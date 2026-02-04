@@ -409,7 +409,6 @@ export function UsersClient() {
                     alert(`删除失败: ${txt}`);
                     return;
                   }
-                  alert(`删除成功: ${txt}`);
                   setEdit({ open: false });
                   await refresh();
                 }}
