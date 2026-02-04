@@ -1,11 +1,13 @@
 "use client";
 
 import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
 
   return (
@@ -22,10 +24,14 @@ export default function LoginPage() {
             const res = await signIn("credentials", {
               username,
               password,
-              redirect: true,
-              callbackUrl: "/",
+              redirect: false,
             });
-            if ((res as any)?.error) setError((res as any).error);
+            if ((res as any)?.error) {
+              setError((res as any).error);
+              return;
+            }
+            router.push("/");
+            router.refresh();
           }}
         >
           <div>
