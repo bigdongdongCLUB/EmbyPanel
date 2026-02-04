@@ -7,7 +7,7 @@ import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin";
 import { hashPassword } from "@/lib/password";
 import { encryptSyncPassword, getSyncPassword } from "@/lib/user-secrets";
-import { embyCreateUser, embySetUserPassword } from "@/lib/emby-provision";
+import { embyCreateUser, embySetUserDisabled, embySetUserPassword } from "@/lib/emby-provision";
 import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
 import { embyFetchUsers } from "@/lib/emby";
 
@@ -107,6 +107,14 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
   const subscription = parsed.data.subscription;
 
+  // snapshot previous assigned servers from current ACTIVE subscription
+  const prevActive = await prisma.subscription.findFirst({
+    where: { userId: id, status: "ACTIVE" },
+    orderBy: { endAt: "desc" },
+    select: { id: true, servers: { select: { embyServerId: true } } },
+  });
+  const prevServerIds = new Set((prevActive?.servers ?? []).map((x) => x.embyServerId));
+
   await prisma.$transaction(async (tx) => {
     await tx.user.update({ where: { id }, data });
 
@@ -137,6 +145,41 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   });
 
   // Provision/sync to Emby after commit (best-effort)
+  const nextServerIds = new Set((subscription?.embyServerIds ?? []).filter(Boolean));
+  const removedServerIds = [...prevServerIds].filter((sid) => !nextServerIds.has(sid));
+
+  // 1) Disable on removed servers (unassign)
+  if (removedServerIds.length) {
+    const [links, servers] = await Promise.all([
+      prisma.embyUserLink.findMany({ where: { userId: id, embyServerId: { in: removedServerIds } }, select: { embyServerId: true, embyUserId: true } }),
+      prisma.embyServer.findMany({ where: { id: { in: removedServerIds } }, select: { id: true, baseUrl: true, apiKey: true, apiKeyEnc: true, apiKeyIv: true, apiKeyTag: true } }),
+    ]);
+    const serverById = new Map(servers.map((s) => [s.id, s] as const));
+    for (const l of links) {
+      const s = serverById.get(l.embyServerId);
+      if (!s) continue;
+      const apiKey = getEmbyApiKeyForServer(s);
+      await embySetUserDisabled(s.baseUrl, apiKey, l.embyUserId, true);
+    }
+  }
+
+  // 2) If panel user disabled, disable on all linked servers
+  if (parsed.data.enabled === false) {
+    const links = await prisma.embyUserLink.findMany({ where: { userId: id }, select: { embyServerId: true, embyUserId: true } });
+    const servers = await prisma.embyServer.findMany({
+      where: { id: { in: links.map((x) => x.embyServerId) } },
+      select: { id: true, baseUrl: true, apiKey: true, apiKeyEnc: true, apiKeyIv: true, apiKeyTag: true },
+    });
+    const serverById = new Map(servers.map((s) => [s.id, s] as const));
+    for (const l of links) {
+      const s = serverById.get(l.embyServerId);
+      if (!s) continue;
+      const apiKey = getEmbyApiKeyForServer(s);
+      await embySetUserDisabled(s.baseUrl, apiKey, l.embyUserId, true);
+    }
+  }
+
+  // 3) Provision to newly assigned servers
   if (subscription && subscription.embyServerIds?.length) {
     const [user, servers] = await Promise.all([
       prisma.user.findUnique({
@@ -187,6 +230,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
         if (embyUserId) {
           await embySetUserPassword(s.baseUrl, apiKey, embyUserId, pw);
+          // ensure enabled on assignment
+          await embySetUserDisabled(s.baseUrl, apiKey, embyUserId, false);
           await prisma.embyUserLink.upsert({
             where: { userId_embyServerId: { userId: user.id, embyServerId: s.id } },
             update: { embyUserId: embyUserId },

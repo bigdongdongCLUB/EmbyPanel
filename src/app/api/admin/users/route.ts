@@ -106,7 +106,12 @@ export async function POST(req: Request) {
 
   const passwordHash = await hashPassword(parsed.data.password);
 
-  const enc = encryptSyncPassword(parsed.data.password);
+  let enc;
+  try {
+    enc = encryptSyncPassword(parsed.data.password);
+  } catch (e: any) {
+    return NextResponse.json({ error: "sync_password_encrypt_failed", detail: e?.message ?? String(e) }, { status: 500 });
+  }
 
   const user = await prisma.user.create({
     data: {
