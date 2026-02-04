@@ -2,7 +2,6 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 
-import { AdminHeader } from "../admin-header";
 import { ServersClient } from "./servers-client";
 
 export default async function AdminServersPage() {
@@ -12,17 +11,13 @@ export default async function AdminServersPage() {
   if (role !== "ADMIN") redirect("/admin");
 
   return (
-    <main className="p-6 max-w-5xl mx-auto space-y-4">
-      <AdminHeader />
+    <div className="space-y-2">
+      <h1 className="text-xl font-semibold">Emby 服务器</h1>
+      <p className="text-sm text-gray-600">添加 Emby 服务器并测试连通性。</p>
 
-      <div>
-        <h1 className="text-xl font-semibold">Emby 服务器管理</h1>
-        <p className="mt-2 text-gray-600">添加 Emby 服务器并测试连通性。</p>
-      </div>
-
-      <div className="mt-6">
+      <div className="mt-4">
         <ServersClient />
       </div>
-    </main>
+    </div>
   );
 }
