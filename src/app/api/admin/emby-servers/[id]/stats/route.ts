@@ -40,7 +40,16 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   const total = users.length;
   const enabled = users.filter((u) => !u.Policy?.IsDisabled).length;
   const disabled = total - enabled;
-  const enabledPct = total ? Math.round((enabled / total) * 1000) / 10 : 0;
+
+  const now = Date.now();
+  const activeCutoffMs = 30 * 24 * 60 * 60 * 1000;
+  const active = users.filter((u) => {
+    const d = u.LastLoginDate ? Date.parse(u.LastLoginDate) : NaN;
+    if (!Number.isFinite(d)) return false;
+    return now - d <= activeCutoffMs;
+  }).length;
+
+  const mauPct = total ? Math.round((active / total) * 1000) / 10 : 0;
 
   const info = infoRes.parsed.success ? infoRes.parsed.data : infoRes.json;
 
@@ -55,7 +64,9 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
       total,
       enabled,
       disabled,
-      enabledPct,
+      // MAU = users who logged in within last 30 days
+      active30d: active,
+      mauPct,
     },
   });
 }

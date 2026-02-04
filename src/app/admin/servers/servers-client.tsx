@@ -32,7 +32,7 @@ type StatsModalState =
       loading: boolean;
       data: null | {
         emby: { serverName: string | null; version: string | null };
-        users: { total: number; enabled: number; disabled: number; enabledPct: number };
+        users: { total: number; enabled: number; disabled: number; active30d: number; mauPct: number };
       };
       error: string | null;
     };
@@ -285,7 +285,8 @@ export function ServersClient() {
                   <div>用户总数：{(statsModal.data as any).users?.total ?? 0}</div>
                   <div>启用用户：{(statsModal.data as any).users?.enabled ?? 0}</div>
                   <div>禁用用户：{(statsModal.data as any).users?.disabled ?? 0}</div>
-                  <div>启用占比：{(statsModal.data as any).users?.enabledPct ?? 0}%</div>
+                  <div className="pt-2">30日活跃用户（30日内有登录）：{(statsModal.data as any).users?.active30d ?? 0}</div>
+                  <div>月活占比（MAU%）：{(statsModal.data as any).users?.mauPct ?? 0}%</div>
                 </div>
               </div>
             ) : null}
