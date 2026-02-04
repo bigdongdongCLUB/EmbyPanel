@@ -79,7 +79,11 @@ model EmbyServer {
   id            String   @id @default(cuid())
   name          String
   baseUrl       String
-  apiKey        String
+  // API key is stored encrypted (prefer apiKeyEnc/iv/tag). apiKey kept for backward compat.
+  apiKey        String?
+  apiKeyEnc     String?
+  apiKeyIv      String?
+  apiKeyTag     String?
   enabled       Boolean  @default(true)
   lastHealthAt  DateTime?
   lastHealthOk  Boolean?

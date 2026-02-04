@@ -6,6 +6,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin";
 import { normalizeBaseUrl } from "@/lib/emby";
+import { encryptString } from "@/lib/crypto";
 
 export async function GET() {
   const auth = await requireAdmin();
@@ -44,11 +45,17 @@ export async function POST(req: Request) {
   const parsed = CreateSchema.safeParse(json);
   if (!parsed.success) return NextResponse.json({ error: "invalid_payload" }, { status: 400 });
 
+  const enc = encryptString(parsed.data.apiKey);
+
   const server = await prisma.embyServer.create({
     data: {
       name: parsed.data.name,
       baseUrl: normalizeBaseUrl(parsed.data.baseUrl),
-      apiKey: parsed.data.apiKey,
+      apiKeyEnc: enc.enc,
+      apiKeyIv: enc.iv,
+      apiKeyTag: enc.tag,
+      // keep plaintext empty
+      apiKey: null,
       enabled: parsed.data.enabled ?? true,
     },
     select: {

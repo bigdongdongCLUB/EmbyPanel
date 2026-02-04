@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin";
 import { embyFetchSystemInfo } from "@/lib/emby";
+import { decryptString } from "@/lib/crypto";
 
 export async function POST(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const auth = await requireAdmin();
@@ -14,8 +15,12 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   const server = await prisma.embyServer.findUnique({ where: { id } });
   if (!server) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
+  const apiKey = server.apiKeyEnc && server.apiKeyIv && server.apiKeyTag
+    ? decryptString({ enc: server.apiKeyEnc, iv: server.apiKeyIv, tag: server.apiKeyTag })
+    : (server.apiKey ?? "");
+
   const started = Date.now();
-  const result = await embyFetchSystemInfo(server.baseUrl, server.apiKey);
+  const result = await embyFetchSystemInfo(server.baseUrl, apiKey);
   const ms = Date.now() - started;
 
   if (!result.ok) {
