@@ -42,6 +42,10 @@ model User {
   email        String?  @unique
   name         String?
   passwordHash String
+  // Encrypted sync password used for provisioning Emby users (AES-256-GCM)
+  syncPasswordEnc String?
+  syncPasswordIv  String?
+  syncPasswordTag String?
   role         Role     @default(USER)
   enabled      Boolean  @default(true)
   balanceCents Int      @default(0)

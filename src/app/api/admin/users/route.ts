@@ -6,6 +6,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin";
 import { hashPassword } from "@/lib/password";
+import { encryptSyncPassword } from "@/lib/user-secrets";
 
 export async function GET(req: Request) {
   const auth = await requireAdmin();
@@ -105,11 +106,16 @@ export async function POST(req: Request) {
 
   const passwordHash = await hashPassword(parsed.data.password);
 
+  const enc = encryptSyncPassword(parsed.data.password);
+
   const user = await prisma.user.create({
     data: {
       username: parsed.data.username,
       email: parsed.data.email ? parsed.data.email : null,
       passwordHash,
+      syncPasswordEnc: enc.enc,
+      syncPasswordIv: enc.iv,
+      syncPasswordTag: enc.tag,
       role: (parsed.data.role as any) ?? "USER",
       enabled: parsed.data.enabled ?? true,
     },

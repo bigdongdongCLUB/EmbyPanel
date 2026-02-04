@@ -6,6 +6,10 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin";
 import { hashPassword } from "@/lib/password";
+import { encryptSyncPassword, getSyncPassword } from "@/lib/user-secrets";
+import { embyCreateUser, embySetUserPassword } from "@/lib/emby-provision";
+import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
+import { embyFetchUsers } from "@/lib/emby";
 
 const PatchSchema = z.object({
   email: z.string().email().nullable().optional(),
@@ -89,10 +93,16 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if (parsed.data.expiryReminderEnabled !== undefined) data.expiryReminderEnabled = parsed.data.expiryReminderEnabled;
   if (parsed.data.balanceCents !== undefined) data.balanceCents = parsed.data.balanceCents;
 
+  let newPlainPassword: string | null = null;
   if (parsed.data.changePassword) {
     const pw = parsed.data.newPassword ?? "";
     if (pw.length < 6) return NextResponse.json({ error: "password_too_short" }, { status: 400 });
     data.passwordHash = await hashPassword(pw);
+    const enc = encryptSyncPassword(pw);
+    data.syncPasswordEnc = enc.enc;
+    data.syncPasswordIv = enc.iv;
+    data.syncPasswordTag = enc.tag;
+    newPlainPassword = pw;
   }
 
   const subscription = parsed.data.subscription;
@@ -125,6 +135,67 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       }
     }
   });
+
+  // Provision/sync to Emby after commit (best-effort)
+  if (subscription && subscription.embyServerIds?.length) {
+    const [user, servers] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          username: true,
+          syncPasswordEnc: true,
+          syncPasswordIv: true,
+          syncPasswordTag: true,
+        },
+      }),
+      prisma.embyServer.findMany({
+        where: { id: { in: subscription.embyServerIds } },
+        select: {
+          id: true,
+          name: true,
+          baseUrl: true,
+          apiKey: true,
+          apiKeyEnc: true,
+          apiKeyIv: true,
+          apiKeyTag: true,
+        },
+      }),
+    ]);
+
+    if (user) {
+      const pw = newPlainPassword ?? getSyncPassword(user);
+      if (!pw) {
+        return NextResponse.json({ ok: true, warn: "missing_sync_password" });
+      }
+
+      for (const s of servers) {
+        const apiKey = getEmbyApiKeyForServer(s);
+
+        // find emby user by name
+        const usersRes = await embyFetchUsers(s.baseUrl, apiKey);
+        let embyUserId: string | null = null;
+        if (usersRes.ok) {
+          const found = usersRes.users.find((u: any) => String(u?.Name ?? "").toLowerCase() === user.username.toLowerCase());
+          if (found?.Id) embyUserId = String(found.Id);
+        }
+
+        if (!embyUserId) {
+          const created = await embyCreateUser(s.baseUrl, apiKey, user.username);
+          if (created.ok) embyUserId = created.userId;
+        }
+
+        if (embyUserId) {
+          await embySetUserPassword(s.baseUrl, apiKey, embyUserId, pw);
+          await prisma.embyUserLink.upsert({
+            where: { userId_embyServerId: { userId: user.id, embyServerId: s.id } },
+            update: { embyUserId: embyUserId },
+            create: { userId: user.id, embyServerId: s.id, embyUserId: embyUserId },
+          });
+        }
+      }
+    }
+  }
 
   return NextResponse.json({ ok: true });
 }
