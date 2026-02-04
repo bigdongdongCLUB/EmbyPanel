@@ -23,6 +23,37 @@ type ModalState =
       enabled: boolean;
     };
 
+type StatsModalState =
+  | { open: false }
+  | {
+      open: true;
+      id: string;
+      name: string;
+      loading: boolean;
+      data: null | {
+        emby: { serverName: string | null; version: string | null };
+        users: { total: number; enabled: number; disabled: number; enabledPct: number };
+      };
+      error: string | null;
+    };
+
+type UsersModalState =
+  | { open: false }
+  | {
+      open: true;
+      id: string;
+      name: string;
+      loading: boolean;
+      users: Array<{
+        id: string;
+        name: string;
+        policy: { isDisabled: boolean; isAdministrator: boolean };
+        lastLoginDate: string | null;
+        lastActivityDate: string | null;
+      }>;
+      error: string | null;
+    };
+
 export function ServersClient() {
   const [servers, setServers] = useState<Server[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,6 +64,8 @@ export function ServersClient() {
   const [apiKey, setApiKey] = useState("");
 
   const [modal, setModal] = useState<ModalState>({ open: false });
+  const [statsModal, setStatsModal] = useState<StatsModalState>({ open: false });
+  const [usersModal, setUsersModal] = useState<UsersModalState>({ open: false });
 
   const canSubmit = useMemo(() => !!name && !!baseUrl && apiKey.length >= 10, [name, baseUrl, apiKey]);
 
@@ -140,6 +173,40 @@ export function ServersClient() {
 
                 <button
                   className="border rounded px-3 py-2"
+                  onClick={async () => {
+                    setStatsModal({ open: true, id: s.id, name: s.name, loading: true, data: null, error: null });
+                    try {
+                      const res = await fetch(`/api/admin/emby-servers/${s.id}/stats`, { cache: "no-store" });
+                      const json = await res.json().catch(() => null);
+                      if (!res.ok) throw new Error(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
+                      setStatsModal({ open: true, id: s.id, name: s.name, loading: false, data: json, error: null } as any);
+                    } catch (e: any) {
+                      setStatsModal({ open: true, id: s.id, name: s.name, loading: false, data: null, error: e?.message ?? "load_failed" });
+                    }
+                  }}
+                >
+                  统计
+                </button>
+
+                <button
+                  className="border rounded px-3 py-2"
+                  onClick={async () => {
+                    setUsersModal({ open: true, id: s.id, name: s.name, loading: true, users: [], error: null });
+                    try {
+                      const res = await fetch(`/api/admin/emby-servers/${s.id}/users`, { cache: "no-store" });
+                      const json = await res.json().catch(() => null);
+                      if (!res.ok) throw new Error(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
+                      setUsersModal({ open: true, id: s.id, name: s.name, loading: false, users: json.users ?? [], error: null });
+                    } catch (e: any) {
+                      setUsersModal({ open: true, id: s.id, name: s.name, loading: false, users: [], error: e?.message ?? "load_failed" });
+                    }
+                  }}
+                >
+                  用户
+                </button>
+
+                <button
+                  className="border rounded px-3 py-2"
                   onClick={() =>
                     setModal({
                       open: true,
@@ -192,6 +259,83 @@ export function ServersClient() {
           ))}
         </div>
       </section>
+
+      {statsModal.open ? (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg w-full max-w-lg p-4">
+            <div className="flex items-center justify-between">
+              <div className="font-semibold">统计 - {statsModal.name}</div>
+              <button className="text-sm underline" onClick={() => setStatsModal({ open: false })}>
+                关闭
+              </button>
+            </div>
+
+            {statsModal.loading ? <div className="mt-3 text-sm text-gray-500">加载中…</div> : null}
+            {statsModal.error ? <pre className="mt-3 text-xs text-red-600 whitespace-pre-wrap">{statsModal.error}</pre> : null}
+
+            {(!statsModal.loading && statsModal.data) ? (
+              <div className="mt-4 space-y-2 text-sm">
+                <div>
+                  Emby 版本：<span className="font-mono">{(statsModal.data as any).emby?.version ?? "-"}</span>
+                </div>
+                <div>
+                  Emby ServerName：<span className="font-mono">{(statsModal.data as any).emby?.serverName ?? "-"}</span>
+                </div>
+                <div className="pt-2 border-t">
+                  <div>用户总数：{(statsModal.data as any).users?.total ?? 0}</div>
+                  <div>启用用户：{(statsModal.data as any).users?.enabled ?? 0}</div>
+                  <div>禁用用户：{(statsModal.data as any).users?.disabled ?? 0}</div>
+                  <div>启用占比：{(statsModal.data as any).users?.enabledPct ?? 0}%</div>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {usersModal.open ? (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg w-full max-w-3xl p-4">
+            <div className="flex items-center justify-between">
+              <div className="font-semibold">用户 - {usersModal.name}</div>
+              <button className="text-sm underline" onClick={() => setUsersModal({ open: false })}>
+                关闭
+              </button>
+            </div>
+
+            {usersModal.loading ? <div className="mt-3 text-sm text-gray-500">加载中…</div> : null}
+            {usersModal.error ? <pre className="mt-3 text-xs text-red-600 whitespace-pre-wrap">{usersModal.error}</pre> : null}
+
+            {!usersModal.loading ? (
+              <div className="mt-4 overflow-auto">
+                <table className="w-full text-sm">
+                  <thead className="text-left text-gray-600">
+                    <tr>
+                      <th className="py-2">用户名</th>
+                      <th className="py-2">状态</th>
+                      <th className="py-2">管理员</th>
+                      <th className="py-2">最后登录</th>
+                      <th className="py-2">最后活动</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {usersModal.users.map((u) => (
+                      <tr key={u.id} className="border-t">
+                        <td className="py-2 font-mono">{u.name}</td>
+                        <td className="py-2">{u.policy.isDisabled ? "禁用" : "启用"}</td>
+                        <td className="py-2">{u.policy.isAdministrator ? "是" : "否"}</td>
+                        <td className="py-2 font-mono text-xs">{u.lastLoginDate ?? "-"}</td>
+                        <td className="py-2 font-mono text-xs">{u.lastActivityDate ?? "-"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {usersModal.users.length === 0 ? <div className="text-sm text-gray-500">无用户</div> : null}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
 
       {modal.open ? (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4">
