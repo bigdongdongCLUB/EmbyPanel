@@ -10,15 +10,17 @@ import { embyFetchUsers } from "@/lib/emby";
 import { hashPassword } from "@/lib/password";
 import { encryptSyncPassword } from "@/lib/user-secrets";
 
-function randomPassword(len = 16) {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
-  let out = "";
-  for (let i = 0; i < len; i++) out += alphabet[Math.floor(Math.random() * alphabet.length)];
-  return out;
-}
-
 const Schema = z.object({
   embyServerId: z.string().min(1),
+  defaultPassword: z.string().min(6).max(200),
+
+  // optional: assign plan on import
+  planId: z.string().min(1).nullable().optional(),
+  payCycle: z.enum(["MONTHLY", "QUARTERLY", "HALF_YEARLY", "YEARLY", "TWO_YEARLY"]).nullable().optional(),
+
+  mode: z.enum(["ALL", "SELECTED"]).optional().default("ALL"),
+  usernames: z.array(z.string().min(1)).nullable().optional(),
+
   missingOnly: z.boolean().optional().default(true),
   skipAdmins: z.boolean().optional().default(true),
 });
@@ -31,7 +33,7 @@ export async function POST(req: Request) {
   const parsed = Schema.safeParse(json);
   if (!parsed.success) return NextResponse.json({ error: "invalid_payload", issues: parsed.error.issues }, { status: 400 });
 
-  const { embyServerId, missingOnly, skipAdmins } = parsed.data;
+  const { embyServerId, missingOnly, skipAdmins, defaultPassword, planId, payCycle, mode, usernames } = parsed.data;
 
   const server = await prisma.embyServer.findUnique({
     where: { id: embyServerId },
@@ -45,7 +47,13 @@ export async function POST(req: Request) {
   const usersRes = await embyFetchUsers(server.baseUrl, apiKey);
   if (!usersRes.ok) return NextResponse.json({ error: "emby_fetch_users_failed", status: usersRes.status, body: usersRes.body }, { status: 502 });
 
-  const embyUsers = usersRes.users;
+  const embyUsersAll = usersRes.users as any[];
+  const allowNameSet =
+    mode === "SELECTED" && usernames?.length
+      ? new Set(usernames.map((s) => s.trim().toLowerCase()).filter(Boolean))
+      : null;
+
+  const embyUsers = allowNameSet ? embyUsersAll.filter((u) => allowNameSet.has(String(u?.Name ?? "").trim().toLowerCase())) : embyUsersAll;
 
   const existingUsernames = new Set(
     (
@@ -58,6 +66,14 @@ export async function POST(req: Request) {
       await prisma.embyUserLink.findMany({ where: { embyServerId }, select: { embyUserId: true } })
     ).map((l) => l.embyUserId),
   );
+
+  const cycleDays: Record<string, number> = {
+    MONTHLY: 30,
+    QUARTERLY: 90,
+    HALF_YEARLY: 180,
+    YEARLY: 365,
+    TWO_YEARLY: 730,
+  };
 
   let imported = 0;
   let skipped = 0;
@@ -94,13 +110,34 @@ export async function POST(req: Request) {
         skipped++;
         details.push({ name, embyUserId, action: "skip", reason: "already_exists" });
       }
+
+      // optional: assign plan to existing panel user
+      if (user && planId) {
+        const cycle = payCycle ?? "YEARLY";
+        const days = cycleDays[cycle] ?? 365;
+        const startAt = new Date();
+        const endAt = new Date(startAt.getTime() + days * 24 * 60 * 60 * 1000);
+
+        await prisma.subscription.updateMany({ where: { userId: user.id, status: "ACTIVE" }, data: { status: "CANCELED" } });
+        const sub = await prisma.subscription.create({
+          data: {
+            userId: user.id,
+            planId,
+            status: "ACTIVE",
+            payCycle: cycle as any,
+            startAt,
+            endAt,
+          },
+        });
+        await prisma.subscriptionServer.createMany({ data: [{ subscriptionId: sub.id, embyServerId }], skipDuplicates: true });
+      }
+
       continue;
     }
 
     // create panel user
-    const plainPw = randomPassword(16);
-    const passwordHash = await hashPassword(plainPw);
-    const enc = encryptSyncPassword(plainPw);
+    const passwordHash = await hashPassword(defaultPassword);
+    const enc = encryptSyncPassword(defaultPassword);
 
     const enabled = !(u?.Policy?.IsDisabled);
 
@@ -120,8 +157,30 @@ export async function POST(req: Request) {
 
     await prisma.embyUserLink.create({ data: { userId: created.id, embyServerId, embyUserId } });
 
+    if (planId) {
+      const cycle = payCycle ?? "YEARLY";
+      const days = cycleDays[cycle] ?? 365;
+      const startAt = new Date();
+      const endAt = new Date(startAt.getTime() + days * 24 * 60 * 60 * 1000);
+
+      await prisma.subscription.updateMany({ where: { userId: created.id, status: "ACTIVE" }, data: { status: "CANCELED" } });
+      const sub = await prisma.subscription.create({
+        data: {
+          userId: created.id,
+          planId,
+          status: "ACTIVE",
+          payCycle: cycle as any,
+          startAt,
+          endAt,
+        },
+      });
+
+      // persist desired server mapping as the current emby server for now.
+      await prisma.subscriptionServer.createMany({ data: [{ subscriptionId: sub.id, embyServerId }], skipDuplicates: true });
+    }
+
     imported++;
-    details.push({ name, embyUserId, action: "created" });
+    details.push({ name, embyUserId, action: planId ? "created_with_plan" : "created" });
   }
 
   return NextResponse.json({ ok: true, server: { id: server.id, name: server.name }, imported, skipped, details });

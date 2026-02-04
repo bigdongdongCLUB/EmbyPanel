@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+type EmbyServerOption = { id: string; name: string; enabled: boolean };
+type PlanOption = { id: string; name: string };
+
 type UserRow = {
   id: string;
   username: string;
@@ -60,6 +63,18 @@ export function UsersClient() {
   const selectedIds = useMemo(() => Object.keys(selected).filter((id) => selected[id]), [selected]);
 
   const [createOpen, setCreateOpen] = useState(false);
+
+  const [importOpen, setImportOpen] = useState(false);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importServers, setImportServers] = useState<EmbyServerOption[]>([]);
+  const [importPlans, setImportPlans] = useState<PlanOption[]>([]);
+  const [importServerId, setImportServerId] = useState("");
+  const [importDefaultPassword, setImportDefaultPassword] = useState("");
+  const [importPlanId, setImportPlanId] = useState("");
+  const [importPayCycle, setImportPayCycle] = useState<"MONTHLY" | "QUARTERLY" | "HALF_YEARLY" | "YEARLY" | "TWO_YEARLY">("YEARLY");
+  const [importMode, setImportMode] = useState<"ALL" | "SELECTED">("ALL");
+  const [importNamesText, setImportNamesText] = useState("");
   const [newUsername, setNewUsername] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -96,6 +111,31 @@ export function UsersClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  async function openImportModal() {
+    setImportOpen(true);
+    setImportError(null);
+    setImportLoading(true);
+    try {
+      const [sRes, pRes] = await Promise.all([
+        fetch("/api/admin/emby-servers", { cache: "no-store" }),
+        fetch("/api/admin/plans", { cache: "no-store" }),
+      ]);
+      const sJson = await sRes.json().catch(() => null);
+      const pJson = await pRes.json().catch(() => null);
+      if (!sRes.ok) throw new Error(sJson?.error ? JSON.stringify(sJson) : `HTTP ${sRes.status}`);
+      if (!pRes.ok) throw new Error(pJson?.error ? JSON.stringify(pJson) : `HTTP ${pRes.status}`);
+
+      setImportServers((sJson.servers ?? []).filter((x: any) => x.enabled));
+      setImportPlans((pJson.plans ?? []).filter((x: any) => x.enabled).map((x: any) => ({ id: x.id, name: x.name })));
+
+      if (!importServerId && (sJson.servers ?? []).length) setImportServerId((sJson.servers ?? [])[0]?.id ?? "");
+    } catch (e: any) {
+      setImportError(e?.message ?? "load_failed");
+    } finally {
+      setImportLoading(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
@@ -120,21 +160,9 @@ export function UsersClient() {
             <div className="absolute right-0 mt-2 w-56 bg-white border rounded shadow p-2 text-sm space-y-1 z-10">
               <button
                 className="w-full text-left px-2 py-2 hover:bg-gray-50 rounded"
-                onClick={async () => {
-                  const serverId = prompt("从哪个 Emby 服务器导入？请输入 EmbyServerId（可在服务器管理页面列表中看到）");
-                  if (!serverId) return;
-                  const res = await fetch("/api/admin/users/import-from-emby", {
-                    method: "POST",
-                    headers: { "content-type": "application/json" },
-                    body: JSON.stringify({ embyServerId: serverId, missingOnly: true, skipAdmins: true }),
-                  });
-                  const json = await res.json().catch(() => null);
-                  if (!res.ok) {
-                    alert(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
-                    return;
-                  }
-                  alert(`导入完成：imported=${json.imported}, skipped=${json.skipped}`);
-                  await refresh();
+                onClick={() => {
+                  (document.activeElement as any)?.blur?.();
+                  openImportModal().catch((e) => alert(e?.message ?? String(e)));
                 }}
               >
                 从 Emby 导入用户
@@ -535,6 +563,151 @@ export function UsersClient() {
                 }}
               >
                 删除用户
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {importOpen ? (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg w-full max-w-xl p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="font-semibold">从 Emby 服务器导入用户</div>
+              <button className="text-sm underline" onClick={() => setImportOpen(false)}>
+                关闭
+              </button>
+            </div>
+
+            {importLoading ? <div className="text-sm text-gray-500">加载中…</div> : null}
+            {importError ? <pre className="text-xs text-red-600 whitespace-pre-wrap">{importError}</pre> : null}
+
+            <div className="grid grid-cols-1 gap-3">
+              <div>
+                <label className="text-sm">选择 Emby 服务器 *</label>
+                <select className="mt-1 w-full border rounded px-3 py-2" value={importServerId} onChange={(e) => setImportServerId(e.target.value)}>
+                  <option value="">选择服务器…</option>
+                  {importServers.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-sm">默认密码 *（导入后面板账户使用该密码；不会重置 Emby 原密码）</label>
+                <input
+                  className="mt-1 w-full border rounded px-3 py-2"
+                  type="password"
+                  value={importDefaultPassword}
+                  onChange={(e) => setImportDefaultPassword(e.target.value)}
+                  placeholder="至少 6 位"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm">分配订阅计划（可选）</label>
+                <select className="mt-1 w-full border rounded px-3 py-2" value={importPlanId} onChange={(e) => setImportPlanId(e.target.value)}>
+                  <option value="">不分配</option>
+                  {importPlans.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-sm">付费周期（当选择了订阅计划时生效）</label>
+                <select className="mt-1 w-full border rounded px-3 py-2" value={importPayCycle} onChange={(e) => setImportPayCycle(e.target.value as any)} disabled={!importPlanId}>
+                  <option value="MONTHLY">月付</option>
+                  <option value="QUARTERLY">季付</option>
+                  <option value="HALF_YEARLY">半年付</option>
+                  <option value="YEARLY">年付</option>
+                  <option value="TWO_YEARLY">两年付</option>
+                </select>
+                <div className="text-xs text-gray-500 mt-1">导入时会按周期自动生成订阅起止时间（从今天开始）。</div>
+              </div>
+
+              <div>
+                <label className="text-sm">导入模式</label>
+                <div className="mt-2 flex gap-4 text-sm">
+                  <label className="flex items-center gap-2">
+                    <input type="radio" name="importMode" checked={importMode === "ALL"} onChange={() => setImportMode("ALL")} />
+                    导入全部用户
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input type="radio" name="importMode" checked={importMode === "SELECTED"} onChange={() => setImportMode("SELECTED")} />
+                    选择特定用户
+                  </label>
+                </div>
+              </div>
+
+              {importMode === "SELECTED" ? (
+                <div>
+                  <label className="text-sm">指定用户名（每行一个）</label>
+                  <textarea className="mt-1 w-full border rounded px-3 py-2 min-h-[120px]" value={importNamesText} onChange={(e) => setImportNamesText(e.target.value)} />
+                </div>
+              ) : null}
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded p-3 text-sm text-yellow-900 space-y-1">
+                <div className="font-medium">导入提示</div>
+                <ul className="list-disc pl-5 text-xs text-yellow-900">
+                  <li>将导入 Emby 服务器上的所有非管理员用户（如选择特定用户，则只导入指定用户名）。</li>
+                  <li>如果用户已存在于面板，将跳过创建；但会尝试补齐 EmbyUserLink。</li>
+                  <li>不会重置 Emby 服务器中用户的密码；仅面板侧使用默认密码。</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <button className="border rounded px-3 py-2" onClick={() => setImportOpen(false)}>
+                取消
+              </button>
+              <button
+                className="bg-black text-white rounded px-3 py-2 disabled:opacity-50"
+                disabled={!importServerId || importDefaultPassword.trim().length < 6 || importLoading}
+                onClick={async () => {
+                  setImportLoading(true);
+                  setImportError(null);
+                  try {
+                    const usernames =
+                      importMode === "SELECTED"
+                        ? importNamesText
+                            .split(/\r?\n/)
+                            .map((s) => s.trim())
+                            .filter(Boolean)
+                        : null;
+
+                    const res = await fetch("/api/admin/users/import-from-emby", {
+                      method: "POST",
+                      headers: { "content-type": "application/json" },
+                      body: JSON.stringify({
+                        embyServerId: importServerId,
+                        defaultPassword: importDefaultPassword,
+                        planId: importPlanId || null,
+                        payCycle: importPlanId ? importPayCycle : null,
+                        mode: importMode,
+                        usernames,
+                        missingOnly: true,
+                        skipAdmins: true,
+                      }),
+                    });
+                    const json = await res.json().catch(() => null);
+                    if (!res.ok) throw new Error(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
+
+                    alert(`导入完成：imported=${json.imported}, skipped=${json.skipped}`);
+                    setImportOpen(false);
+                    await refresh();
+                  } catch (e: any) {
+                    setImportError(e?.message ?? "import_failed");
+                  } finally {
+                    setImportLoading(false);
+                  }
+                }}
+              >
+                开始导入
               </button>
             </div>
           </div>
