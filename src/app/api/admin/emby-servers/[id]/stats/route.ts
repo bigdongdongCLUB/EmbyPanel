@@ -44,7 +44,8 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   const now = Date.now();
   const activeCutoffMs = 30 * 24 * 60 * 60 * 1000;
   const active = users.filter((u) => {
-    const d = u.LastLoginDate ? Date.parse(u.LastLoginDate) : NaN;
+    // If user never logged in / no activity date => not active
+    const d = u.LastActivityDate ? Date.parse(u.LastActivityDate) : NaN;
     if (!Number.isFinite(d)) return false;
     return now - d <= activeCutoffMs;
   }).length;
