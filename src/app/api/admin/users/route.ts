@@ -53,7 +53,7 @@ export async function GET(req: Request) {
           status: true,
           startAt: true,
           endAt: true,
-          plan: { select: { id: true, name: true, durationDays: true, maxConcurrentStreams: true } },
+          plan: { select: { id: true, name: true, enabled: true, visible: true } },
           servers: { select: { embyServer: { select: { id: true, name: true } } } },
         },
       },

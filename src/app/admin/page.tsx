@@ -32,6 +32,11 @@ export default async function AdminHome() {
             用户管理
           </Link>
         </div>
+        <div>
+          <Link className="underline" href="/admin/subscriptions">
+            订阅管理
+          </Link>
+        </div>
       </div>
     </main>
   );

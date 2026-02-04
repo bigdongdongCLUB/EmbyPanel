@@ -21,9 +21,17 @@ enum SubscriptionStatus {
 }
 
 enum PayCycle {
+  TRIAL
   MONTHLY
   QUARTERLY
+  HALF_YEARLY
   YEARLY
+  TWO_YEARLY
+}
+
+enum ServerAssignStrategy {
+  ALL
+  LOAD_BALANCE
 }
 
 enum AnomalyStatus {
@@ -59,15 +67,41 @@ model User {
 }
 
 model Plan {
-  id                    String   @id @default(cuid())
-  name                  String
-  durationDays          Int
-  maxConcurrentStreams  Int      @default(1)
-  enabled               Boolean  @default(true)
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id          String   @id @default(cuid())
+  name        String
+  description String?  // markdown/html
+  enabled     Boolean  @default(true) // 可用状态：是否允许创建新订单/订阅
+  visible     Boolean  @default(true) // 显示状态：前端是否展示
+
+  // Pricing is flexible; store as JSON:
+  // { trial: { priceCents, days }, monthly: { priceCents }, ... }
+  pricingJson Json?
+
+  // server assignment strategy (set once; UI can lock later)
+  serverAssignStrategy ServerAssignStrategy @default(LOAD_BALANCE)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   subscriptions Subscription[]
+  serverConfigs PlanServerConfig[]
+}
+
+model PlanServerConfig {
+  id             String   @id @default(cuid())
+  planId         String
+  embyServerId   String
+  // Emby user id used as template for new users on this server
+  templateEmbyUserId String
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  plan       Plan       @relation(fields: [planId], references: [id], onDelete: Cascade)
+  embyServer EmbyServer @relation(fields: [embyServerId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, embyServerId])
+  @@index([embyServerId])
 }
 
 model Subscription {
@@ -106,6 +140,7 @@ model EmbyServer {
   updatedAt     DateTime @updatedAt
 
   subscriptionLinks SubscriptionServer[]
+  planServerConfigs PlanServerConfig[]
   embyLinks         EmbyUserLink[]
   anomalies         Anomaly[]
   sessionSnapshots  SessionSnapshot[]
