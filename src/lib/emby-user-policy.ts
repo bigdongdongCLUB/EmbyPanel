@@ -53,13 +53,23 @@ export async function embySetUserPolicy(baseUrl: string, apiKey: string, embyUse
 }
 
 export async function embyClonePolicyFromTemplate(baseUrl: string, apiKey: string, templateEmbyUserId: string, targetEmbyUserId: string) {
-  const got = await embyFetchUserPolicy(baseUrl, apiKey, templateEmbyUserId);
-  if (!got.ok) return got;
+  const [tpl, cur] = await Promise.all([
+    embyFetchUserPolicy(baseUrl, apiKey, templateEmbyUserId),
+    embyFetchUserPolicy(baseUrl, apiKey, targetEmbyUserId),
+  ]);
+  if (!tpl.ok) return tpl;
+  if (!cur.ok) return cur;
 
-  // avoid accidentally copying disabled/admin bits; keep explicit fields controlled by panel
-  const policy = { ...(got.policy as any) };
-  delete (policy as any).IsAdministrator;
-  delete (policy as any).IsDisabled;
+  // Some Emby versions are picky: POST /Policy expects a full-ish policy object.
+  // Safer approach: take current policy as base, then overlay template fields.
+  const templatePolicy = typeof tpl.policy === "object" && tpl.policy ? (tpl.policy as any) : {};
+  const currentPolicy = typeof cur.policy === "object" && cur.policy ? (cur.policy as any) : {};
 
-  return embySetUserPolicy(baseUrl, apiKey, targetEmbyUserId, policy);
+  const merged: any = { ...currentPolicy, ...templatePolicy };
+
+  // Do not copy these bits from template; keep panel-controlled.
+  merged.IsAdministrator = currentPolicy.IsAdministrator;
+  merged.IsDisabled = currentPolicy.IsDisabled;
+
+  return embySetUserPolicy(baseUrl, apiKey, targetEmbyUserId, merged);
 }

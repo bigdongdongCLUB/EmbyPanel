@@ -270,7 +270,11 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
           const templateId = templateByServerId.get(s.id);
           if (templateId) {
-            await embyApplyTemplatePolicy(s.baseUrl, apiKey, embyUserId, templateId);
+            const applied = await embyApplyTemplatePolicy(s.baseUrl, apiKey, embyUserId, templateId);
+            if (!applied.ok) {
+              // best-effort, but keep a warning for debugging
+              console.warn("template_policy_apply_failed", { userId: id, embyServerId: s.id, templateId, detail: applied });
+            }
           }
 
           // ensure enabled on assignment
