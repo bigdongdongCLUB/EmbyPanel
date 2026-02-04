@@ -75,6 +75,10 @@ export function UsersClient() {
   const [importPayCycle, setImportPayCycle] = useState<"MONTHLY" | "QUARTERLY" | "HALF_YEARLY" | "YEARLY" | "TWO_YEARLY">("YEARLY");
   const [importMode, setImportMode] = useState<"ALL" | "SELECTED">("ALL");
   const [importNamesText, setImportNamesText] = useState("");
+  const [importEmbyUsers, setImportEmbyUsers] = useState<Array<{ id: string; name: string }>>([]);
+  const [importEmbyUsersLoaded, setImportEmbyUsersLoaded] = useState(false);
+  const [importSelectedEmbyUsers, setImportSelectedEmbyUsers] = useState<Record<string, boolean>>({});
+
   const [newUsername, setNewUsername] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -115,6 +119,9 @@ export function UsersClient() {
     setImportOpen(true);
     setImportError(null);
     setImportLoading(true);
+    setImportEmbyUsers([]);
+    setImportEmbyUsersLoaded(false);
+    setImportSelectedEmbyUsers({});
     try {
       const [sRes, pRes] = await Promise.all([
         fetch("/api/admin/emby-servers", { cache: "no-store" }),
@@ -131,6 +138,31 @@ export function UsersClient() {
       if (!importServerId && (sJson.servers ?? []).length) setImportServerId((sJson.servers ?? [])[0]?.id ?? "");
     } catch (e: any) {
       setImportError(e?.message ?? "load_failed");
+    } finally {
+      setImportLoading(false);
+    }
+  }
+
+  const importSelectedIds = useMemo(() => Object.keys(importSelectedEmbyUsers).filter((id) => importSelectedEmbyUsers[id]), [importSelectedEmbyUsers]);
+
+  async function loadEmbyUserListForImport() {
+    if (!importServerId) {
+      alert("请先选择 Emby 服务器");
+      return;
+    }
+    setImportLoading(true);
+    setImportError(null);
+    try {
+      const res = await fetch(`/api/admin/emby-servers/${importServerId}/users`, { cache: "no-store" });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
+
+      const list = (json.users ?? []).map((u: any) => ({ id: String(u.id), name: String(u.name) }));
+      setImportEmbyUsers(list);
+      setImportEmbyUsersLoaded(true);
+      setImportSelectedEmbyUsers({});
+    } catch (e: any) {
+      setImportError(e?.message ?? "load_users_failed");
     } finally {
       setImportLoading(false);
     }
@@ -645,9 +677,73 @@ export function UsersClient() {
               </div>
 
               {importMode === "SELECTED" ? (
-                <div>
-                  <label className="text-sm">指定用户名（每行一个）</label>
-                  <textarea className="mt-1 w-full border rounded px-3 py-2 min-h-[120px]" value={importNamesText} onChange={(e) => setImportNamesText(e.target.value)} />
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <button className="border rounded px-3 py-2" type="button" onClick={loadEmbyUserListForImport} disabled={importLoading || !importServerId}>
+                      加载 Emby 用户列表
+                    </button>
+                    <div className="text-xs text-gray-600">已选择 {importSelectedIds.length}/{importEmbyUsers.length} 个用户</div>
+                  </div>
+
+                  {!importEmbyUsersLoaded ? (
+                    <div className="bg-sky-50 border border-sky-200 rounded p-3 text-sm text-sky-900">
+                      请先加载用户列表。点击上方的“加载 Emby 用户列表”按钮来查看和选择要导入的用户。
+                    </div>
+                  ) : (
+                    <div className="border rounded overflow-auto">
+                      <table className="min-w-[520px] w-full text-sm">
+                        <thead className="text-left text-gray-600 border-b">
+                          <tr>
+                            <th className="py-2 px-3">
+                              <input
+                                type="checkbox"
+                                checked={importEmbyUsers.length > 0 && importSelectedIds.length === importEmbyUsers.length}
+                                onChange={(e) => {
+                                  const on = e.target.checked;
+                                  if (!on) {
+                                    setImportSelectedEmbyUsers({});
+                                    return;
+                                  }
+                                  const next: Record<string, boolean> = {};
+                                  for (const u of importEmbyUsers) next[u.id] = true;
+                                  setImportSelectedEmbyUsers(next);
+                                }}
+                              />
+                            </th>
+                            <th className="py-2 px-3">用户名</th>
+                            <th className="py-2 px-3">Emby 用户ID</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {importEmbyUsers.map((u) => (
+                            <tr key={u.id} className="border-b last:border-b-0">
+                              <td className="py-2 px-3">
+                                <input
+                                  type="checkbox"
+                                  checked={!!importSelectedEmbyUsers[u.id]}
+                                  onChange={(e) => setImportSelectedEmbyUsers((m) => ({ ...m, [u.id]: e.target.checked }))}
+                                />
+                              </td>
+                              <td className="py-2 px-3 font-mono">{u.name}</td>
+                              <td className="py-2 px-3 font-mono text-xs">{u.id}</td>
+                            </tr>
+                          ))}
+                          {!importEmbyUsers.length ? (
+                            <tr>
+                              <td className="py-6 px-3 text-gray-500" colSpan={3}>
+                                无可用用户
+                              </td>
+                            </tr>
+                          ) : null}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="text-sm">（可选）手动指定用户名（每行一个，和勾选列表取并集）</label>
+                    <textarea className="mt-1 w-full border rounded px-3 py-2 min-h-[100px]" value={importNamesText} onChange={(e) => setImportNamesText(e.target.value)} />
+                  </div>
                 </div>
               ) : null}
 
@@ -667,17 +763,24 @@ export function UsersClient() {
               </button>
               <button
                 className="bg-black text-white rounded px-3 py-2 disabled:opacity-50"
-                disabled={!importServerId || importDefaultPassword.trim().length < 6 || importLoading}
+                disabled={!importServerId || importDefaultPassword.trim().length < 6 || importLoading || (importMode === "SELECTED" && importSelectedIds.length === 0 && importNamesText.trim().length === 0)}
                 onClick={async () => {
                   setImportLoading(true);
                   setImportError(null);
                   try {
-                    const usernames =
+                    const usernamesFromText =
                       importMode === "SELECTED"
                         ? importNamesText
                             .split(/\r?\n/)
                             .map((s) => s.trim())
                             .filter(Boolean)
+                        : [];
+
+                    const usernamesFromChecked = importMode === "SELECTED" ? importSelectedIds.map((id) => importEmbyUsers.find((u) => u.id === id)?.name).filter(Boolean) : [];
+
+                    const usernames =
+                      importMode === "SELECTED"
+                        ? Array.from(new Set([...usernamesFromChecked, ...usernamesFromText].map((s) => String(s).trim()).filter(Boolean)))
                         : null;
 
                     const res = await fetch("/api/admin/users/import-from-emby", {
