@@ -80,7 +80,12 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
   const json = await req.json().catch(() => null);
   const parsed = PatchSchema.safeParse(json);
-  if (!parsed.success) return NextResponse.json({ error: "invalid_payload" }, { status: 400 });
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "invalid_payload", issues: parsed.error.issues },
+      { status: 400 }
+    );
+  }
 
   const data: any = {};
   if (parsed.data.email !== undefined) data.email = parsed.data.email;
