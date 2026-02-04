@@ -12,6 +12,17 @@ type Server = {
   lastHealthMsg: string | null;
 };
 
+type ModalState =
+  | { open: false }
+  | {
+      open: true;
+      id: string;
+      name: string;
+      baseUrl: string;
+      apiKey: string;
+      enabled: boolean;
+    };
+
 export function ServersClient() {
   const [servers, setServers] = useState<Server[]>([]);
   const [loading, setLoading] = useState(true);
@@ -20,6 +31,8 @@ export function ServersClient() {
   const [name, setName] = useState("");
   const [baseUrl, setBaseUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
+
+  const [modal, setModal] = useState<ModalState>({ open: false });
 
   const canSubmit = useMemo(() => !!name && !!baseUrl && apiKey.length >= 10, [name, baseUrl, apiKey]);
 
@@ -124,11 +137,143 @@ export function ServersClient() {
                 >
                   测试连接
                 </button>
+
+                <button
+                  className="border rounded px-3 py-2"
+                  onClick={() =>
+                    setModal({
+                      open: true,
+                      id: s.id,
+                      name: s.name,
+                      baseUrl: s.baseUrl,
+                      apiKey: "",
+                      enabled: s.enabled,
+                    })
+                  }
+                >
+                  编辑
+                </button>
+
+                <button
+                  className="border rounded px-3 py-2"
+                  onClick={async () => {
+                    const nextEnabled = !s.enabled;
+                    const res = await fetch(`/api/admin/emby-servers/${s.id}`, {
+                      method: "PATCH",
+                      headers: { "content-type": "application/json" },
+                      body: JSON.stringify({ enabled: nextEnabled }),
+                    });
+                    if (!res.ok) {
+                      alert(`更新失败: ${await res.text()}`);
+                      return;
+                    }
+                    await refresh();
+                  }}
+                >
+                  {s.enabled ? "禁用" : "启用"}
+                </button>
+
+                <button
+                  className="border rounded px-3 py-2 text-red-600"
+                  onClick={async () => {
+                    if (!confirm(`确定删除服务器：${s.name} ?`)) return;
+                    const res = await fetch(`/api/admin/emby-servers/${s.id}`, { method: "DELETE" });
+                    if (!res.ok) {
+                      alert(`删除失败: ${await res.text()}`);
+                      return;
+                    }
+                    await refresh();
+                  }}
+                >
+                  删除
+                </button>
               </div>
             </div>
           ))}
         </div>
       </section>
+
+      {modal.open ? (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg w-full max-w-lg p-4">
+            <div className="flex items-center justify-between">
+              <div className="font-semibold">编辑服务器</div>
+              <button className="text-sm underline" onClick={() => setModal({ open: false })}>
+                关闭
+              </button>
+            </div>
+
+            <div className="mt-3 grid grid-cols-1 gap-3">
+              <div>
+                <label className="text-sm">名称</label>
+                <input
+                  className="mt-1 w-full border rounded px-3 py-2"
+                  value={modal.name}
+                  onChange={(e) => setModal({ ...modal, name: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="text-sm">Base URL</label>
+                <input
+                  className="mt-1 w-full border rounded px-3 py-2"
+                  value={modal.baseUrl}
+                  onChange={(e) => setModal({ ...modal, baseUrl: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="text-sm">API Key（留空=不修改）</label>
+                <input
+                  className="mt-1 w-full border rounded px-3 py-2"
+                  value={modal.apiKey}
+                  onChange={(e) => setModal({ ...modal, apiKey: e.target.value })}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  id="enabled"
+                  type="checkbox"
+                  checked={modal.enabled}
+                  onChange={(e) => setModal({ ...modal, enabled: e.target.checked })}
+                />
+                <label htmlFor="enabled" className="text-sm">
+                  启用
+                </label>
+              </div>
+            </div>
+
+            <div className="mt-4 flex gap-2">
+              <button
+                className="bg-black text-white rounded px-3 py-2"
+                onClick={async () => {
+                  const payload: any = {
+                    name: modal.name,
+                    baseUrl: modal.baseUrl,
+                    enabled: modal.enabled,
+                  };
+                  if (modal.apiKey.trim()) payload.apiKey = modal.apiKey.trim();
+
+                  const res = await fetch(`/api/admin/emby-servers/${modal.id}`, {
+                    method: "PATCH",
+                    headers: { "content-type": "application/json" },
+                    body: JSON.stringify(payload),
+                  });
+                  if (!res.ok) {
+                    alert(`保存失败: ${await res.text()}`);
+                    return;
+                  }
+                  setModal({ open: false });
+                  await refresh();
+                }}
+              >
+                保存
+              </button>
+              <button className="border rounded px-3 py-2" onClick={() => setModal({ open: false })}>
+                取消
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
