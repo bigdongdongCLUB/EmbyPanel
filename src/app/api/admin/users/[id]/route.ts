@@ -19,7 +19,12 @@ const PatchSchema = z.object({
   balanceCents: z.number().int().min(0).optional(),
 
   changePassword: z.boolean().optional(),
-  newPassword: z.string().min(6).max(200).optional(),
+  // allow empty string when not changing password (frontend may send it)
+  newPassword: z
+    .string()
+    .transform((s) => s.trim())
+    .optional()
+    .refine((s) => s === undefined || s.length === 0 || s.length >= 6, "password_too_short"),
 
   subscription: z
     .object({

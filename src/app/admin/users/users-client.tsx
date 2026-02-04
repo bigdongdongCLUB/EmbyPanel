@@ -367,7 +367,7 @@ export function UsersClient() {
                     expiryReminderEnabled: edit.expiryReminderEnabled,
                     balanceCents: Math.round(balanceNum * 100),
                     changePassword: edit.changePassword,
-                    newPassword: edit.newPassword,
+                    ...(edit.changePassword ? { newPassword: edit.newPassword } : {}),
                   };
 
                   if (edit.embyServerId) {
