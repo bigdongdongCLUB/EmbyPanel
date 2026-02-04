@@ -56,6 +56,9 @@ export function UsersClient() {
 
   const [edit, setEdit] = useState<EditState>({ open: false });
 
+  const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const selectedIds = useMemo(() => Object.keys(selected).filter((id) => selected[id]), [selected]);
+
   const [createOpen, setCreateOpen] = useState(false);
   const [newUsername, setNewUsername] = useState("");
   const [newEmail, setNewEmail] = useState("");
@@ -74,6 +77,13 @@ export function UsersClient() {
       const json = await res.json().catch(() => null);
       if (!res.ok) throw new Error(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
       setRows(json.users ?? []);
+      // prune selection after refresh
+      setSelected((m) => {
+        const next: Record<string, boolean> = {};
+        const valid = new Set((json.users ?? []).map((u: any) => u.id));
+        for (const [k, v] of Object.entries(m)) if (v && valid.has(k)) next[k] = true;
+        return next;
+      });
     } catch (e: any) {
       setError(e?.message ?? "load_failed");
     } finally {
@@ -100,13 +110,97 @@ export function UsersClient() {
             查询
           </button>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           <button className="bg-black text-white rounded px-3 py-2" onClick={() => setCreateOpen(true)}>
             + 创建用户
           </button>
-          <button className="border rounded px-3 py-2" disabled title="后期做导入 Emby 用户">
-            导入用户
-          </button>
+
+          <details className="relative">
+            <summary className="list-none cursor-pointer select-none border rounded px-3 py-2">更多 ▾</summary>
+            <div className="absolute right-0 mt-2 w-56 bg-white border rounded shadow p-2 text-sm space-y-1 z-10">
+              <button
+                className="w-full text-left px-2 py-2 hover:bg-gray-50 rounded"
+                onClick={async () => {
+                  const serverId = prompt("从哪个 Emby 服务器导入？请输入 EmbyServerId（可在服务器管理页面列表中看到）");
+                  if (!serverId) return;
+                  const res = await fetch("/api/admin/users/import-from-emby", {
+                    method: "POST",
+                    headers: { "content-type": "application/json" },
+                    body: JSON.stringify({ embyServerId: serverId, missingOnly: true, skipAdmins: true }),
+                  });
+                  const json = await res.json().catch(() => null);
+                  if (!res.ok) {
+                    alert(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
+                    return;
+                  }
+                  alert(`导入完成：imported=${json.imported}, skipped=${json.skipped}`);
+                  await refresh();
+                }}
+              >
+                从 Emby 导入用户
+              </button>
+
+              <button
+                className="w-full text-left px-2 py-2 hover:bg-gray-50 rounded disabled:opacity-50"
+                disabled={!selectedIds.length}
+                onClick={async () => {
+                  const planId = prompt("批量更改订阅计划：请输入 PlanId（在订阅管理页面可看到）");
+                  if (!planId) return;
+                  const payCycle = prompt("付费周期：MONTHLY/QUARTERLY/HALF_YEARLY/YEARLY/TWO_YEARLY", "YEARLY") || "YEARLY";
+                  const startAt = prompt("开始日期(YYYY-MM-DD)", new Date().toISOString().slice(0, 10)) || new Date().toISOString().slice(0, 10);
+                  const endAt = prompt("结束日期(YYYY-MM-DD)", startAt) || startAt;
+
+                  for (const id of selectedIds) {
+                    await fetch(`/api/admin/users/${id}`, {
+                      method: "PATCH",
+                      headers: { "content-type": "application/json" },
+                      body: JSON.stringify({ subscription: { planId, payCycle, startAt: new Date(startAt + "T00:00:00.000Z").toISOString(), endAt: new Date(endAt + "T00:00:00.000Z").toISOString() } }),
+                    });
+                  }
+                  alert("批量更改订阅计划已提交（逐个更新）");
+                  await refresh();
+                }}
+              >
+                批量更改订阅计划
+              </button>
+
+              <button
+                className="w-full text-left px-2 py-2 hover:bg-gray-50 rounded disabled:opacity-50"
+                disabled={!selectedIds.length}
+                onClick={async () => {
+                  const addDaysStr = prompt("批量增加订阅时间：增加多少天？", "30");
+                  if (!addDaysStr) return;
+                  const addDays = Number(addDaysStr);
+                  if (!Number.isFinite(addDays) || addDays <= 0) {
+                    alert("天数不合法");
+                    return;
+                  }
+
+                  for (const id of selectedIds) {
+                    const dRes = await fetch(`/api/admin/users/${id}`, { cache: "no-store" });
+                    const dJson = await dRes.json().catch(() => null);
+                    if (!dRes.ok) continue;
+                    const sub = dJson?.user?.subscriptions?.[0];
+                    if (!sub?.endAt || !sub?.planId) continue;
+                    const end = new Date(sub.endAt);
+                    const nextEnd = new Date(end.getTime() + addDays * 24 * 60 * 60 * 1000);
+                    await fetch(`/api/admin/users/${id}`, {
+                      method: "PATCH",
+                      headers: { "content-type": "application/json" },
+                      body: JSON.stringify({ subscription: { planId: sub.planId, payCycle: sub.payCycle, startAt: sub.startAt, endAt: nextEnd.toISOString() } }),
+                    });
+                  }
+
+                  alert("批量增加订阅时间已提交（逐个更新）");
+                  await refresh();
+                }}
+              >
+                批量增加订阅时间
+              </button>
+            </div>
+          </details>
+
+          <div className="text-xs text-gray-500">已选 {selectedIds.length} 个</div>
         </div>
       </div>
 
@@ -117,6 +211,22 @@ export function UsersClient() {
         <table className="min-w-[1200px] w-full text-sm">
           <thead className="text-left text-gray-600 border-b">
             <tr>
+              <th className="py-2 px-3">
+                <input
+                  type="checkbox"
+                  checked={rows.length > 0 && selectedIds.length === rows.length}
+                  onChange={(e) => {
+                    const on = e.target.checked;
+                    if (!on) {
+                      setSelected({});
+                      return;
+                    }
+                    const next: Record<string, boolean> = {};
+                    for (const r of rows) next[r.id] = true;
+                    setSelected(next);
+                  }}
+                />
+              </th>
               <th className="py-2 px-3">用户</th>
               <th className="py-2 px-3">邮箱</th>
               <th className="py-2 px-3">管理员(面板)</th>
@@ -135,6 +245,13 @@ export function UsersClient() {
           <tbody>
             {rows.map((r) => (
               <tr key={r.id} className="border-b last:border-b-0">
+                <td className="py-2 px-3">
+                  <input
+                    type="checkbox"
+                    checked={!!selected[r.id]}
+                    onChange={(e) => setSelected((m) => ({ ...m, [r.id]: e.target.checked }))}
+                  />
+                </td>
                 <td className="py-2 px-3 font-mono">{r.username}</td>
                 <td className="py-2 px-3">{dash(r.email)}</td>
                 <td className="py-2 px-3">{r.role === "ADMIN" ? "是" : "否"}</td>
