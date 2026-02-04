@@ -1,4 +1,5 @@
 import { normalizeBaseUrl } from "@/lib/emby";
+import { embyClonePolicyFromTemplate } from "@/lib/emby-user-policy";
 
 async function tryRequest(reqs: Array<() => Promise<Response>>) {
   let last: any = null;
@@ -102,6 +103,14 @@ export async function embySetUserDisabled(baseUrl: string, apiKey: string, embyU
   }
 
   return { ok: true as const, status: res.status };
+}
+
+export async function embyApplyTemplatePolicy(baseUrl: string, apiKey: string, targetEmbyUserId: string, templateEmbyUserId: string) {
+  const res = await embyClonePolicyFromTemplate(baseUrl, apiKey, templateEmbyUserId, targetEmbyUserId);
+  if (!(res as any)?.ok) {
+    return { ok: false as const, error: "template_policy_apply_failed", detail: res };
+  }
+  return { ok: true as const };
 }
 
 export async function embyDeleteUser(baseUrl: string, apiKey: string, embyUserId: string) {

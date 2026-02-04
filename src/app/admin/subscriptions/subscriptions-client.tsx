@@ -44,17 +44,20 @@ type EditState =
       servers: Array<{ embyServerId: string; templateEmbyUserId: string }>; // configs
     };
 
-function yuanToCents(v: string): number | null {
+function yuanIntToCents(v: string): number | null {
   const s = v.trim();
   if (!s) return null;
+  // 价格要求：人民币元（不设小数）
+  if (!/^[0-9]+$/.test(s)) return NaN;
   const n = Number(s);
   if (!Number.isFinite(n) || n < 0) return NaN;
-  return Math.round(n * 100);
+  return n * 100;
 }
 
-function centsToYuan(v: any): string {
+function centsToYuanInt(v: any): string {
   if (typeof v !== "number") return "";
-  return (v / 100).toFixed(2);
+  if (!Number.isFinite(v)) return "";
+  return String(Math.round(v / 100));
 }
 
 export function SubscriptionsClient() {
@@ -137,13 +140,13 @@ export function SubscriptionsClient() {
       enabled: p.enabled,
       visible: p.visible,
       serverAssignStrategy: p.serverAssignStrategy,
-      trialPrice: centsToYuan(pricing?.trial?.priceCents),
+      trialPrice: centsToYuanInt(pricing?.trial?.priceCents),
       trialDays: pricing?.trial?.days ? String(pricing.trial.days) : "",
-      monthlyPrice: centsToYuan(pricing?.monthly?.priceCents),
-      quarterlyPrice: centsToYuan(pricing?.quarterly?.priceCents),
-      halfYearlyPrice: centsToYuan(pricing?.halfYearly?.priceCents),
-      yearlyPrice: centsToYuan(pricing?.yearly?.priceCents),
-      twoYearlyPrice: centsToYuan(pricing?.twoYearly?.priceCents),
+      monthlyPrice: centsToYuanInt(pricing?.monthly?.priceCents),
+      quarterlyPrice: centsToYuanInt(pricing?.quarterly?.priceCents),
+      halfYearlyPrice: centsToYuanInt(pricing?.halfYearly?.priceCents),
+      yearlyPrice: centsToYuanInt(pricing?.yearly?.priceCents),
+      twoYearlyPrice: centsToYuanInt(pricing?.twoYearly?.priceCents),
       servers: (p.serverConfigs ?? []).map((c) => ({ embyServerId: c.embyServerId, templateEmbyUserId: c.templateEmbyUserId })),
     });
 
@@ -159,20 +162,29 @@ export function SubscriptionsClient() {
     if (!edit.servers.length) return false;
     if (edit.servers.some((s) => !s.embyServerId || !s.templateEmbyUserId)) return false;
 
-    const centsFields = [edit.trialPrice, edit.monthlyPrice, edit.quarterlyPrice, edit.halfYearlyPrice, edit.yearlyPrice, edit.twoYearlyPrice].filter(
-      (v) => v.trim().length > 0,
-    );
-    if (!centsFields.length) return false; // 至少设置一个价格
+    const hasAnyPrice = [edit.monthlyPrice, edit.quarterlyPrice, edit.halfYearlyPrice, edit.yearlyPrice, edit.twoYearlyPrice].some((v) => v.trim().length > 0);
 
-    for (const f of centsFields) {
-      const c = yuanToCents(f);
+    // 试用必须同时填：价格 + 天数 才启用
+    const trialPriceFilled = edit.trialPrice.trim().length > 0;
+    const trialDaysFilled = edit.trialDays.trim().length > 0;
+    const trialEnabled = trialPriceFilled || trialDaysFilled;
+    if (trialEnabled && !(trialPriceFilled && trialDaysFilled)) return false;
+
+    // 至少设置一个计费周期价格（试用不算）
+    if (!hasAnyPrice) return false;
+
+    for (const f of [edit.monthlyPrice, edit.quarterlyPrice, edit.halfYearlyPrice, edit.yearlyPrice, edit.twoYearlyPrice, edit.trialPrice]) {
+      const c = yuanIntToCents(f);
       if (c === null) continue;
       if (Number.isNaN(c)) return false;
     }
-    if (edit.trialDays.trim()) {
+
+    if (trialDaysFilled) {
+      if (!/^[0-9]+$/.test(edit.trialDays.trim())) return false;
       const d = Number(edit.trialDays.trim());
-      if (!Number.isFinite(d) || d < 0) return false;
+      if (!Number.isFinite(d) || d <= 0) return false;
     }
+
     return true;
   }, [edit]);
 
@@ -182,19 +194,17 @@ export function SubscriptionsClient() {
     try {
       const pricing: any = {};
 
-      const trialC = yuanToCents(edit.trialPrice);
+      const trialC = yuanIntToCents(edit.trialPrice);
       const trialD = edit.trialDays.trim() ? Number(edit.trialDays.trim()) : null;
-      if (trialC !== null || trialD !== null) {
-        pricing.trial = {};
-        if (trialC !== null) {
-          if (Number.isNaN(trialC)) throw new Error("trial_price_invalid");
-          pricing.trial.priceCents = trialC;
-        }
-        if (trialD !== null) pricing.trial.days = trialD;
+      const trialEnabled = edit.trialPrice.trim() || edit.trialDays.trim();
+      if (trialEnabled) {
+        if (trialC === null || Number.isNaN(trialC)) throw new Error("trial_price_invalid");
+        if (trialD === null || !Number.isFinite(trialD) || trialD <= 0) throw new Error("trial_days_invalid");
+        pricing.trial = { priceCents: trialC, days: trialD };
       }
 
       const setPrice = (key: string, v: string) => {
-        const c = yuanToCents(v);
+        const c = yuanIntToCents(v);
         if (c === null) return;
         if (Number.isNaN(c)) throw new Error(`${key}_price_invalid`);
         pricing[key] = { priceCents: c };
@@ -346,11 +356,11 @@ export function SubscriptionsClient() {
             </section>
 
             <section className="space-y-3">
-              <div className="font-medium">订阅价格设置（元）</div>
+              <div className="font-medium">订阅价格设置（元，整数）</div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <label className="text-sm">试用价格（可选）</label>
-                  <input className="mt-1 w-full border rounded px-3 py-2" value={edit.trialPrice} onChange={(e) => setEdit({ ...edit, trialPrice: e.target.value })} placeholder="例如 0 或 9.9" />
+                  <input className="mt-1 w-full border rounded px-3 py-2" value={edit.trialPrice} onChange={(e) => setEdit({ ...edit, trialPrice: e.target.value })} placeholder="例如 0 或 10" inputMode="numeric" />
                 </div>
                 <div>
                   <label className="text-sm">试用天数（可选）</label>
