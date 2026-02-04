@@ -29,7 +29,12 @@ export default async function AdminHome() {
         </div>
         <div>
           <Link className="underline" href="/admin/users">
-            用户管理
+            用户管理（Emby 用户）
+          </Link>
+        </div>
+        <div>
+          <Link className="underline" href="/admin/panel-users">
+            面板账号
           </Link>
         </div>
       </div>
