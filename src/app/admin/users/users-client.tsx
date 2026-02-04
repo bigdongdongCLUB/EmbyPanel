@@ -35,11 +35,12 @@ type EditState =
       expiryReminderEnabled: boolean;
       enabled: boolean;
       // subscription
-      embyServerId: string;
-      payCycle: "MONTHLY" | "QUARTERLY" | "YEARLY";
+      planId: string;
+      payCycle: "TRIAL" | "MONTHLY" | "QUARTERLY" | "HALF_YEARLY" | "YEARLY" | "TWO_YEARLY";
       startAt: string;
       endAt: string;
       servers: Array<{ id: string; name: string }>;
+      plans: Array<{ id: string; name: string }>;
     };
 
 function dash(v: any) {
@@ -163,11 +164,12 @@ export function UsersClient() {
                         balance: String(r.balance ?? 0),
                         expiryReminderEnabled: !!r.expiryReminderEnabled,
                         enabled: r.enabled,
-                        embyServerId: "",
+                        planId: "",
                         payCycle: "MONTHLY",
                         startAt: new Date().toISOString().slice(0, 10),
                         endAt: new Date().toISOString().slice(0, 10),
                         servers: [],
+                        plans: [],
                       });
                       try {
                         const res = await fetch(`/api/admin/users/${r.id}`, { cache: "no-store" });
@@ -176,7 +178,6 @@ export function UsersClient() {
 
                         const u = json.user;
                         const sub = u.subscriptions?.[0] ?? null;
-                        const serverId = (sub?.servers ?? [])[0]?.embyServerId ?? "";
 
                         setEdit({
                           open: true,
@@ -191,11 +192,12 @@ export function UsersClient() {
                           balance: String((u.balanceCents ?? 0) / 100),
                           expiryReminderEnabled: !!u.expiryReminderEnabled,
                           enabled: !!u.enabled,
-                          embyServerId: serverId,
+                          planId: sub?.planId ?? "",
                           payCycle: (sub?.payCycle ?? "MONTHLY") as any,
                           startAt: sub?.startAt ? String(sub.startAt).slice(0, 10) : new Date().toISOString().slice(0, 10),
                           endAt: sub?.endAt ? String(sub.endAt).slice(0, 10) : new Date().toISOString().slice(0, 10),
                           servers: json.servers ?? [],
+                          plans: (json.plans ?? []).map((p: any) => ({ id: p.id, name: p.name })),
                         });
                       } catch (e: any) {
                         setEdit((prev: any) => ({ ...prev, loading: false, error: e?.message ?? "load_failed" }));
@@ -295,16 +297,16 @@ export function UsersClient() {
                 <div className="font-medium">订阅信息</div>
 
                 <div>
-                  <label className="text-sm">订阅计划（选择 Emby 服务器）</label>
+                  <label className="text-sm">订阅计划</label>
                   <select
                     className="mt-1 w-full border rounded px-3 py-2"
-                    value={edit.embyServerId}
-                    onChange={(e) => setEdit({ ...edit, embyServerId: e.target.value })}
+                    value={edit.planId}
+                    onChange={(e) => setEdit({ ...edit, planId: e.target.value })}
                   >
                     <option value="">-</option>
-                    {edit.servers.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
+                    {edit.plans.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
                       </option>
                     ))}
                   </select>
@@ -316,12 +318,14 @@ export function UsersClient() {
                   <select
                     className="mt-1 w-full border rounded px-3 py-2"
                     value={edit.payCycle}
-                    disabled={!edit.embyServerId}
+                    disabled={!edit.planId}
                     onChange={(e) => setEdit({ ...edit, payCycle: e.target.value as any })}
                   >
                     <option value="MONTHLY">月付</option>
                     <option value="QUARTERLY">季付</option>
+                    <option value="HALF_YEARLY">半年付</option>
                     <option value="YEARLY">年付</option>
+                    <option value="TWO_YEARLY">两年付</option>
                   </select>
                 </div>
 
@@ -331,7 +335,7 @@ export function UsersClient() {
                     className="mt-1 w-full border rounded px-3 py-2"
                     type="date"
                     value={edit.startAt}
-                    disabled={!edit.embyServerId}
+                    disabled={!edit.planId}
                     onChange={(e) => setEdit({ ...edit, startAt: e.target.value })}
                   />
                 </div>
@@ -342,7 +346,7 @@ export function UsersClient() {
                     className="mt-1 w-full border rounded px-3 py-2"
                     type="date"
                     value={edit.endAt}
-                    disabled={!edit.embyServerId}
+                    disabled={!edit.planId}
                     onChange={(e) => setEdit({ ...edit, endAt: e.target.value })}
                   />
                 </div>
@@ -370,9 +374,9 @@ export function UsersClient() {
                     ...(edit.changePassword ? { newPassword: edit.newPassword } : {}),
                   };
 
-                  if (edit.embyServerId) {
+                  if (edit.planId) {
                     payload.subscription = {
-                      embyServerId: edit.embyServerId,
+                      planId: edit.planId,
                       payCycle: edit.payCycle,
                       startAt: new Date(edit.startAt + "T00:00:00.000Z").toISOString(),
                       endAt: new Date(edit.endAt + "T00:00:00.000Z").toISOString(),

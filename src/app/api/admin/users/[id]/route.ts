@@ -28,8 +28,8 @@ const PatchSchema = z.object({
 
   subscription: z
     .object({
-      embyServerId: z.string().min(1),
-      payCycle: z.enum(["MONTHLY", "QUARTERLY", "YEARLY"]).nullable().optional(),
+      planId: z.string().min(1),
+      payCycle: z.enum(["TRIAL", "MONTHLY", "QUARTERLY", "HALF_YEARLY", "YEARLY", "TWO_YEARLY"]).nullable().optional(),
       startAt: z.string().datetime(),
       endAt: z.string().datetime(),
     })
@@ -72,9 +72,12 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
 
   if (!user) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
-  const servers = await prisma.embyServer.findMany({ where: { enabled: true }, orderBy: { createdAt: "desc" }, select: { id: true, name: true } });
+  const [servers, plans] = await Promise.all([
+    prisma.embyServer.findMany({ where: { enabled: true }, orderBy: { createdAt: "desc" }, select: { id: true, name: true } }),
+    prisma.plan.findMany({ where: { enabled: true }, orderBy: { createdAt: "desc" }, select: { id: true, name: true, visible: true } }),
+  ]);
 
-  return NextResponse.json({ ok: true, user, servers });
+  return NextResponse.json({ ok: true, user, servers, plans });
 }
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -132,7 +135,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         const sub = await tx.subscription.create({
           data: {
             userId: id,
-            planId: null,
+            planId: subscription.planId,
             status: "ACTIVE",
             payCycle: subscription.payCycle ?? null,
             startAt: new Date(subscription.startAt),
@@ -140,16 +143,27 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
           },
         });
 
-        await tx.subscriptionServer.createMany({
-          data: [{ subscriptionId: sub.id, embyServerId: subscription.embyServerId }],
-          skipDuplicates: true,
-        });
+        // servers will be decided after commit (by plan strategy) and then persisted.
+        // keep empty here.
       }
     }
   });
 
   // Provision/sync to Emby after commit (best-effort)
-  const nextServerIds = new Set(subscription?.embyServerId ? [subscription.embyServerId] : []);
+  // Decide next servers by plan.
+  let nextServers: Array<{ embyServerId: string; templateEmbyUserId: string }> = [];
+  if (subscription && subscription.planId) {
+    try {
+      const mod = await import("@/lib/plan-assign");
+      const picked = await mod.pickServerForPlan(subscription.planId);
+      nextServers = picked.servers;
+    } catch (e) {
+      // best-effort: if pick fails, keep nextServers empty (will result in only cancel/disable)
+      nextServers = [];
+    }
+  }
+
+  const nextServerIds = new Set(nextServers.map((x) => x.embyServerId));
   const removedServerIds = [...prevServerIds].filter((sid) => !nextServerIds.has(sid));
 
   // 1) Disable on removed servers (unassign)
@@ -183,9 +197,9 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     }
   }
 
-  // 3) Provision to newly assigned servers
-  if (subscription && subscription.embyServerId) {
-    const [user, servers] = await Promise.all([
+  // 3) Provision to newly assigned servers (by plan)
+  if (subscription && subscription.planId && nextServers.length) {
+    const [user, servers, serverConfigs] = await Promise.all([
       prisma.user.findUnique({
         where: { id },
         select: {
@@ -197,7 +211,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         },
       }),
       prisma.embyServer.findMany({
-        where: { id: { in: [subscription.embyServerId] } },
+        where: { id: { in: nextServers.map((x) => x.embyServerId) } },
         select: {
           id: true,
           name: true,
@@ -208,13 +222,32 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
           apiKeyTag: true,
         },
       }),
+      prisma.planServerConfig.findMany({
+        where: { planId: subscription.planId },
+        select: { embyServerId: true, templateEmbyUserId: true },
+      }),
     ]);
+
+    const templateByServerId = new Map(serverConfigs.map((c) => [c.embyServerId, c.templateEmbyUserId] as const));
 
     if (user) {
       const pw = newPlainPassword ?? getSyncPassword(user);
       if (!pw) {
         return NextResponse.json({ ok: true, warn: "missing_sync_password" });
       }
+
+      // persist subscription servers mapping
+      const activeSub = await prisma.subscription.findFirst({ where: { userId: id, status: "ACTIVE" }, orderBy: { endAt: "desc" }, select: { id: true } });
+      if (activeSub) {
+        await prisma.subscriptionServer.deleteMany({ where: { subscriptionId: activeSub.id } });
+        await prisma.subscriptionServer.createMany({
+          data: nextServers.map((x) => ({ subscriptionId: activeSub.id, embyServerId: x.embyServerId })),
+          skipDuplicates: true,
+        });
+      }
+
+      // provision
+      const { embyApplyTemplatePolicy } = await import("@/lib/emby-provision");
 
       for (const s of servers) {
         const apiKey = getEmbyApiKeyForServer(s);
@@ -234,8 +267,15 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
         if (embyUserId) {
           await embySetUserPassword(s.baseUrl, apiKey, embyUserId, pw);
+
+          const templateId = templateByServerId.get(s.id);
+          if (templateId) {
+            await embyApplyTemplatePolicy(s.baseUrl, apiKey, embyUserId, templateId);
+          }
+
           // ensure enabled on assignment
           await embySetUserDisabled(s.baseUrl, apiKey, embyUserId, false);
+
           await prisma.embyUserLink.upsert({
             where: { userId_embyServerId: { userId: user.id, embyServerId: s.id } },
             update: { embyUserId: embyUserId },
