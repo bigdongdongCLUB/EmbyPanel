@@ -21,7 +21,7 @@ export default async function AdminUsersPage() {
           </Link>
         </div>
       </div>
-      <p className="mt-2 text-gray-600">这里列出各 Emby 服务器的现存用户（统一管理）。无数据则以 - 表示。</p>
+      <p className="mt-2 text-gray-600">统一管理面板用户与其绑定的 Emby 用户。无数据则以 - 表示。</p>
 
       <div className="mt-6">
         <UsersClient />

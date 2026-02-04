@@ -24,7 +24,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     );
   }
 
-  const users = usersRes.users
+  const embyUsers = usersRes.users
     .map((u) => ({
       id: u.Id,
       name: u.Name,
@@ -36,6 +36,39 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
       lastActivityDate: u.LastActivityDate ?? null,
     }))
     .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+
+  const links = await prisma.embyUserLink.findMany({
+    where: { embyServerId: server.id },
+    select: {
+      embyUserId: true,
+      disabled: true,
+      user: { select: { id: true, username: true, email: true } },
+    },
+  });
+
+  const linkByEmbyUserId = new Map(links.map((l) => [l.embyUserId, l] as const));
+
+  const users = embyUsers.map((u) => {
+    const link = linkByEmbyUserId.get(u.id);
+    if (!link) {
+      return {
+        ...u,
+        panel: null,
+        anomalyStatus: "仅Emby",
+      };
+    }
+
+    return {
+      ...u,
+      panel: {
+        id: link.user.id,
+        username: link.user.username,
+        email: link.user.email,
+        linkDisabled: link.disabled,
+      },
+      anomalyStatus: null,
+    };
+  });
 
   return NextResponse.json({ ok: true, server: { id: server.id, name: server.name }, users });
 }

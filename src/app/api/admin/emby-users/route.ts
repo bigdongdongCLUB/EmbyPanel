@@ -51,6 +51,12 @@ export async function GET(req: Request) {
     for (const u of usersRes.users) {
       const name = u.Name ?? "";
       if (q && !name.toLowerCase().includes(q)) continue;
+      // Panel user mapping (only show linked users by default in UI)
+      const link = await prisma.embyUserLink.findFirst({
+        where: { embyServerId: s.id, embyUserId: u.Id },
+        select: { userId: true },
+      });
+
       results.push({
         serverId: s.id,
         serverName: s.name,
@@ -60,6 +66,7 @@ export async function GET(req: Request) {
         isAdmin: !!u.Policy?.IsAdministrator,
         lastLoginDate: safeIso(u.LastLoginDate),
         lastActivityDate: safeIso(u.LastActivityDate),
+        panelUserId: link?.userId ?? null,
       });
     }
   }

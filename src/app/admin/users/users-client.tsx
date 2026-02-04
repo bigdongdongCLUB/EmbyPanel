@@ -24,6 +24,7 @@ export function UsersClient() {
   const [error, setError] = useState<string | null>(null);
   const [rows, setRows] = useState<Row[]>([]);
   const [errors, setErrors] = useState<any[]>([]);
+  const [linkedOnly, setLinkedOnly] = useState(true);
 
   const hint = useMemo(() => (q.trim() ? `搜索: ${q.trim()}` : ""), [q]);
 
@@ -65,7 +66,11 @@ export function UsersClient() {
           </button>
           <span className="text-xs text-gray-500">{hint}</span>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-3 items-center">
+          <label className="text-sm flex items-center gap-2">
+            <input type="checkbox" checked={linkedOnly} onChange={(e) => setLinkedOnly(e.target.checked)} />
+            仅显示已入库用户
+          </label>
           <button className="border rounded px-3 py-2" onClick={refresh}>
             刷新
           </button>
@@ -93,7 +98,9 @@ export function UsersClient() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
+            {rows
+              .filter((r: any) => (linkedOnly ? !!(r as any).panelUserId : true))
+              .map((r) => (
               <tr key={`${r.serverId}:${r.embyUserId}`} className="border-b last:border-b-0">
                 <td className="py-2 px-3 font-mono">{r.username}</td>
                 <td className="py-2 px-3">{r.serverName}</td>

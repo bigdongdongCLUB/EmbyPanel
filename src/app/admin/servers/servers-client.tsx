@@ -313,19 +313,21 @@ export function ServersClient() {
                   <thead className="text-left text-gray-600">
                     <tr>
                       <th className="py-2">用户名</th>
-                      <th className="py-2">状态</th>
-                      <th className="py-2">管理员</th>
-                      <th className="py-2">最后登录</th>
+                      <th className="py-2">异常状态</th>
+                      <th className="py-2">Emby用户状态</th>
+                      <th className="py-2">面板账号</th>
+                      <th className="py-2">邮箱</th>
                       <th className="py-2">最后活动</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {usersModal.users.map((u) => (
+                    {usersModal.users.map((u: any) => (
                       <tr key={u.id} className="border-t">
                         <td className="py-2 font-mono">{u.name}</td>
-                        <td className="py-2">{u.policy.isDisabled ? "禁用" : "启用"}</td>
-                        <td className="py-2">{u.policy.isAdministrator ? "是" : "否"}</td>
-                        <td className="py-2 font-mono text-xs">{u.lastLoginDate ?? "-"}</td>
+                        <td className="py-2">{u.anomalyStatus ?? "-"}</td>
+                        <td className="py-2">{u.policy.isDisabled ? "Emby禁用" : "Emby正常"}</td>
+                        <td className="py-2 font-mono">{u.panel?.username ?? "-"}</td>
+                        <td className="py-2">{u.panel?.email ?? "-"}</td>
                         <td className="py-2 font-mono text-xs">{u.lastActivityDate ?? "-"}</td>
                       </tr>
                     ))}
