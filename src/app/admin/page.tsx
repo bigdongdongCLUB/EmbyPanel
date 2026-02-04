@@ -27,6 +27,11 @@ export default async function AdminHome() {
             Emby 服务器管理
           </Link>
         </div>
+        <div>
+          <Link className="underline" href="/admin/users">
+            用户管理
+          </Link>
+        </div>
       </div>
     </main>
   );
