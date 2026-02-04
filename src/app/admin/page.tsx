@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
+import { AdminHeader } from "./admin-header";
 
 export default async function AdminHome() {
   const session = await getServerSession(authOptions);
@@ -17,9 +18,12 @@ export default async function AdminHome() {
   }
 
   return (
-    <main className="p-6 max-w-4xl mx-auto">
-      <h1 className="text-xl font-semibold">管理后台</h1>
-      <p className="mt-2 text-gray-600">接下来会在这里做：服务器/用户/订阅/异常管理。</p>
+    <main className="p-6 max-w-4xl mx-auto space-y-3">
+      <AdminHeader />
+      <div>
+        <h1 className="text-xl font-semibold">管理后台</h1>
+        <p className="mt-2 text-gray-600">接下来会在这里做：服务器/用户/订阅/异常管理。</p>
+      </div>
 
       <div className="mt-6 space-y-2">
         <div>
