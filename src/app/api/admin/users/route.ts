@@ -14,18 +14,32 @@ export async function GET(req: Request) {
 
   const url = new URL(req.url);
   const q = (url.searchParams.get("q") ?? "").trim();
+  const planId = (url.searchParams.get("planId") ?? "").trim();
+  const subStatus = (url.searchParams.get("subStatus") ?? "").trim(); // valid|expired|none
 
   const now = new Date();
 
   const users = await prisma.user.findMany({
-    where: q
-      ? {
-          OR: [
-            { username: { contains: q, mode: "insensitive" } },
-            { email: { contains: q, mode: "insensitive" } },
-          ],
-        }
-      : undefined,
+    where: {
+      ...(q
+        ? {
+            OR: [
+              { username: { contains: q, mode: "insensitive" } },
+              { email: { contains: q, mode: "insensitive" } },
+            ],
+          }
+        : {}),
+      ...(planId
+        ? {
+            subscriptions: {
+              some: {
+                status: "ACTIVE",
+                planId,
+              },
+            },
+          }
+        : {}),
+    },
     orderBy: { createdAt: "desc" },
     select: {
       id: true,
@@ -53,6 +67,8 @@ export async function GET(req: Request) {
           status: true,
           startAt: true,
           endAt: true,
+          planId: true,
+          payCycle: true,
           plan: { select: { id: true, name: true, enabled: true, visible: true } },
           servers: { select: { embyServer: { select: { id: true, name: true } } } },
         },
@@ -60,30 +76,41 @@ export async function GET(req: Request) {
     },
   });
 
-  const mapped = users.map((u) => {
-    const sub = u.subscriptions[0];
-    const subValid = sub && sub.endAt > now;
+  const mapped = users
+    .map((u) => {
+      const sub = u.subscriptions[0] as any;
+      const subValid = sub && sub.endAt > now;
 
-    const linkedServers = (u.embyLinks ?? []).map((l) => l.embyServer.name);
+      const linkedServers = (u.embyLinks ?? []).map((l) => l.embyServer.name);
 
-    return {
-      id: u.id,
-      username: u.username,
-      email: u.email,
-      // panel admin, not emby admin
-      role: u.role,
-      enabled: u.enabled,
-      expiryReminderEnabled: u.expiryReminderEnabled,
-      balance: u.balanceCents / 100,
-      subscriptionStatus: sub ? (subValid ? "有效" : "已过期") : null,
-      planName: sub?.plan?.name ?? null,
-      payCycle: null,
-      remark: null,
-      servers: linkedServers,
-      endAt: sub?.endAt?.toISOString() ?? null,
-      createdAt: u.createdAt.toISOString(),
-    };
-  });
+      const statusLabel = sub ? (subValid ? "有效" : "已过期") : null;
+
+      return {
+        id: u.id,
+        username: u.username,
+        email: u.email,
+        // panel admin, not emby admin
+        role: u.role,
+        enabled: u.enabled,
+        expiryReminderEnabled: u.expiryReminderEnabled,
+        balance: u.balanceCents / 100,
+        subscriptionStatus: statusLabel,
+        planId: sub?.planId ?? null,
+        planName: sub?.plan?.name ?? null,
+        payCycle: sub?.payCycle ?? null,
+        remark: null,
+        servers: linkedServers,
+        endAt: sub?.endAt?.toISOString() ?? null,
+        createdAt: u.createdAt.toISOString(),
+      };
+    })
+    .filter((row) => {
+      if (!subStatus) return true;
+      if (subStatus === "valid") return row.subscriptionStatus === "有效";
+      if (subStatus === "expired") return row.subscriptionStatus === "已过期";
+      if (subStatus === "none") return row.subscriptionStatus === null;
+      return true;
+    });
 
   return NextResponse.json({ ok: true, users: mapped });
 }

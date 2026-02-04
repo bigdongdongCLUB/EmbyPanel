@@ -14,6 +14,7 @@ type UserRow = {
   expiryReminderEnabled?: boolean;
   balance: number | null;
   subscriptionStatus: string | null;
+  planId?: string | null;
   planName: string | null;
   payCycle: string | null;
   remark: string | null;
@@ -53,6 +54,10 @@ function dash(v: any) {
 
 export function UsersClient() {
   const [q, setQ] = useState("");
+  const [filterPlanId, setFilterPlanId] = useState("");
+  const [filterSubStatus, setFilterSubStatus] = useState<"" | "valid" | "expired" | "none">("");
+  const [filterPlans, setFilterPlans] = useState<PlanOption[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [rows, setRows] = useState<UserRow[]>([]);
@@ -94,6 +99,9 @@ export function UsersClient() {
     try {
       const url = new URL(window.location.origin + "/api/admin/users");
       if (q.trim()) url.searchParams.set("q", q.trim());
+      if (filterPlanId) url.searchParams.set("planId", filterPlanId);
+      if (filterSubStatus) url.searchParams.set("subStatus", filterSubStatus);
+
       const res = await fetch(url.toString(), { cache: "no-store" });
       const json = await res.json().catch(() => null);
       if (!res.ok) throw new Error(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
@@ -115,6 +123,17 @@ export function UsersClient() {
   useEffect(() => {
     refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    // load plan options for filter
+    fetch("/api/admin/plans", { cache: "no-store" })
+      .then((r) => r.json().then((j) => ({ ok: r.ok, j, status: r.status })))
+      .then(({ ok, j, status }) => {
+        if (!ok) throw new Error(j?.error ? JSON.stringify(j) : `HTTP ${status}`);
+        setFilterPlans((j?.plans ?? []).map((p: any) => ({ id: p.id, name: p.name })));
+      })
+      .catch(() => null);
   }, []);
 
   async function openImportModal() {
@@ -177,13 +196,30 @@ export function UsersClient() {
   return (
     <div className="space-y-4">
       <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
-        <div className="flex gap-2 items-center">
+        <div className="flex flex-wrap gap-2 items-center">
           <input
-            className="w-full md:w-80 border rounded px-3 py-2"
+            className="w-full md:w-72 border rounded px-3 py-2"
             placeholder="搜索用户/邮箱"
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
+
+          <select className="border rounded px-3 py-2" value={filterPlanId} onChange={(e) => setFilterPlanId(e.target.value)}>
+            <option value="">选择订阅计划</option>
+            {filterPlans.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+
+          <select className="border rounded px-3 py-2" value={filterSubStatus} onChange={(e) => setFilterSubStatus(e.target.value as any)}>
+            <option value="">选择订阅状态</option>
+            <option value="valid">有效</option>
+            <option value="expired">已过期</option>
+            <option value="none">无订阅</option>
+          </select>
+
           <button className="border rounded px-3 py-2" onClick={refresh}>
             查询
           </button>
@@ -262,6 +298,37 @@ export function UsersClient() {
                 }}
               >
                 批量增加订阅时间
+              </button>
+
+              <button
+                className="w-full text-left px-2 py-2 hover:bg-red-50 text-red-600 rounded disabled:opacity-50"
+                disabled={!selectedIds.length}
+                onClick={async () => {
+                  if (!confirm(`确定批量删除所选用户？\n将同步删除 Emby 服务器对应用户。\n数量：${selectedIds.length}`)) return;
+
+                  const res = await fetch("/api/admin/users/bulk-delete", {
+                    method: "POST",
+                    headers: { "content-type": "application/json" },
+                    body: JSON.stringify({ ids: selectedIds }),
+                  });
+                  const json = await res.json().catch(() => null);
+                  if (!res.ok) {
+                    alert(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
+                    return;
+                  }
+
+                  const failed = (json.results ?? []).filter((r: any) => !r.ok);
+                  if (failed.length) {
+                    alert(`批量删除完成，但有失败：${failed.length} 个。\n` + failed.map((x: any) => `${x.id}: ${x.status ?? ""} ${x.error ?? ""}`).join("\n"));
+                  } else {
+                    alert("批量删除成功");
+                  }
+
+                  setSelected({});
+                  await refresh();
+                }}
+              >
+                批量删除
               </button>
             </div>
           </details>
