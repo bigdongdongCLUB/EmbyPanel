@@ -42,3 +42,6 @@ next-env.d.ts
 
 # local docker data
 /data
+
+# local debug artifacts
+.tmp_emby_policy_debug/
