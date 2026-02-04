@@ -77,16 +77,14 @@ export async function embyClonePolicyFromTemplate(baseUrl: string, apiKey: strin
   if (!tpl.ok) return tpl;
   if (!cur.ok) return cur;
 
-  // Some Emby versions are picky: POST /Policy expects a full-ish policy object.
-  // Safer approach: take current policy as base, then overlay template fields.
+  // Use template policy as the source of truth.
+  // Keep a couple of fields panel-controlled.
   const templatePolicy = typeof tpl.policy === "object" && tpl.policy ? (tpl.policy as any) : {};
   const currentPolicy = typeof cur.policy === "object" && cur.policy ? (cur.policy as any) : {};
 
-  const merged: any = { ...currentPolicy, ...templatePolicy };
+  const next: any = { ...templatePolicy };
+  next.IsAdministrator = currentPolicy.IsAdministrator;
+  next.IsDisabled = currentPolicy.IsDisabled;
 
-  // Do not copy these bits from template; keep panel-controlled.
-  merged.IsAdministrator = currentPolicy.IsAdministrator;
-  merged.IsDisabled = currentPolicy.IsDisabled;
-
-  return embySetUserPolicy(baseUrl, apiKey, targetEmbyUserId, merged);
+  return embySetUserPolicy(baseUrl, apiKey, targetEmbyUserId, next);
 }
