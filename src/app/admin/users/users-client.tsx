@@ -72,7 +72,9 @@ export function UsersClient() {
   const [importServerId, setImportServerId] = useState("");
   const [importDefaultPassword, setImportDefaultPassword] = useState("");
   const [importPlanId, setImportPlanId] = useState("");
-  const [importPayCycle, setImportPayCycle] = useState<"MONTHLY" | "QUARTERLY" | "HALF_YEARLY" | "YEARLY" | "TWO_YEARLY">("YEARLY");
+  const [importPayCycle, setImportPayCycle] = useState<"" | "MONTHLY" | "QUARTERLY" | "HALF_YEARLY" | "YEARLY" | "TWO_YEARLY">("");
+  const [importStartAt, setImportStartAt] = useState("");
+  const [importEndAt, setImportEndAt] = useState("");
   const [importMode, setImportMode] = useState<"ALL" | "SELECTED">("ALL");
   const [importNamesText, setImportNamesText] = useState("");
   const [importEmbyUsers, setImportEmbyUsers] = useState<Array<{ id: string; name: string }>>([]);
@@ -134,6 +136,10 @@ export function UsersClient() {
 
       setImportServers((sJson.servers ?? []).filter((x: any) => x.enabled));
       setImportPlans((pJson.plans ?? []).filter((x: any) => x.enabled).map((x: any) => ({ id: x.id, name: x.name })));
+
+      const today = new Date().toISOString().slice(0, 10);
+      if (!importStartAt) setImportStartAt(today);
+      if (!importEndAt) setImportEndAt(today);
 
       if (!importServerId && (sJson.servers ?? []).length) setImportServerId((sJson.servers ?? [])[0]?.id ?? "");
     } catch (e: any) {
@@ -640,7 +646,17 @@ export function UsersClient() {
 
               <div>
                 <label className="text-sm">分配订阅计划（可选）</label>
-                <select className="mt-1 w-full border rounded px-3 py-2" value={importPlanId} onChange={(e) => setImportPlanId(e.target.value)}>
+                <select
+                  className="mt-1 w-full border rounded px-3 py-2"
+                  value={importPlanId}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setImportPlanId(v);
+                    if (!v) {
+                      setImportPayCycle("");
+                    }
+                  }}
+                >
                   <option value="">不分配</option>
                   {importPlans.map((p) => (
                     <option key={p.id} value={p.id}>
@@ -650,17 +666,35 @@ export function UsersClient() {
                 </select>
               </div>
 
-              <div>
-                <label className="text-sm">付费周期（当选择了订阅计划时生效）</label>
-                <select className="mt-1 w-full border rounded px-3 py-2" value={importPayCycle} onChange={(e) => setImportPayCycle(e.target.value as any)} disabled={!importPlanId}>
-                  <option value="MONTHLY">月付</option>
-                  <option value="QUARTERLY">季付</option>
-                  <option value="HALF_YEARLY">半年付</option>
-                  <option value="YEARLY">年付</option>
-                  <option value="TWO_YEARLY">两年付</option>
-                </select>
-                <div className="text-xs text-gray-500 mt-1">导入时会按周期自动生成订阅起止时间（从今天开始）。</div>
-              </div>
+              {importPlanId ? (
+                <>
+                  <div>
+                    <label className="text-sm">付款周期 *</label>
+                    <select className="mt-1 w-full border rounded px-3 py-2" value={importPayCycle} onChange={(e) => setImportPayCycle(e.target.value as any)}>
+                      <option value="">请选择付款周期</option>
+                      <option value="MONTHLY">月付</option>
+                      <option value="QUARTERLY">季付</option>
+                      <option value="HALF_YEARLY">半年付</option>
+                      <option value="YEARLY">年付</option>
+                      <option value="TWO_YEARLY">两年付</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-sm">订阅开始日期 *</label>
+                    <input className="mt-1 w-full border rounded px-3 py-2" type="date" value={importStartAt} onChange={(e) => setImportStartAt(e.target.value)} />
+                  </div>
+
+                  <div>
+                    <label className="text-sm">订阅结束日期 *</label>
+                    <input className="mt-1 w-full border rounded px-3 py-2" type="date" value={importEndAt} onChange={(e) => setImportEndAt(e.target.value)} />
+                  </div>
+
+                  {importStartAt && importEndAt && importStartAt >= importEndAt ? (
+                    <div className="text-sm text-red-600">订阅开始日期必须早于订阅结束日期</div>
+                  ) : null}
+                </>
+              ) : null}
 
               <div>
                 <label className="text-sm">导入模式</label>
@@ -763,7 +797,13 @@ export function UsersClient() {
               </button>
               <button
                 className="bg-black text-white rounded px-3 py-2 disabled:opacity-50"
-                disabled={!importServerId || importDefaultPassword.trim().length < 6 || importLoading || (importMode === "SELECTED" && importSelectedIds.length === 0 && importNamesText.trim().length === 0)}
+                disabled={
+                  !importServerId ||
+                  importDefaultPassword.trim().length < 6 ||
+                  importLoading ||
+                  (importMode === "SELECTED" && importSelectedIds.length === 0 && importNamesText.trim().length === 0) ||
+                  (importPlanId ? !importPayCycle || !importStartAt || !importEndAt || importStartAt >= importEndAt : false)
+                }
                 onClick={async () => {
                   setImportLoading(true);
                   setImportError(null);
@@ -791,6 +831,8 @@ export function UsersClient() {
                         defaultPassword: importDefaultPassword,
                         planId: importPlanId || null,
                         payCycle: importPlanId ? importPayCycle : null,
+                        startAt: importPlanId ? new Date(importStartAt + "T00:00:00.000Z").toISOString() : null,
+                        endAt: importPlanId ? new Date(importEndAt + "T00:00:00.000Z").toISOString() : null,
                         mode: importMode,
                         usernames,
                         missingOnly: true,

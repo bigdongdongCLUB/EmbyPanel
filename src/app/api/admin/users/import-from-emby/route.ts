@@ -17,6 +17,8 @@ const Schema = z.object({
   // optional: assign plan on import
   planId: z.string().min(1).nullable().optional(),
   payCycle: z.enum(["MONTHLY", "QUARTERLY", "HALF_YEARLY", "YEARLY", "TWO_YEARLY"]).nullable().optional(),
+  startAt: z.string().datetime().nullable().optional(),
+  endAt: z.string().datetime().nullable().optional(),
 
   mode: z.enum(["ALL", "SELECTED"]).optional().default("ALL"),
   usernames: z.array(z.string().min(1)).nullable().optional(),
@@ -33,7 +35,7 @@ export async function POST(req: Request) {
   const parsed = Schema.safeParse(json);
   if (!parsed.success) return NextResponse.json({ error: "invalid_payload", issues: parsed.error.issues }, { status: 400 });
 
-  const { embyServerId, missingOnly, skipAdmins, defaultPassword, planId, payCycle, mode, usernames } = parsed.data;
+  const { embyServerId, missingOnly, skipAdmins, defaultPassword, planId, payCycle, startAt, endAt, mode, usernames } = parsed.data;
 
   const server = await prisma.embyServer.findUnique({
     where: { id: embyServerId },
@@ -67,13 +69,14 @@ export async function POST(req: Request) {
     ).map((l) => l.embyUserId),
   );
 
-  const cycleDays: Record<string, number> = {
-    MONTHLY: 30,
-    QUARTERLY: 90,
-    HALF_YEARLY: 180,
-    YEARLY: 365,
-    TWO_YEARLY: 730,
-  };
+  // When planId is provided, startAt/endAt must be provided too (UI enforces).
+  if (planId) {
+    if (!payCycle) return NextResponse.json({ error: "missing_pay_cycle" }, { status: 400 });
+    if (!startAt || !endAt) return NextResponse.json({ error: "missing_subscription_dates" }, { status: 400 });
+    if (new Date(startAt).getTime() >= new Date(endAt).getTime()) {
+      return NextResponse.json({ error: "subscription_date_invalid" }, { status: 400 });
+    }
+  }
 
   let imported = 0;
   let skipped = 0;
@@ -114,9 +117,8 @@ export async function POST(req: Request) {
       // optional: assign plan to existing panel user
       if (user && planId) {
         const cycle = payCycle ?? "YEARLY";
-        const days = cycleDays[cycle] ?? 365;
-        const startAt = new Date();
-        const endAt = new Date(startAt.getTime() + days * 24 * 60 * 60 * 1000);
+        const start = new Date(startAt as string);
+        const end = new Date(endAt as string);
 
         await prisma.subscription.updateMany({ where: { userId: user.id, status: "ACTIVE" }, data: { status: "CANCELED" } });
         const sub = await prisma.subscription.create({
@@ -125,8 +127,8 @@ export async function POST(req: Request) {
             planId,
             status: "ACTIVE",
             payCycle: cycle as any,
-            startAt,
-            endAt,
+            startAt: start,
+            endAt: end,
           },
         });
         await prisma.subscriptionServer.createMany({ data: [{ subscriptionId: sub.id, embyServerId }], skipDuplicates: true });
@@ -159,9 +161,8 @@ export async function POST(req: Request) {
 
     if (planId) {
       const cycle = payCycle ?? "YEARLY";
-      const days = cycleDays[cycle] ?? 365;
-      const startAt = new Date();
-      const endAt = new Date(startAt.getTime() + days * 24 * 60 * 60 * 1000);
+      const start = new Date(startAt as string);
+      const end = new Date(endAt as string);
 
       await prisma.subscription.updateMany({ where: { userId: created.id, status: "ACTIVE" }, data: { status: "CANCELED" } });
       const sub = await prisma.subscription.create({
@@ -170,8 +171,8 @@ export async function POST(req: Request) {
           planId,
           status: "ACTIVE",
           payCycle: cycle as any,
-          startAt,
-          endAt,
+          startAt: start,
+          endAt: end,
         },
       });
 
