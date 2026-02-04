@@ -399,6 +399,23 @@ export function UsersClient() {
               <button className="border rounded px-3 py-2" onClick={() => setEdit({ open: false })}>
                 取消
               </button>
+              <button
+                className="border rounded px-3 py-2 text-red-600 ml-auto"
+                onClick={async () => {
+                  if (!confirm(`确定删除用户：${edit.username} ?\n此操作会同步删除 Emby 服务器上的该用户。`)) return;
+                  const res = await fetch(`/api/admin/users/${edit.id}/delete`, { method: "POST" });
+                  const txt = await res.text();
+                  if (!res.ok) {
+                    alert(`删除失败: ${txt}`);
+                    return;
+                  }
+                  alert(`删除成功: ${txt}`);
+                  setEdit({ open: false });
+                  await refresh();
+                }}
+              >
+                删除用户
+              </button>
             </div>
           </div>
         </div>

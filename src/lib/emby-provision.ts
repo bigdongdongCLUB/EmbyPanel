@@ -76,7 +76,11 @@ export async function embySetUserDisabled(baseUrl: string, apiKey: string, embyU
   getUrl.searchParams.set("api_key", apiKey);
 
   // Fetch current policy (best-effort)
-  const current = await fetch(getUrl.toString(), { method: "GET", headers: { Accept: "application/json" }, cache: "no-store" })
+  const current = await fetch(getUrl.toString(), {
+    method: "GET",
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  })
     .then((r) => (r.ok ? r.json() : null))
     .catch(() => null);
 
@@ -97,5 +101,25 @@ export async function embySetUserDisabled(baseUrl: string, apiKey: string, embyU
     return { ok: false as const, status: res.status, body };
   }
 
+  return { ok: true as const, status: res.status };
+}
+
+export async function embyDeleteUser(baseUrl: string, apiKey: string, embyUserId: string) {
+  const url1 = new URL(normalizeBaseUrl(baseUrl) + `/Users/${encodeURIComponent(embyUserId)}`);
+  url1.searchParams.set("api_key", apiKey);
+
+  const url2 = new URL(normalizeBaseUrl(baseUrl) + `/Users/${encodeURIComponent(embyUserId)}/Delete`);
+  url2.searchParams.set("api_key", apiKey);
+
+  const res = await tryRequest([
+    () => fetch(url1.toString(), { method: "DELETE", headers: { Accept: "application/json" } }),
+    () => fetch(url2.toString(), { method: "POST", headers: { Accept: "application/json" } }),
+    () => fetch(url2.toString(), { method: "DELETE", headers: { Accept: "application/json" } }),
+  ]);
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    return { ok: false as const, status: res.status, body };
+  }
   return { ok: true as const, status: res.status };
 }

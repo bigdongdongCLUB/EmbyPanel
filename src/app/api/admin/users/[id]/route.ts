@@ -7,7 +7,7 @@ import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin";
 import { hashPassword } from "@/lib/password";
 import { encryptSyncPassword, getSyncPassword } from "@/lib/user-secrets";
-import { embyCreateUser, embySetUserDisabled, embySetUserPassword } from "@/lib/emby-provision";
+import { embyCreateUser, embyDeleteUser, embySetUserDisabled, embySetUserPassword } from "@/lib/emby-provision";
 import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
 import { embyFetchUsers } from "@/lib/emby";
 
