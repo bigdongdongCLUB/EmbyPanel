@@ -20,6 +20,12 @@ enum SubscriptionStatus {
   CANCELED
 }
 
+enum PayCycle {
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
 enum AnomalyStatus {
   OPEN
   IGNORED
@@ -38,6 +44,8 @@ model User {
   passwordHash String
   role         Role     @default(USER)
   enabled      Boolean  @default(true)
+  balanceCents Int      @default(0)
+  expiryReminderEnabled Boolean @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -63,6 +71,7 @@ model Subscription {
   userId    String
   planId    String
   status    SubscriptionStatus @default(ACTIVE)
+  payCycle  PayCycle?
   startAt   DateTime
   endAt     DateTime
   createdAt DateTime           @default(now())

@@ -32,6 +32,8 @@ export async function GET(req: Request) {
       email: true,
       role: true,
       enabled: true,
+      balanceCents: true,
+      expiryReminderEnabled: true,
       createdAt: true,
       embyLinks: {
         select: {
@@ -70,7 +72,8 @@ export async function GET(req: Request) {
       // panel admin, not emby admin
       role: u.role,
       enabled: u.enabled,
-      balance: null,
+      expiryReminderEnabled: u.expiryReminderEnabled,
+      balance: u.balanceCents / 100,
       subscriptionStatus: sub ? (subValid ? "有效" : "已过期") : null,
       planName: sub?.plan?.name ?? null,
       payCycle: null,

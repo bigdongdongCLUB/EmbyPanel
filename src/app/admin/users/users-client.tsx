@@ -8,6 +8,7 @@ type UserRow = {
   email: string | null;
   role: "USER" | "ADMIN";
   enabled: boolean;
+  expiryReminderEnabled?: boolean;
   balance: number | null;
   subscriptionStatus: string | null;
   planName: string | null;
@@ -17,6 +18,32 @@ type UserRow = {
   endAt: string | null;
   createdAt: string;
 };
+
+type EditState =
+  | { open: false }
+  | {
+      open: true;
+      id: string;
+      loading: boolean;
+      error: string | null;
+      username: string;
+      email: string;
+      changePassword: boolean;
+      newPassword: string;
+      role: "USER" | "ADMIN";
+      balance: string;
+      expiryReminderEnabled: boolean;
+      enabled: boolean;
+      // subscription
+      hasSubscription: boolean;
+      planId: string;
+      payCycle: "MONTHLY" | "QUARTERLY" | "YEARLY";
+      serverIds: string[];
+      startAt: string;
+      endAt: string;
+      plans: Array<{ id: string; name: string }>;
+      servers: Array<{ id: string; name: string }>;
+    };
 
 function dash(v: any) {
   if (v === null || v === undefined || v === "") return "-";
@@ -28,6 +55,8 @@ export function UsersClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [rows, setRows] = useState<UserRow[]>([]);
+
+  const [edit, setEdit] = useState<EditState>({ open: false });
 
   const [createOpen, setCreateOpen] = useState(false);
   const [newUsername, setNewUsername] = useState("");
@@ -120,7 +149,71 @@ export function UsersClient() {
                 <td className="py-2 px-3">{r.servers.length ? r.servers.join(",") : "-"}</td>
                 <td className="py-2 px-3 font-mono text-xs">{dash(r.endAt)}</td>
                 <td className="py-2 px-3 font-mono text-xs">{dash(r.createdAt)}</td>
-                <td className="py-2 px-3 text-gray-500">-</td>
+                <td className="py-2 px-3">
+                  <button
+                    className="border rounded px-2 py-1"
+                    onClick={async () => {
+                      setEdit({
+                        open: true,
+                        id: r.id,
+                        loading: true,
+                        error: null,
+                        username: r.username,
+                        email: r.email ?? "",
+                        changePassword: false,
+                        newPassword: "",
+                        role: r.role,
+                        balance: String(r.balance ?? 0),
+                        expiryReminderEnabled: !!r.expiryReminderEnabled,
+                        enabled: r.enabled,
+                        hasSubscription: false,
+                        planId: "",
+                        payCycle: "MONTHLY",
+                        serverIds: [],
+                        startAt: new Date().toISOString().slice(0, 10),
+                        endAt: new Date().toISOString().slice(0, 10),
+                        plans: [],
+                        servers: [],
+                      });
+                      try {
+                        const res = await fetch(`/api/admin/users/${r.id}`, { cache: "no-store" });
+                        const json = await res.json().catch(() => null);
+                        if (!res.ok) throw new Error(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
+
+                        const u = json.user;
+                        const sub = u.subscriptions?.[0] ?? null;
+                        const servers = (sub?.servers ?? []).map((x: any) => x.embyServerId);
+
+                        setEdit({
+                          open: true,
+                          id: r.id,
+                          loading: false,
+                          error: null,
+                          username: u.username,
+                          email: u.email ?? "",
+                          changePassword: false,
+                          newPassword: "",
+                          role: u.role,
+                          balance: String((u.balanceCents ?? 0) / 100),
+                          expiryReminderEnabled: !!u.expiryReminderEnabled,
+                          enabled: !!u.enabled,
+                          hasSubscription: !!sub,
+                          planId: sub?.planId ?? "",
+                          payCycle: (sub?.payCycle ?? "MONTHLY") as any,
+                          serverIds: servers,
+                          startAt: sub?.startAt ? String(sub.startAt).slice(0, 10) : new Date().toISOString().slice(0, 10),
+                          endAt: sub?.endAt ? String(sub.endAt).slice(0, 10) : new Date().toISOString().slice(0, 10),
+                          plans: json.plans ?? [],
+                          servers: json.servers ?? [],
+                        });
+                      } catch (e: any) {
+                        setEdit((prev: any) => ({ ...prev, loading: false, error: e?.message ?? "load_failed" }));
+                      }
+                    }}
+                  >
+                    编辑
+                  </button>
+                </td>
               </tr>
             ))}
             {!loading && rows.length === 0 ? (
@@ -133,6 +226,218 @@ export function UsersClient() {
           </tbody>
         </table>
       </div>
+
+      {edit.open ? (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg w-full max-w-2xl p-4">
+            <div className="flex items-center justify-between">
+              <div className="font-semibold">编辑用户</div>
+              <button className="text-sm underline" onClick={() => setEdit({ open: false })}>
+                关闭
+              </button>
+            </div>
+
+            {edit.loading ? <div className="mt-3 text-sm text-gray-500">加载中…</div> : null}
+            {edit.error ? <pre className="mt-3 text-xs text-red-600 whitespace-pre-wrap">{edit.error}</pre> : null}
+
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm">用户名</label>
+                  <input className="mt-1 w-full border rounded px-3 py-2 bg-gray-50" value={edit.username} disabled />
+                </div>
+                <div>
+                  <label className="text-sm">邮箱</label>
+                  <input className="mt-1 w-full border rounded px-3 py-2" value={edit.email} onChange={(e) => setEdit({ ...edit, email: e.target.value })} />
+                </div>
+                <div>
+                  <label className="text-sm">修改密码</label>
+                  <div className="mt-2 flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={edit.changePassword}
+                      onChange={(e) => setEdit({ ...edit, changePassword: e.target.checked })}
+                    />
+                    <span className="text-sm">是</span>
+                  </div>
+                  {edit.changePassword ? (
+                    <input
+                      className="mt-2 w-full border rounded px-3 py-2"
+                      type="password"
+                      placeholder="新密码（>=6位）"
+                      value={edit.newPassword}
+                      onChange={(e) => setEdit({ ...edit, newPassword: e.target.value })}
+                    />
+                  ) : null}
+                </div>
+                <div>
+                  <label className="text-sm">角色（面板）</label>
+                  <select className="mt-1 w-full border rounded px-3 py-2" value={edit.role} onChange={(e) => setEdit({ ...edit, role: e.target.value as any })}>
+                    <option value="ADMIN">管理员</option>
+                    <option value="USER">用户</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm">账户余额</label>
+                  <input className="mt-1 w-full border rounded px-3 py-2" value={edit.balance} onChange={(e) => setEdit({ ...edit, balance: e.target.value })} />
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    id="expiryReminder"
+                    type="checkbox"
+                    checked={edit.expiryReminderEnabled}
+                    onChange={(e) => setEdit({ ...edit, expiryReminderEnabled: e.target.checked })}
+                  />
+                  <label htmlFor="expiryReminder" className="text-sm">
+                    到期提醒
+                  </label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input id="enabled" type="checkbox" checked={edit.enabled} onChange={(e) => setEdit({ ...edit, enabled: e.target.checked })} />
+                  <label htmlFor="enabled" className="text-sm">
+                    用户状态（启用）
+                  </label>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="font-medium">订阅信息</div>
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" checked={edit.hasSubscription} onChange={(e) => setEdit({ ...edit, hasSubscription: e.target.checked })} />
+                  <span className="text-sm">启用订阅</span>
+                </div>
+
+                <div>
+                  <label className="text-sm">订阅计划</label>
+                  <select
+                    className="mt-1 w-full border rounded px-3 py-2"
+                    value={edit.planId}
+                    disabled={!edit.hasSubscription}
+                    onChange={(e) => setEdit({ ...edit, planId: e.target.value })}
+                  >
+                    <option value="">-</option>
+                    {edit.plans.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-sm">分配至 Emby 服务器</label>
+                  <select
+                    className="mt-1 w-full border rounded px-3 py-2"
+                    value={edit.serverIds[0] ?? ""}
+                    disabled={!edit.hasSubscription}
+                    onChange={(e) => setEdit({ ...edit, serverIds: e.target.value ? [e.target.value] : [] })}
+                  >
+                    <option value="">-</option>
+                    {edit.servers.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-sm">付款周期</label>
+                  <select
+                    className="mt-1 w-full border rounded px-3 py-2"
+                    value={edit.payCycle}
+                    disabled={!edit.hasSubscription}
+                    onChange={(e) => setEdit({ ...edit, payCycle: e.target.value as any })}
+                  >
+                    <option value="MONTHLY">月付</option>
+                    <option value="QUARTERLY">季付</option>
+                    <option value="YEARLY">年付</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-sm">订阅开始日期</label>
+                  <input
+                    className="mt-1 w-full border rounded px-3 py-2"
+                    type="date"
+                    value={edit.startAt}
+                    disabled={!edit.hasSubscription}
+                    onChange={(e) => setEdit({ ...edit, startAt: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm">订阅结束日期</label>
+                  <input
+                    className="mt-1 w-full border rounded px-3 py-2"
+                    type="date"
+                    value={edit.endAt}
+                    disabled={!edit.hasSubscription}
+                    onChange={(e) => setEdit({ ...edit, endAt: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 flex gap-2">
+              <button
+                className="bg-black text-white rounded px-3 py-2 disabled:opacity-50"
+                disabled={edit.loading}
+                onClick={async () => {
+                  const balanceNum = Number(edit.balance);
+                  if (!Number.isFinite(balanceNum) || balanceNum < 0) {
+                    alert("余额格式不正确");
+                    return;
+                  }
+
+                  const payload: any = {
+                    email: edit.email.trim() ? edit.email.trim() : null,
+                    role: edit.role,
+                    enabled: edit.enabled,
+                    expiryReminderEnabled: edit.expiryReminderEnabled,
+                    balanceCents: Math.round(balanceNum * 100),
+                    changePassword: edit.changePassword,
+                    newPassword: edit.newPassword,
+                  };
+
+                  if (edit.hasSubscription) {
+                    if (!edit.planId) {
+                      alert("请选择订阅计划");
+                      return;
+                    }
+                    payload.subscription = {
+                      planId: edit.planId,
+                      payCycle: edit.payCycle,
+                      startAt: new Date(edit.startAt + "T00:00:00.000Z").toISOString(),
+                      endAt: new Date(edit.endAt + "T00:00:00.000Z").toISOString(),
+                      embyServerIds: edit.serverIds,
+                    };
+                  } else {
+                    payload.subscription = null;
+                  }
+
+                  const res = await fetch(`/api/admin/users/${edit.id}`, {
+                    method: "PATCH",
+                    headers: { "content-type": "application/json" },
+                    body: JSON.stringify(payload),
+                  });
+                  if (!res.ok) {
+                    alert(`保存失败: ${await res.text()}`);
+                    return;
+                  }
+                  setEdit({ open: false });
+                  await refresh();
+                }}
+              >
+                更新用户
+              </button>
+              <button className="border rounded px-3 py-2" onClick={() => setEdit({ open: false })}>
+                取消
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {createOpen ? (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4">
