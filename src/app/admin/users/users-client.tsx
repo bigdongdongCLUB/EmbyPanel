@@ -35,13 +35,10 @@ type EditState =
       expiryReminderEnabled: boolean;
       enabled: boolean;
       // subscription
-      hasSubscription: boolean;
-      planId: string;
+      embyServerId: string;
       payCycle: "MONTHLY" | "QUARTERLY" | "YEARLY";
-      serverIds: string[];
       startAt: string;
       endAt: string;
-      plans: Array<{ id: string; name: string }>;
       servers: Array<{ id: string; name: string }>;
     };
 
@@ -166,13 +163,10 @@ export function UsersClient() {
                         balance: String(r.balance ?? 0),
                         expiryReminderEnabled: !!r.expiryReminderEnabled,
                         enabled: r.enabled,
-                        hasSubscription: false,
-                        planId: "",
+                        embyServerId: "",
                         payCycle: "MONTHLY",
-                        serverIds: [],
                         startAt: new Date().toISOString().slice(0, 10),
                         endAt: new Date().toISOString().slice(0, 10),
-                        plans: [],
                         servers: [],
                       });
                       try {
@@ -182,7 +176,7 @@ export function UsersClient() {
 
                         const u = json.user;
                         const sub = u.subscriptions?.[0] ?? null;
-                        const servers = (sub?.servers ?? []).map((x: any) => x.embyServerId);
+                        const serverId = (sub?.servers ?? [])[0]?.embyServerId ?? "";
 
                         setEdit({
                           open: true,
@@ -197,13 +191,10 @@ export function UsersClient() {
                           balance: String((u.balanceCents ?? 0) / 100),
                           expiryReminderEnabled: !!u.expiryReminderEnabled,
                           enabled: !!u.enabled,
-                          hasSubscription: !!sub,
-                          planId: sub?.planId ?? "",
+                          embyServerId: serverId,
                           payCycle: (sub?.payCycle ?? "MONTHLY") as any,
-                          serverIds: servers,
                           startAt: sub?.startAt ? String(sub.startAt).slice(0, 10) : new Date().toISOString().slice(0, 10),
                           endAt: sub?.endAt ? String(sub.endAt).slice(0, 10) : new Date().toISOString().slice(0, 10),
-                          plans: json.plans ?? [],
                           servers: json.servers ?? [],
                         });
                       } catch (e: any) {
@@ -302,35 +293,13 @@ export function UsersClient() {
 
               <div className="space-y-3">
                 <div className="font-medium">订阅信息</div>
-                <div className="flex items-center gap-2">
-                  <input type="checkbox" checked={edit.hasSubscription} onChange={(e) => setEdit({ ...edit, hasSubscription: e.target.checked })} />
-                  <span className="text-sm">启用订阅</span>
-                </div>
 
                 <div>
-                  <label className="text-sm">订阅计划</label>
+                  <label className="text-sm">订阅计划（选择 Emby 服务器）</label>
                   <select
                     className="mt-1 w-full border rounded px-3 py-2"
-                    value={edit.planId}
-                    disabled={!edit.hasSubscription}
-                    onChange={(e) => setEdit({ ...edit, planId: e.target.value })}
-                  >
-                    <option value="">-</option>
-                    {edit.plans.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-sm">分配至 Emby 服务器</label>
-                  <select
-                    className="mt-1 w-full border rounded px-3 py-2"
-                    value={edit.serverIds[0] ?? ""}
-                    disabled={!edit.hasSubscription}
-                    onChange={(e) => setEdit({ ...edit, serverIds: e.target.value ? [e.target.value] : [] })}
+                    value={edit.embyServerId}
+                    onChange={(e) => setEdit({ ...edit, embyServerId: e.target.value })}
                   >
                     <option value="">-</option>
                     {edit.servers.map((s) => (
@@ -339,6 +308,7 @@ export function UsersClient() {
                       </option>
                     ))}
                   </select>
+                  <div className="text-xs text-gray-500 mt-1">不选择则表示无订阅（仅存在面板）。</div>
                 </div>
 
                 <div>
@@ -346,7 +316,7 @@ export function UsersClient() {
                   <select
                     className="mt-1 w-full border rounded px-3 py-2"
                     value={edit.payCycle}
-                    disabled={!edit.hasSubscription}
+                    disabled={!edit.embyServerId}
                     onChange={(e) => setEdit({ ...edit, payCycle: e.target.value as any })}
                   >
                     <option value="MONTHLY">月付</option>
@@ -361,7 +331,7 @@ export function UsersClient() {
                     className="mt-1 w-full border rounded px-3 py-2"
                     type="date"
                     value={edit.startAt}
-                    disabled={!edit.hasSubscription}
+                    disabled={!edit.embyServerId}
                     onChange={(e) => setEdit({ ...edit, startAt: e.target.value })}
                   />
                 </div>
@@ -372,7 +342,7 @@ export function UsersClient() {
                     className="mt-1 w-full border rounded px-3 py-2"
                     type="date"
                     value={edit.endAt}
-                    disabled={!edit.hasSubscription}
+                    disabled={!edit.embyServerId}
                     onChange={(e) => setEdit({ ...edit, endAt: e.target.value })}
                   />
                 </div>
@@ -400,17 +370,12 @@ export function UsersClient() {
                     newPassword: edit.newPassword,
                   };
 
-                  if (edit.hasSubscription) {
-                    if (!edit.planId) {
-                      alert("请选择订阅计划");
-                      return;
-                    }
+                  if (edit.embyServerId) {
                     payload.subscription = {
-                      planId: edit.planId,
+                      embyServerId: edit.embyServerId,
                       payCycle: edit.payCycle,
                       startAt: new Date(edit.startAt + "T00:00:00.000Z").toISOString(),
                       endAt: new Date(edit.endAt + "T00:00:00.000Z").toISOString(),
-                      embyServerIds: edit.serverIds,
                     };
                   } else {
                     payload.subscription = null;

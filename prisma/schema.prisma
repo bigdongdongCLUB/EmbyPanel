@@ -73,7 +73,7 @@ model Plan {
 model Subscription {
   id        String             @id @default(cuid())
   userId    String
-  planId    String
+  planId    String?
   status    SubscriptionStatus @default(ACTIVE)
   payCycle  PayCycle?
   startAt   DateTime
@@ -82,7 +82,7 @@ model Subscription {
   updatedAt DateTime           @updatedAt
 
   user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  plan      Plan               @relation(fields: [planId], references: [id])
+  plan      Plan?              @relation(fields: [planId], references: [id])
   servers   SubscriptionServer[]
 
   @@index([userId, status])
