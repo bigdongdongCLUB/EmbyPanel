@@ -33,6 +33,14 @@ export async function GET(req: Request) {
       role: true,
       enabled: true,
       createdAt: true,
+      embyLinks: {
+        select: {
+          id: true,
+          embyUserId: true,
+          disabled: true,
+          embyServer: { select: { id: true, name: true } },
+        },
+      },
       subscriptions: {
         where: { status: "ACTIVE" },
         orderBy: { endAt: "desc" },
@@ -53,10 +61,13 @@ export async function GET(req: Request) {
     const sub = u.subscriptions[0];
     const subValid = sub && sub.endAt > now;
 
+    const linkedServers = (u.embyLinks ?? []).map((l) => l.embyServer.name);
+
     return {
       id: u.id,
       username: u.username,
       email: u.email,
+      // panel admin, not emby admin
       role: u.role,
       enabled: u.enabled,
       balance: null,
@@ -64,7 +75,7 @@ export async function GET(req: Request) {
       planName: sub?.plan?.name ?? null,
       payCycle: null,
       remark: null,
-      servers: sub?.servers?.map((x) => x.embyServer.name) ?? [],
+      servers: linkedServers,
       endAt: sub?.endAt?.toISOString() ?? null,
       createdAt: u.createdAt.toISOString(),
     };
