@@ -15,20 +15,37 @@ async function tryRequest(reqs: Array<() => Promise<Response>>) {
 }
 
 export async function embyFetchUserPolicy(baseUrl: string, apiKey: string, embyUserId: string) {
-  const url = new URL(normalizeBaseUrl(baseUrl) + `/Users/${encodeURIComponent(embyUserId)}/Policy`);
-  url.searchParams.set("api_key", apiKey);
+  // Some Emby deployments do not support GET /Users/{id}/Policy (404),
+  // but the policy is available on GET /Users/{id} as a field.
+  const url1 = new URL(normalizeBaseUrl(baseUrl) + `/Users/${encodeURIComponent(embyUserId)}/Policy`);
+  url1.searchParams.set("api_key", apiKey);
 
-  const res = await fetch(url.toString(), {
+  const res1 = await fetch(url1.toString(), {
     method: "GET",
     headers: { Accept: "application/json" },
     cache: "no-store",
   });
 
-  const text = await res.text();
-  if (!res.ok) return { ok: false as const, status: res.status, body: text };
+  if (res1.ok) {
+    const text = await res1.text();
+    const json = JSON.parse(text);
+    return { ok: true as const, status: res1.status, policy: json };
+  }
 
-  const json = JSON.parse(text);
-  return { ok: true as const, status: res.status, policy: json };
+  const url2 = new URL(normalizeBaseUrl(baseUrl) + `/Users/${encodeURIComponent(embyUserId)}`);
+  url2.searchParams.set("api_key", apiKey);
+
+  const res2 = await fetch(url2.toString(), {
+    method: "GET",
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  });
+
+  const text2 = await res2.text();
+  if (!res2.ok) return { ok: false as const, status: res2.status, body: text2 };
+
+  const json2 = JSON.parse(text2);
+  return { ok: true as const, status: res2.status, policy: (json2 as any)?.Policy ?? {} };
 }
 
 export async function embySetUserPolicy(baseUrl: string, apiKey: string, embyUserId: string, policy: any) {

@@ -73,10 +73,10 @@ export async function embySetUserPassword(baseUrl: string, apiKey: string, embyU
 }
 
 export async function embySetUserDisabled(baseUrl: string, apiKey: string, embyUserId: string, disabled: boolean) {
-  const getUrl = new URL(normalizeBaseUrl(baseUrl) + `/Users/${encodeURIComponent(embyUserId)}/Policy`);
+  // best-effort: fetch full policy via GET /Users/{id} fallback (some Emby does not support GET /Policy)
+  const getUrl = new URL(normalizeBaseUrl(baseUrl) + `/Users/${encodeURIComponent(embyUserId)}`);
   getUrl.searchParams.set("api_key", apiKey);
 
-  // Fetch current policy (best-effort)
   const current = await fetch(getUrl.toString(), {
     method: "GET",
     headers: { Accept: "application/json" },
@@ -85,7 +85,7 @@ export async function embySetUserDisabled(baseUrl: string, apiKey: string, embyU
     .then((r) => (r.ok ? r.json() : null))
     .catch(() => null);
 
-  const policy = typeof current === "object" && current ? current : {};
+  const policy = (current as any)?.Policy && typeof (current as any).Policy === "object" ? (current as any).Policy : {};
   (policy as any).IsDisabled = !!disabled;
 
   const postUrl = new URL(normalizeBaseUrl(baseUrl) + `/Users/${encodeURIComponent(embyUserId)}/Policy`);
@@ -94,7 +94,7 @@ export async function embySetUserDisabled(baseUrl: string, apiKey: string, embyU
   const res = await fetch(postUrl.toString(), {
     method: "POST",
     headers: { "content-type": "application/json", Accept: "application/json" },
-    body: JSON.stringify(policy),
+    body: JSON.stringify(policy ?? {}),
   });
 
   if (!res.ok) {
