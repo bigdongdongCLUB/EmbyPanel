@@ -4,6 +4,8 @@ import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { LoginRedirect } from "./login-redirect";
+
 export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -12,8 +14,9 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen flex items-center justify-center p-6">
+      <LoginRedirect />
       <div className="w-full max-w-sm border rounded-lg p-6">
-        <h1 className="text-xl font-semibold">EmbyPanel 登录</h1>
+        <h1 className="text-xl font-semibold">登录</h1>
         <p className="text-sm text-gray-500 mt-1">使用用户名 + 密码登录</p>
 
         <form

@@ -3,12 +3,17 @@ import { redirect } from "next/navigation";
 
 import { authOptions } from "@/lib/auth";
 
-export default async function HomePage() {
+export default async function PortalPage() {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
 
   const role = (session as any)?.role;
   if (role === "ADMIN") redirect("/admin");
 
-  redirect("/portal");
+  return (
+    <main className="p-6 max-w-3xl mx-auto space-y-2">
+      <h1 className="text-xl font-semibold">用户后台</h1>
+      <p className="text-sm text-gray-600">（开发中）</p>
+    </main>
+  );
 }
