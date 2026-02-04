@@ -1,0 +1,44 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: embypanel-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-embypanel}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-embypanel}
+      POSTGRES_DB: ${POSTGRES_DB:-embypanel}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: embypanel-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:-embypanel}" ]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - ./data/redis:/data
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: embypanel-web
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      INTERNAL_JOBS_SECRET: ${INTERNAL_JOBS_SECRET}
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    depends_on:
+      - db
+      - redis
+
+# No named volumes (we use bind mounts under ./data)
