@@ -5,38 +5,39 @@ import React, { useEffect, useMemo, useState } from "react";
 type ServerOption = { id: string; name: string; enabled: boolean };
 
 type Anomaly = {
-  key: string;
+  id: string;
   server: { id: string; name: string };
   user: { id: string; name: string };
-  type: "MULTI_DEVICE" | "GEO_SHARE";
+  type: "MULTI_DEVICE";
   sessionCount: number;
   ips: string[];
-  titles: string[];
   description: string;
   detectedAt: string;
-  sessions: Array<{ id: string; device: string; client: string; ip: string; nowPlaying: string }>;
+  sessions: Array<{ device: string; client: string; ip: string; nowPlaying: string }>;
 };
 
 type Data = {
   ok: boolean;
-  detectedAt: string;
-  scope: "single" | "all";
-  summary: { total: number; multiDevice: number; geoShare: number };
+  rangeDays: number;
+  since: string;
+  summary: { totalEvents: number; totalUsers: number };
   anomalies: Anomaly[];
-  warnings: any[];
 };
 
-function TypeBadge({ type }: { type: Anomaly["type"] }) {
-  const label = type === "GEO_SHARE" ? "异地共享" : "同时多设备";
-  const cls = type === "GEO_SHARE" ? "bg-red-50 text-red-700 border-red-200" : "bg-amber-50 text-amber-700 border-amber-200";
-  return <span className={"inline-flex items-center px-2 py-0.5 rounded border text-xs " + cls}>{label}</span>;
+function TypeBadge() {
+  return (
+    <span className="inline-flex items-center px-2 py-0.5 rounded border text-xs bg-amber-50 text-amber-700 border-amber-200">
+      同时多设备
+    </span>
+  );
 }
 
 export function MonitoringAnomaliesClient() {
   const [servers, setServers] = useState<ServerOption[]>([]);
   const [serverId, setServerId] = useState<string>("__ALL__");
+  const [rangeDays, setRangeDays] = useState<number>(7);
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const intervalSec = 60;
+  const intervalSec = 120;
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,6 +58,7 @@ export function MonitoringAnomaliesClient() {
     try {
       const url = new URL(window.location.origin + "/api/admin/monitoring/anomalies");
       if (serverId && serverId !== "__ALL__") url.searchParams.set("serverId", serverId);
+      url.searchParams.set("rangeDays", String(rangeDays));
       const res = await fetch(url.toString(), { cache: "no-store" });
       const json = (await res.json().catch(() => null)) as any;
       if (!res.ok) throw new Error(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
@@ -75,28 +77,23 @@ export function MonitoringAnomaliesClient() {
   useEffect(() => {
     refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [serverId]);
+  }, [serverId, rangeDays]);
 
   useEffect(() => {
     if (!autoRefresh) return;
     const t = setInterval(() => refresh(), intervalSec * 1000);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoRefresh, serverId]);
+  }, [autoRefresh, serverId, rangeDays]);
 
   const totalLabel = useMemo(() => {
     if (!data) return "-";
-    return String(data.summary?.total ?? 0);
+    return String(data.summary?.totalEvents ?? 0);
   }, [data]);
 
   const multiLabel = useMemo(() => {
     if (!data) return "-";
-    return String(data.summary?.multiDevice ?? 0);
-  }, [data]);
-
-  const geoLabel = useMemo(() => {
-    if (!data) return "-";
-    return String(data.summary?.geoShare ?? 0);
+    return String(data.summary?.totalUsers ?? 0);
   }, [data]);
 
   return (
@@ -111,6 +108,11 @@ export function MonitoringAnomaliesClient() {
           ))}
         </select>
 
+        <select className="border rounded px-3 py-2" value={String(rangeDays)} onChange={(e) => setRangeDays(Number(e.target.value))}>
+          <option value="7">最近 7 天</option>
+          <option value="30">最近 30 天</option>
+        </select>
+
         <button className="border rounded px-3 py-2" onClick={refresh} disabled={loading}>
           刷新
         </button>
@@ -123,36 +125,26 @@ export function MonitoringAnomaliesClient() {
         {loading ? <div className="text-sm text-gray-500">加载中…</div> : null}
       </div>
 
+      <div className="text-xs text-gray-600">说明：该页面为累计数据（建议每 10 分钟检测一次并写入数据库）。</div>
+
       {error ? <pre className="text-xs text-red-600 whitespace-pre-wrap">{error}</pre> : null}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div className="bg-white border rounded-lg p-4">
-          <div className="text-xs text-gray-500">总异常数（实时）</div>
+          <div className="text-xs text-gray-500">总异常事件数（累计）</div>
           <div className="mt-2 text-2xl font-semibold">{totalLabel}</div>
         </div>
         <div className="bg-white border rounded-lg p-4">
-          <div className="text-xs text-gray-500">同时多设备播放</div>
+          <div className="text-xs text-gray-500">涉及用户数（累计）</div>
           <div className="mt-2 text-2xl font-semibold">{multiLabel}</div>
-          <div className="mt-1 text-xs text-gray-500">（同一用户同一时刻 ≥2 个播放会话）</div>
-        </div>
-        <div className="bg-white border rounded-lg p-4">
-          <div className="text-xs text-gray-500">异地共享检测</div>
-          <div className="mt-2 text-2xl font-semibold">{geoLabel}</div>
-          <div className="mt-1 text-xs text-gray-500">（同一用户同一时刻出现 ≥2 个不同 IP）</div>
+          <div className="mt-1 text-xs text-gray-500">（统计去重用户数）</div>
         </div>
       </div>
-
-      {data?.warnings?.length ? (
-        <details className="bg-white border rounded-lg p-4">
-          <summary className="text-sm cursor-pointer">告警/告知（{data.warnings.length}）</summary>
-          <pre className="mt-2 text-xs whitespace-pre-wrap text-gray-600">{JSON.stringify(data.warnings, null, 2)}</pre>
-        </details>
-      ) : null}
 
       <div className="bg-white border rounded-lg p-4">
         <div className="flex items-center justify-between">
           <div className="font-medium text-sm">异常列表</div>
-          <div className="text-xs text-gray-500">{data ? `共 ${data.anomalies.length} 条 · ${new Date(data.detectedAt).toLocaleString()}` : ""}</div>
+          <div className="text-xs text-gray-500">{data ? `显示 ${data.anomalies.length} / ${data.summary.totalEvents} 条` : ""}</div>
         </div>
 
         <div className="mt-3 overflow-auto">
@@ -171,22 +163,29 @@ export function MonitoringAnomaliesClient() {
             </thead>
             <tbody>
               {(data?.anomalies ?? []).map((a) => {
-                const isOpen = !!open[a.key];
+                const isOpen = !!open[a.id];
                 return (
-                  <React.Fragment key={a.key}>
+                  <React.Fragment key={a.id}>
                     <tr className="border-b">
                       <td className="py-2 px-3">
-                        <button className="text-xs border rounded px-2 py-1" onClick={() => setOpen((p) => ({ ...p, [a.key]: !p[a.key] }))}>
+                        <button className="text-xs border rounded px-2 py-1" onClick={() => setOpen((p) => ({ ...p, [a.id]: !p[a.id] }))}>
                           {isOpen ? "-" : "+"}
                         </button>
                       </td>
                       <td className="py-2 px-3">{a.user?.name || "-"}</td>
                       <td className="py-2 px-3">{a.server?.name || "-"}</td>
                       <td className="py-2 px-3">
-                        <TypeBadge type={a.type} />
+                        <TypeBadge />
                       </td>
                       <td className="py-2 px-3">
-                        <div className="text-xs text-gray-700">{a.sessions.map((s) => s.device || "-").filter(Boolean).slice(0, 2).join(" / ")}{a.sessions.length > 2 ? ` 等 ${a.sessions.length} 台` : ""}</div>
+                        <div className="text-xs text-gray-700">
+                          {a.sessions
+                            .map((s) => s.device || "-")
+                            .filter(Boolean)
+                            .slice(0, 2)
+                            .join(" / ")}
+                          {a.sessions.length > 2 ? ` 等 ${a.sessions.length} 台` : ""}
+                        </div>
                       </td>
                       <td className="py-2 px-3">
                         <div className="flex flex-wrap gap-1">
@@ -218,8 +217,8 @@ export function MonitoringAnomaliesClient() {
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {a.sessions.map((s) => (
-                                    <tr key={s.id} className="border-b last:border-b-0">
+                                  {a.sessions.map((s, idx) => (
+                                    <tr key={idx} className="border-b last:border-b-0">
                                       <td className="py-2 px-2">{s.device || "-"}</td>
                                       <td className="py-2 px-2">{s.client || "-"}</td>
                                       <td className="py-2 px-2">{s.nowPlaying || "-"}</td>
