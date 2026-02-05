@@ -36,10 +36,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             Emby 服务器
           </Link>
           <Link className="block px-3 py-2 rounded hover:bg-white/10" href="/admin/monitoring">
-            实时监控
-          </Link>
-          <Link className="block px-3 py-2 rounded hover:bg-white/10" href="/admin/monitoring/playback">
-            播放统计
+            统计监控
           </Link>
         </nav>
 

@@ -8,9 +8,12 @@ type Data = {
   ok: boolean;
   server: { id: string; name: string; baseUrl: string };
   rangeDays: number;
-  activeUsers: number;
-  topMovies: Array<{ id: string; name: string; playCount: number | null; lastPlayed: string | null; year: number | null }>;
-  topEpisodes: Array<{ id: string; seriesName: string; name: string; season: number | null; episode: number | null; playCount: number | null; lastPlayed: string | null }>;
+  requirePlugin?: boolean;
+  pluginInstalled?: boolean;
+  message?: string;
+  activeUsers?: number;
+  topMovies?: Array<{ id: string; name: string; playCount: number | null; lastPlayed: string | null; year: number | null }>;
+  topEpisodes?: Array<{ id: string; seriesName: string; name: string; season: number | null; episode: number | null; playCount: number | null; lastPlayed: string | null }>;
   warn?: any;
 };
 
@@ -96,10 +99,16 @@ export function PlaybackStatsClient() {
 
       {error ? <pre className="text-xs text-red-600 whitespace-pre-wrap">{error}</pre> : null}
 
+      {data?.requirePlugin ? (
+        <div className="bg-yellow-50 border border-yellow-200 rounded p-4 text-sm text-yellow-900">
+          {data.message ?? "需要安装 Playback Reporting 插件才可以进行统计"}
+        </div>
+      ) : null}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div className="bg-white border rounded-lg p-4">
           <div className="text-xs text-gray-500">活跃人数（{titleRange}）</div>
-          <div className="mt-2 text-2xl font-semibold">{data ? data.activeUsers : "-"}</div>
+          <div className="mt-2 text-2xl font-semibold">{data && !data.requirePlugin ? String(data.activeUsers ?? "-") : "-"}</div>
           <div className="mt-1 text-xs text-gray-500">按 Emby 用户 LastActivityDate 统计</div>
         </div>
       </div>
@@ -124,7 +133,7 @@ export function PlaybackStatsClient() {
                     <td className="py-2 px-3 font-mono text-xs">{m.lastPlayed ? String(m.lastPlayed).slice(0, 19) : "-"}</td>
                   </tr>
                 ))}
-                {data && data.topMovies.length === 0 ? (
+                {data && !data.requirePlugin && (data.topMovies ?? []).length === 0 ? (
                   <tr>
                     <td className="py-6 px-3 text-gray-500" colSpan={3}>
                       暂无数据（可能该时间范围内无 LastPlayedDate，或 Emby 未提供）
@@ -157,7 +166,7 @@ export function PlaybackStatsClient() {
                     <td className="py-2 px-3 font-mono text-xs">{e.lastPlayed ? String(e.lastPlayed).slice(0, 19) : "-"}</td>
                   </tr>
                 ))}
-                {data && data.topEpisodes.length === 0 ? (
+                {data && !data.requirePlugin && (data.topEpisodes ?? []).length === 0 ? (
                   <tr>
                     <td className="py-6 px-3 text-gray-500" colSpan={3}>
                       暂无数据（可能该时间范围内无 LastPlayedDate，或 Emby 未提供）

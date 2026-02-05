@@ -2,10 +2,9 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 
 import { authOptions } from "@/lib/auth";
-import { MonitoringTabs } from "./tabs";
-import { RealtimeMonitorClient } from "./realtime-client";
+import { MonitoringTabs } from "../tabs";
 
-export default async function MonitoringPage() {
+export default async function MonitoringAnomaliesPage() {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
   const role = (session as any)?.role;
@@ -19,11 +18,7 @@ export default async function MonitoringPage() {
 
       <MonitoringTabs />
 
-      <div>
-        <p className="text-sm text-gray-600">实时监控：服务器在线状态、正在播放数量、播放会话列表（默认 120 秒自动刷新）。</p>
-      </div>
-
-      <RealtimeMonitorClient />
+      <div className="bg-white border rounded-lg p-4 text-sm text-gray-600">异常监控（开发中）</div>
     </div>
   );
 }

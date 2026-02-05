@@ -6,6 +6,7 @@ import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
 import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
 import { embyFetchUsers } from "@/lib/emby";
+import { embyFetchPlugins, hasPlaybackReportingPlugin } from "@/lib/emby-plugins";
 import { embyFetchTopPlayedItems } from "@/lib/emby-items";
 
 export async function GET(req: Request) {
@@ -30,6 +31,32 @@ export async function GET(req: Request) {
 
   const now = new Date();
   const since = new Date(now.getTime() - rangeDays * 24 * 60 * 60 * 1000);
+
+  // Require Playback Reporting plugin for this page (per product rules)
+  const pluginsRes = await embyFetchPlugins(server.baseUrl, apiKey);
+  if (!pluginsRes.ok) {
+    return NextResponse.json({
+      ok: true,
+      server: { id: server.id, name: server.name, baseUrl: server.baseUrl },
+      rangeDays,
+      pluginInstalled: false,
+      requirePlugin: true,
+      message: "无法检测插件状态，请确认已安装 Playback Reporting 插件",
+      detail: { status: pluginsRes.status, body: pluginsRes.body },
+    });
+  }
+
+  const installed = hasPlaybackReportingPlugin(pluginsRes.plugins);
+  if (!installed) {
+    return NextResponse.json({
+      ok: true,
+      server: { id: server.id, name: server.name, baseUrl: server.baseUrl },
+      rangeDays,
+      pluginInstalled: false,
+      requirePlugin: true,
+      message: "需要安装 Playback Reporting 插件才可以进行统计",
+    });
+  }
 
   // Active users in range: based on LastActivityDate
   const usersRes = await embyFetchUsers(server.baseUrl, apiKey);
@@ -76,6 +103,8 @@ export async function GET(req: Request) {
     ok: true,
     server: { id: server.id, name: server.name, baseUrl: server.baseUrl },
     rangeDays,
+    pluginInstalled: true,
+    requirePlugin: false,
     activeUsers,
     topMovies,
     topEpisodes,
