@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 type ServerOption = { id: string; name: string; enabled: boolean };
 
@@ -86,16 +86,6 @@ export function MonitoringAnomaliesClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoRefresh, serverId, rangeDays]);
 
-  const totalLabel = useMemo(() => {
-    if (!data) return "-";
-    return String(data.summary?.totalEvents ?? 0);
-  }, [data]);
-
-  const multiLabel = useMemo(() => {
-    if (!data) return "-";
-    return String(data.summary?.totalUsers ?? 0);
-  }, [data]);
-
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2 items-center">
@@ -125,26 +115,12 @@ export function MonitoringAnomaliesClient() {
         {loading ? <div className="text-sm text-gray-500">加载中…</div> : null}
       </div>
 
-      <div className="text-xs text-gray-600">说明：该页面为累计数据（建议每 10 分钟检测一次并写入数据库）。</div>
-
       {error ? <pre className="text-xs text-red-600 whitespace-pre-wrap">{error}</pre> : null}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div className="bg-white border rounded-lg p-4">
-          <div className="text-xs text-gray-500">总异常事件数（累计）</div>
-          <div className="mt-2 text-2xl font-semibold">{totalLabel}</div>
-        </div>
-        <div className="bg-white border rounded-lg p-4">
-          <div className="text-xs text-gray-500">涉及用户数（累计）</div>
-          <div className="mt-2 text-2xl font-semibold">{multiLabel}</div>
-          <div className="mt-1 text-xs text-gray-500">（统计去重用户数）</div>
-        </div>
-      </div>
 
       <div className="bg-white border rounded-lg p-4">
         <div className="flex items-center justify-between">
           <div className="font-medium text-sm">异常列表</div>
-          <div className="text-xs text-gray-500">{data ? `显示 ${data.anomalies.length} / ${data.summary.totalEvents} 条` : ""}</div>
+          <div className="text-xs text-gray-500">{data ? `共 ${data.anomalies.length} 条` : ""}</div>
         </div>
 
         <div className="mt-3 overflow-auto">
@@ -239,7 +215,7 @@ export function MonitoringAnomaliesClient() {
               {data && data.anomalies.length === 0 ? (
                 <tr>
                   <td className="py-6 px-3 text-gray-500" colSpan={8}>
-                    当前未检测到“同一用户多设备同时播放”的异常（仅实时）
+                    暂无异常
                   </td>
                 </tr>
               ) : null}
