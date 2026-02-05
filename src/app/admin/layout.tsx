@@ -35,6 +35,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <Link className="block px-3 py-2 rounded hover:bg-white/10" href="/admin/servers">
             Emby 服务器
           </Link>
+          <Link className="block px-3 py-2 rounded hover:bg-white/10" href="/admin/monitoring">
+            统计监控
+          </Link>
         </nav>
 
         <div className="p-3 border-t border-white/10 text-xs text-white/70">{username}</div>
