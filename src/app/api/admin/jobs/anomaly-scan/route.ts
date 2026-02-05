@@ -29,15 +29,25 @@ function nowPlayingLabel(s: any): string {
 }
 
 export async function POST(req: Request) {
-  // Allow either admin session OR job token header for external cron.
-  const token = (process.env.EMBYPANEL_JOB_TOKEN ?? "").trim();
-  const headerToken = (req.headers.get("x-job-token") ?? "").trim();
+  // Allow either:
+  // - internal jobs secret (for BullMQ worker calling the web container)
+  // - admin session
+  // - optional external job token (legacy / compatibility)
+  const internalSecret = (process.env.INTERNAL_JOBS_SECRET ?? "").trim();
+  const headerInternalSecret = (req.headers.get("x-internal-jobs-secret") ?? "").trim();
 
-  if (token && headerToken) {
-    if (token !== headerToken) return NextResponse.json({ error: "invalid_job_token" }, { status: 401 });
+  if (internalSecret && headerInternalSecret) {
+    if (internalSecret !== headerInternalSecret) return NextResponse.json({ error: "invalid_internal_jobs_secret" }, { status: 401 });
   } else {
-    const auth = await requireAdmin();
-    if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
+    const token = (process.env.EMBYPANEL_JOB_TOKEN ?? "").trim();
+    const headerToken = (req.headers.get("x-job-token") ?? "").trim();
+
+    if (token && headerToken) {
+      if (token !== headerToken) return NextResponse.json({ error: "invalid_job_token" }, { status: 401 });
+    } else {
+      const auth = await requireAdmin();
+      if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
   }
 
   const startedAt = new Date();

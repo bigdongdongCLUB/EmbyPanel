@@ -41,4 +41,20 @@ services:
       - db
       - redis
 
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: embypanel-worker
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      REDIS_URL: ${REDIS_URL}
+      INTERNAL_JOBS_SECRET: ${INTERNAL_JOBS_SECRET}
+      WEB_INTERNAL_URL: http://web:3000
+    command: ["node", "scripts/worker-anomaly-scan.js"]
+    depends_on:
+      - redis
+      - web
+
 # No named volumes (we use bind mounts under ./data)
