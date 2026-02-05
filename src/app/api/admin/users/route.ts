@@ -121,6 +121,7 @@ const CreateSchema = z.object({
   email: z.string().email().optional().or(z.literal("")),
   role: z.enum(["USER", "ADMIN"]).optional(),
   enabled: z.boolean().optional(),
+  balanceCents: z.number().int().min(0).optional(),
 });
 
 export async function POST(req: Request) {
@@ -150,8 +151,9 @@ export async function POST(req: Request) {
       syncPasswordTag: enc.tag,
       role: (parsed.data.role as any) ?? "USER",
       enabled: parsed.data.enabled ?? true,
+      balanceCents: parsed.data.balanceCents ?? 0,
     },
-    select: { id: true, username: true, email: true, role: true, enabled: true, createdAt: true },
+    select: { id: true, username: true, email: true, role: true, enabled: true, balanceCents: true, createdAt: true },
   });
 
   return NextResponse.json({ ok: true, user }, { status: 201 });

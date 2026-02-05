@@ -90,8 +90,15 @@ export function UsersClient() {
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [newRole, setNewRole] = useState<"USER" | "ADMIN">("USER");
+  const [newBalance, setNewBalance] = useState("0");
 
-  const canCreate = useMemo(() => newUsername.trim() && newPassword.length >= 6, [newUsername, newPassword]);
+  const canCreate = useMemo(() => {
+    if (!newUsername.trim()) return false;
+    if (newPassword.length < 6) return false;
+    const b = Number(newBalance);
+    if (!Number.isFinite(b) || b < 0) return false;
+    return true;
+  }, [newUsername, newPassword, newBalance]);
 
   async function refresh() {
     setLoading(true);
@@ -954,6 +961,21 @@ export function UsersClient() {
                   <option value="ADMIN">是</option>
                 </select>
               </div>
+
+              <div>
+                <label className="text-sm">账户余额</label>
+                <div className="mt-1 flex">
+                  <div className="border rounded-l px-3 py-2 bg-gray-50 text-gray-600">¥</div>
+                  <input
+                    className="w-full border-t border-b border-r rounded-r px-3 py-2"
+                    value={newBalance}
+                    onChange={(e) => setNewBalance(e.target.value)}
+                    inputMode="decimal"
+                    placeholder="0"
+                  />
+                </div>
+                <div className="text-xs text-gray-500 mt-1">创建时可直接充值到该账户（元）。</div>
+              </div>
             </div>
 
             <div className="mt-4 flex gap-2">
@@ -961,10 +983,22 @@ export function UsersClient() {
                 className="bg-black text-white rounded px-3 py-2 disabled:opacity-50"
                 disabled={!canCreate}
                 onClick={async () => {
+                  const balanceNum = Number(newBalance);
+                  if (!Number.isFinite(balanceNum) || balanceNum < 0) {
+                    alert("账户余额格式不正确");
+                    return;
+                  }
+
                   const res = await fetch("/api/admin/users", {
                     method: "POST",
                     headers: { "content-type": "application/json" },
-                    body: JSON.stringify({ username: newUsername.trim(), email: newEmail.trim(), password: newPassword, role: newRole }),
+                    body: JSON.stringify({
+                      username: newUsername.trim(),
+                      email: newEmail.trim(),
+                      password: newPassword,
+                      role: newRole,
+                      balanceCents: Math.round(balanceNum * 100),
+                    }),
                   });
                   if (!res.ok) {
                     alert(`创建失败: ${await res.text()}`);
@@ -975,6 +1009,7 @@ export function UsersClient() {
                   setNewEmail("");
                   setNewPassword("");
                   setNewRole("USER");
+                  setNewBalance("0");
                   await refresh();
                 }}
               >
