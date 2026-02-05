@@ -931,9 +931,7 @@ export function UsersClient() {
           <div className="bg-white rounded-lg w-full max-w-lg p-4">
             <div className="flex items-center justify-between">
               <div className="font-semibold">创建用户（面板用户）</div>
-              <button className="text-sm underline" onClick={() => setCreateOpen(false)}>
-                关闭
-              </button>
+              <div />
             </div>
 
             <div className="mt-3 grid grid-cols-1 gap-3">
