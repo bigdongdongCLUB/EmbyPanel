@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { authOptions } from "@/lib/auth";
 import { MonitoringTabs } from "../tabs";
+import { MonitoringAnomaliesClient } from "./anomalies-client";
 
 export default async function MonitoringAnomaliesPage() {
   const session = await getServerSession(authOptions);
@@ -18,7 +19,7 @@ export default async function MonitoringAnomaliesPage() {
 
       <MonitoringTabs />
 
-      <div className="bg-white border rounded-lg p-4 text-sm text-gray-600">异常监控（开发中）</div>
+      <MonitoringAnomaliesClient />
     </div>
   );
 }
