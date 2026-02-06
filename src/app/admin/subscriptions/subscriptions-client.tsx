@@ -18,6 +18,7 @@ type PlanRow = {
     templateEmbyUserId: string;
     embyServer: { id: string; name: string };
   }>;
+  subscriptionCount?: number;
   createdAt: string;
 };
 
@@ -252,7 +253,14 @@ export function SubscriptionsClient() {
 
       editRef.current = { open: false };
       setEdit({ open: false });
-      await refreshAll();
+      // Update local list first (avoid "saved but looks unchanged" if refresh fails)
+      if (json?.plan?.id) {
+        setPlans((prev) => prev.map((x) => (x.id === json.plan.id ? { ...x, ...json.plan } : x)));
+      } else {
+        await refreshAll();
+      }
+      // Also refresh in background to re-sync counts/configs
+      refreshAll().catch(() => null);
     } catch (e: any) {
       setEditSafe((s) => {
         if (!s.open) return s;
@@ -262,10 +270,22 @@ export function SubscriptionsClient() {
   }
 
   async function removePlan(id: string) {
-    if (!confirm("确定删除该订阅计划？（如果已被用户订阅，会删除失败）")) return;
+    const plan = plans.find((p) => p.id === id);
+    const cnt = plan?.subscriptionCount ?? null;
+    const hint = cnt && cnt > 0 ? `\n\n注意：该计划当前有 ${cnt} 个订阅，不能删除。` : "";
+    if (!confirm("确定删除该订阅计划？" + hint)) return;
+
     const res = await fetch(`/api/admin/plans/${id}`, { method: "DELETE" });
     const json = await res.json().catch(() => null);
-    if (!res.ok) alert(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
+    if (!res.ok) {
+      if (json?.error === "plan_in_use") {
+        alert(`删除失败：该计划已被订阅（${json.subscriptionCount ?? "?"}）`);
+      } else {
+        alert(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
+      }
+      return;
+    }
+
     await refreshAll();
   }
 
@@ -289,6 +309,7 @@ export function SubscriptionsClient() {
               <th className="py-2 px-3">可用</th>
               <th className="py-2 px-3">显示</th>
               <th className="py-2 px-3">服务器数</th>
+              <th className="py-2 px-3">订阅数</th>
               <th className="py-2 px-3">策略</th>
               <th className="py-2 px-3">操作</th>
             </tr>
@@ -300,6 +321,7 @@ export function SubscriptionsClient() {
                 <td className="py-2 px-3">{p.enabled ? "可用" : "禁用"}</td>
                 <td className="py-2 px-3">{p.visible ? "显示" : "隐藏"}</td>
                 <td className="py-2 px-3">{p.serverConfigs?.length ?? 0}</td>
+                <td className="py-2 px-3">{p.subscriptionCount ?? "-"}</td>
                 <td className="py-2 px-3">{p.serverAssignStrategy === "ALL" ? "全部分配" : "负载均衡"}</td>
                 <td className="py-2 px-3">
                   <div className="flex gap-2">
@@ -315,7 +337,7 @@ export function SubscriptionsClient() {
             ))}
             {!plans.length && !loading ? (
               <tr>
-                <td className="py-6 px-3 text-gray-500" colSpan={6}>
+                <td className="py-6 px-3 text-gray-500" colSpan={7}>
                   暂无订阅计划
                 </td>
               </tr>

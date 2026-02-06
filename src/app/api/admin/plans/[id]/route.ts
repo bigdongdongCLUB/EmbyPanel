@@ -79,7 +79,7 @@ export async function PATCH(req: Request, { params }: any) {
 
   const p = parsed.data;
 
-  await prisma.$transaction(async (tx) => {
+  const updated = await prisma.$transaction(async (tx) => {
     // replace server configs if provided
     if (p.servers) {
       await tx.planServerConfig.deleteMany({ where: { planId: params.id } });
@@ -105,9 +105,33 @@ export async function PATCH(req: Request, { params }: any) {
         pricingJson: p.pricing !== undefined ? ((p.pricing as any) ?? null) : undefined,
       },
     });
+
+    return tx.plan.findUnique({
+      where: { id: params.id },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        enabled: true,
+        visible: true,
+        serverAssignStrategy: true,
+        pricingJson: true,
+        createdAt: true,
+        updatedAt: true,
+        serverConfigs: {
+          select: {
+            id: true,
+            embyServerId: true,
+            templateEmbyUserId: true,
+            embyServer: { select: { id: true, name: true } },
+          },
+          orderBy: { createdAt: "asc" },
+        },
+      },
+    });
   });
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, plan: updated });
 }
 
 export async function DELETE(_req: Request, { params }: any) {
@@ -116,7 +140,7 @@ export async function DELETE(_req: Request, { params }: any) {
 
   // if there are subscriptions, we can either block or allow delete. For now: block.
   const subCount = await prisma.subscription.count({ where: { planId: params.id } });
-  if (subCount > 0) return NextResponse.json({ error: "plan_in_use" }, { status: 409 });
+  if (subCount > 0) return NextResponse.json({ error: "plan_in_use", subscriptionCount: subCount }, { status: 409 });
 
   await prisma.plan.delete({ where: { id: params.id } });
   return NextResponse.json({ ok: true });

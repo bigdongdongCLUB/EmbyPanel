@@ -65,7 +65,19 @@ export async function GET() {
     },
   });
 
-  return NextResponse.json({ ok: true, plans });
+  const counts = await prisma.subscription.groupBy({
+    by: ["planId"],
+    _count: { _all: true },
+    where: { planId: { in: plans.map((p) => p.id) } },
+  });
+  const countMap = new Map<string, number>();
+  for (const c of counts) {
+    if (c.planId) countMap.set(c.planId, c._count._all);
+  }
+
+  const plansWithCounts = plans.map((p) => ({ ...p, subscriptionCount: countMap.get(p.id) ?? 0 }));
+
+  return NextResponse.json({ ok: true, plans: plansWithCounts });
 }
 
 export async function POST(req: Request) {
