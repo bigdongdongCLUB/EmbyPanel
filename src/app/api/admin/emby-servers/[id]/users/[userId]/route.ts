@@ -23,6 +23,18 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string; u
   const apiKey = getEmbyApiKeyForServer(server);
   if (!apiKey) return NextResponse.json({ error: "missing_emby_api_key" }, { status: 400 });
 
+  // Block admin user operations
+  // (UI blocks too, but keep server-side guard.)
+  const u = await fetch(`${server.baseUrl.replace(/\/+$/, "")}/Users/${encodeURIComponent(embyUserId)}?api_key=${encodeURIComponent(apiKey)}`, {
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  });
+  if (u.ok) {
+    const uj = await u.json().catch(() => null);
+    const isAdmin = !!uj?.Policy?.IsAdministrator;
+    if (isAdmin) return NextResponse.json({ error: "admin_user_forbidden" }, { status: 403 });
+  }
+
   const r = await embySetUserDisabled(server.baseUrl, apiKey, embyUserId, disabled);
   if (!r.ok) return NextResponse.json({ error: "emby_failed", detail: r }, { status: 502 });
 
@@ -46,6 +58,17 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string;
 
   const apiKey = getEmbyApiKeyForServer(server);
   if (!apiKey) return NextResponse.json({ error: "missing_emby_api_key" }, { status: 400 });
+
+  // Block admin user operations
+  const u = await fetch(`${server.baseUrl.replace(/\/+$/, "")}/Users/${encodeURIComponent(embyUserId)}?api_key=${encodeURIComponent(apiKey)}`, {
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  });
+  if (u.ok) {
+    const uj = await u.json().catch(() => null);
+    const isAdmin = !!uj?.Policy?.IsAdministrator;
+    if (isAdmin) return NextResponse.json({ error: "admin_user_forbidden" }, { status: 403 });
+  }
 
   const r = await embyDeleteUser(server.baseUrl, apiKey, embyUserId);
   if (!r.ok) return NextResponse.json({ error: "emby_failed", detail: r }, { status: 502 });

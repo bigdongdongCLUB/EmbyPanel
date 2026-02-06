@@ -146,7 +146,9 @@ function UsersTable({
                   <td className="py-2 px-3">
                     <div className="flex gap-2">
                       <button
-                        className="border rounded px-2 py-1"
+                        className="border rounded px-2 py-1 disabled:opacity-50"
+                        disabled={!!u.policy?.isAdministrator}
+                        title={u.policy?.isAdministrator ? "管理员账户不可禁用" : ""}
                         onClick={async () => {
                           const nextDisabled = !u.policy?.isDisabled;
                           const label = nextDisabled ? "禁用" : "启用";
@@ -168,9 +170,12 @@ function UsersTable({
                       </button>
 
                       <button
-                        className="border rounded px-2 py-1 text-red-600"
+                        className="border rounded px-2 py-1 text-red-600 disabled:opacity-50"
+                        disabled={!!u.policy?.isAdministrator}
+                        title={u.policy?.isAdministrator ? "管理员账户不可删除" : ""}
                         onClick={async () => {
-                          if (!confirm(`确定从 Emby 服务器删除用户：${u.name} ?\n\n注意：此操作不可恢复。`)) return;
+                          const panelHint = u.panel?.username ? `\n\n提示：该用户已绑定面板账号（${u.panel.username}），本操作只删除 Emby 端用户，不会删除面板账号。` : "";
+                          if (!confirm(`确定从 Emby 服务器删除用户：${u.name} ?\n\n注意：此操作不可恢复。${panelHint}`)) return;
                           const res = await fetch(`/api/admin/emby-servers/${serverId}/users/${u.id}`, { method: "DELETE" });
                           const txt = await res.text();
                           if (!res.ok) {
