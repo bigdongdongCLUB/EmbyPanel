@@ -173,8 +173,17 @@ export function SubscriptionsClient() {
   const canSave = useMemo(() => {
     if (!edit.open) return false;
     if (!edit.name.trim()) return false;
-    if (!edit.servers.length) return false;
-    if (edit.servers.some((s) => !s.embyServerId || !s.templateEmbyUserId)) return false;
+
+    const isCreate = edit.id === null;
+
+    // Servers: required on create; optional on edit (to avoid blocking quick edits like strategy/name).
+    if (isCreate) {
+      if (!edit.servers.length) return false;
+      if (edit.servers.some((s) => !s.embyServerId || !s.templateEmbyUserId)) return false;
+    } else {
+      // If user touched servers, still enforce integrity.
+      if (edit.servers.length && edit.servers.some((s) => !s.embyServerId || !s.templateEmbyUserId)) return false;
+    }
 
     const hasAnyPrice = [edit.monthlyPrice, edit.quarterlyPrice, edit.halfYearlyPrice, edit.yearlyPrice, edit.twoYearlyPrice].some((v) => v.trim().length > 0);
 
@@ -184,8 +193,8 @@ export function SubscriptionsClient() {
     const trialEnabled = trialPriceFilled || trialDaysFilled;
     if (trialEnabled && !(trialPriceFilled && trialDaysFilled)) return false;
 
-    // 至少设置一个计费周期价格（试用不算）
-    if (!hasAnyPrice) return false;
+    // Paid prices: required on create; optional on edit.
+    if (isCreate && !hasAnyPrice) return false;
 
     for (const f of [edit.monthlyPrice, edit.quarterlyPrice, edit.halfYearlyPrice, edit.yearlyPrice, edit.twoYearlyPrice, edit.trialPrice]) {
       const c = yuanIntToCents(f);
@@ -235,15 +244,20 @@ export function SubscriptionsClient() {
       setPrice("yearly", cur.yearlyPrice);
       setPrice("twoYearly", cur.twoYearlyPrice);
 
-      const payload = {
+      const hasAnyPaidPrice = [cur.monthlyPrice, cur.quarterlyPrice, cur.halfYearlyPrice, cur.yearlyPrice, cur.twoYearlyPrice].some((v) => v.trim().length > 0);
+      const hasAnyTrial = cur.trialPrice.trim().length > 0 || cur.trialDays.trim().length > 0;
+      const shouldSendPricing = !cur.id || hasAnyPaidPrice || hasAnyTrial;
+      const shouldSendServers = !cur.id || cur.servers.length > 0;
+
+      const payload: any = {
         name: cur.name.trim(),
         description: cur.description,
         enabled: cur.enabled,
         visible: cur.visible,
         serverAssignStrategy: cur.serverAssignStrategy,
-        pricing,
-        servers: cur.servers,
       };
+      if (shouldSendPricing) payload.pricing = pricing;
+      if (shouldSendServers) payload.servers = cur.servers;
 
       const url = cur.id ? `/api/admin/plans/${cur.id}` : "/api/admin/plans";
       const method = cur.id ? "PATCH" : "POST";
