@@ -50,9 +50,141 @@ type UsersModalState =
         policy: { isDisabled: boolean; isAdministrator: boolean };
         lastLoginDate: string | null;
         lastActivityDate: string | null;
+        // optional enrich fields (some APIs return these)
+        anomalyStatus?: string | null;
+        panel?: { username?: string | null; email?: string | null } | null;
       }>;
       error: string | null;
     };
+
+function UsersTable({
+  users,
+  q,
+  setQ,
+  page,
+  setPage,
+  pageSize,
+  setPageSize,
+  onRefresh,
+}: {
+  users: UsersModalState extends { open: true } ? any : any;
+  q: string;
+  setQ: (v: string) => void;
+  page: number;
+  setPage: (v: number) => void;
+  pageSize: number;
+  setPageSize: (v: number) => void;
+  onRefresh: () => void;
+}) {
+  const filtered = useMemo(() => {
+    const qq = q.trim().toLowerCase();
+    if (!qq) return users ?? [];
+    return (users ?? []).filter((u: any) => {
+      const hay = [u?.name, u?.panel?.username, u?.panel?.email].filter(Boolean).join(" ").toLowerCase();
+      return hay.includes(qq);
+    });
+  }, [users, q]);
+
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(Math.max(1, page), totalPages);
+  const start = (safePage - 1) * pageSize;
+  const pageRows = filtered.slice(start, start + pageSize);
+
+  useEffect(() => {
+    if (page !== safePage) setPage(safePage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [safePage]);
+
+  return (
+    <div className="mt-4 space-y-3">
+      <div className="flex flex-wrap items-center gap-2 justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            className="border rounded px-3 py-2 w-[260px]"
+            placeholder="搜索用户名/面板账号/邮箱"
+            value={q}
+            onChange={(e) => {
+              setQ(e.target.value);
+              setPage(1);
+            }}
+          />
+
+          <button className="border rounded px-3 py-2" onClick={onRefresh}>
+            刷新
+          </button>
+        </div>
+
+        <div className="text-sm text-gray-600">共 {total} 个用户</div>
+      </div>
+
+      <div className="border rounded-lg overflow-hidden">
+        <div className="max-h-[70vh] overflow-auto">
+          <table className="min-w-[1100px] w-full text-sm">
+            <thead className="text-left text-gray-600 sticky top-0 bg-white border-b">
+              <tr>
+                <th className="py-2 px-3">用户名</th>
+                <th className="py-2 px-3">异常状态</th>
+                <th className="py-2 px-3">Emby用户状态</th>
+                <th className="py-2 px-3">面板账号</th>
+                <th className="py-2 px-3">邮箱</th>
+                <th className="py-2 px-3">最后活动</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pageRows.map((u: any) => (
+                <tr key={u.id} className="border-b last:border-b-0">
+                  <td className="py-2 px-3 font-mono">{u.name}</td>
+                  <td className="py-2 px-3">{u.anomalyStatus ?? "-"}</td>
+                  <td className="py-2 px-3">{u.policy?.isDisabled ? "Emby禁用" : "Emby正常"}</td>
+                  <td className="py-2 px-3 font-mono">{u.panel?.username ?? "-"}</td>
+                  <td className="py-2 px-3">{u.panel?.email ?? "-"}</td>
+                  <td className="py-2 px-3 font-mono text-xs">{u.lastActivityDate ?? "-"}</td>
+                </tr>
+              ))}
+              {total === 0 ? (
+                <tr>
+                  <td className="py-6 px-3 text-gray-500" colSpan={6}>
+                    无用户
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t p-3 text-sm">
+          <div className="text-gray-600">
+            {total > 0 ? `第 ${safePage} / ${totalPages} 页 · 本页 ${pageRows.length} 条` : ""}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button className="border rounded px-2 py-1 disabled:opacity-50" disabled={safePage <= 1} onClick={() => setPage(safePage - 1)}>
+              上一页
+            </button>
+            <button className="border rounded px-2 py-1 disabled:opacity-50" disabled={safePage >= totalPages} onClick={() => setPage(safePage + 1)}>
+              下一页
+            </button>
+
+            <select
+              className="border rounded px-2 py-1"
+              value={String(pageSize)}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setPage(1);
+              }}
+            >
+              <option value="10">10 / page</option>
+              <option value="20">20 / page</option>
+              <option value="50">50 / page</option>
+              <option value="100">100 / page</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function ServersClient() {
   const [servers, setServers] = useState<Server[]>([]);
@@ -66,6 +198,9 @@ export function ServersClient() {
   const [modal, setModal] = useState<ModalState>({ open: false });
   const [statsModal, setStatsModal] = useState<StatsModalState>({ open: false });
   const [usersModal, setUsersModal] = useState<UsersModalState>({ open: false });
+  const [usersQ, setUsersQ] = useState("");
+  const [usersPage, setUsersPage] = useState(1);
+  const [usersPageSize, setUsersPageSize] = useState(10);
 
   const canSubmit = useMemo(() => !!name && !!baseUrl && apiKey.length >= 10, [name, baseUrl, apiKey]);
 
@@ -191,6 +326,9 @@ export function ServersClient() {
                 <button
                   className="border rounded px-3 py-2"
                   onClick={async () => {
+                    setUsersQ("");
+                    setUsersPage(1);
+                    setUsersPageSize(10);
                     setUsersModal({ open: true, id: s.id, name: s.name, loading: true, users: [], error: null });
                     try {
                       const res = await fetch(`/api/admin/emby-servers/${s.id}/users`, { cache: "no-store" });
@@ -296,10 +434,15 @@ export function ServersClient() {
 
       {usersModal.open ? (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg w-full max-w-3xl p-4">
+          <div className="bg-white rounded-lg w-full max-w-5xl p-4">
             <div className="flex items-center justify-between">
-              <div className="font-semibold">用户 - {usersModal.name}</div>
-              <button className="text-sm underline" onClick={() => setUsersModal({ open: false })}>
+              <div className="font-semibold">{usersModal.name} - 用户列表</div>
+              <button
+                className="text-sm underline"
+                onClick={() => {
+                  setUsersModal({ open: false });
+                }}
+              >
                 关闭
               </button>
             </div>
@@ -308,33 +451,27 @@ export function ServersClient() {
             {usersModal.error ? <pre className="mt-3 text-xs text-red-600 whitespace-pre-wrap">{usersModal.error}</pre> : null}
 
             {!usersModal.loading ? (
-              <div className="mt-4 overflow-auto">
-                <table className="w-full text-sm">
-                  <thead className="text-left text-gray-600">
-                    <tr>
-                      <th className="py-2">用户名</th>
-                      <th className="py-2">异常状态</th>
-                      <th className="py-2">Emby用户状态</th>
-                      <th className="py-2">面板账号</th>
-                      <th className="py-2">邮箱</th>
-                      <th className="py-2">最后活动</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {usersModal.users.map((u: any) => (
-                      <tr key={u.id} className="border-t">
-                        <td className="py-2 font-mono">{u.name}</td>
-                        <td className="py-2">{u.anomalyStatus ?? "-"}</td>
-                        <td className="py-2">{u.policy.isDisabled ? "Emby禁用" : "Emby正常"}</td>
-                        <td className="py-2 font-mono">{u.panel?.username ?? "-"}</td>
-                        <td className="py-2">{u.panel?.email ?? "-"}</td>
-                        <td className="py-2 font-mono text-xs">{u.lastActivityDate ?? "-"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {usersModal.users.length === 0 ? <div className="text-sm text-gray-500">无用户</div> : null}
-              </div>
+              <UsersTable
+                users={usersModal.users}
+                q={usersQ}
+                setQ={setUsersQ}
+                page={usersPage}
+                setPage={setUsersPage}
+                pageSize={usersPageSize}
+                setPageSize={setUsersPageSize}
+                onRefresh={async () => {
+                  if (!usersModal.open) return;
+                  setUsersModal({ ...usersModal, loading: true, error: null });
+                  try {
+                    const res = await fetch(`/api/admin/emby-servers/${usersModal.id}/users`, { cache: "no-store" });
+                    const json = await res.json().catch(() => null);
+                    if (!res.ok) throw new Error(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
+                    setUsersModal({ ...usersModal, loading: false, users: json.users ?? [], error: null });
+                  } catch (e: any) {
+                    setUsersModal({ ...usersModal, loading: false, users: [], error: e?.message ?? "load_failed" });
+                  }
+                }}
+              />
             ) : null}
           </div>
         </div>
