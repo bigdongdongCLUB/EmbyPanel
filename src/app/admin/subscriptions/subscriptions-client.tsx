@@ -248,8 +248,17 @@ export function SubscriptionsClient() {
       const url = cur.id ? `/api/admin/plans/${cur.id}` : "/api/admin/plans";
       const method = cur.id ? "PATCH" : "POST";
       const res = await fetch(url, { method, headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
-      const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
+      const text = await res.text();
+      const json = (() => {
+        try {
+          return JSON.parse(text);
+        } catch {
+          return null;
+        }
+      })();
+      if (!res.ok) {
+        throw new Error(json?.error ? JSON.stringify(json) : `HTTP ${res.status}: ${text?.slice?.(0, 5000) ?? text}`);
+      }
 
       editRef.current = { open: false };
       setEdit({ open: false });
@@ -262,9 +271,14 @@ export function SubscriptionsClient() {
       // Also refresh in background to re-sync counts/configs
       refreshAll().catch(() => null);
     } catch (e: any) {
+      const msg = e?.message ?? "save_failed";
+      // Make it impossible to miss in production.
+      try {
+        alert(`保存失败：${msg}`);
+      } catch {}
       setEditSafe((s) => {
         if (!s.open) return s;
-        return { ...s, loading: false, error: e?.message ?? "save_failed" };
+        return { ...s, loading: false, error: msg };
       });
     }
   }
@@ -276,12 +290,20 @@ export function SubscriptionsClient() {
     if (!confirm("确定删除该订阅计划？" + hint)) return;
 
     const res = await fetch(`/api/admin/plans/${id}`, { method: "DELETE" });
-    const json = await res.json().catch(() => null);
+    const text = await res.text();
+    const json = (() => {
+      try {
+        return JSON.parse(text);
+      } catch {
+        return null;
+      }
+    })();
+
     if (!res.ok) {
       if (json?.error === "plan_in_use") {
         alert(`删除失败：该计划已被订阅（${json.subscriptionCount ?? "?"}）`);
       } else {
-        alert(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
+        alert(json?.error ? JSON.stringify(json) : `HTTP ${res.status}: ${text?.slice?.(0, 5000) ?? text}`);
       }
       return;
     }
