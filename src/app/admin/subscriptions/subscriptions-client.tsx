@@ -384,7 +384,16 @@ export function SubscriptionsClient() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <label className="text-sm">订阅名称</label>
-                  <input className="mt-1 w-full border rounded px-3 py-2" value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} />
+                  <input
+                    className="mt-1 w-full border rounded px-3 py-2"
+                    value={edit.name}
+                    onChange={(e) =>
+                      setEditSafe((prev) => {
+                        if (!prev.open) return prev;
+                        return { ...prev, name: e.target.value };
+                      })
+                    }
+                  />
                 </div>
                 <div>
                   <label className="text-sm">服务器分配策略</label>
@@ -410,18 +419,41 @@ export function SubscriptionsClient() {
                 <textarea
                   className="mt-1 w-full border rounded px-3 py-2 min-h-[160px]"
                   value={edit.description}
-                  onChange={(e) => setEdit({ ...edit, description: e.target.value })}
+                  onChange={(e) =>
+                    setEditSafe((prev) => {
+                      if (!prev.open) return prev;
+                      return { ...prev, description: e.target.value };
+                    })
+                  }
                   placeholder="支持 Markdown/HTML（前台以富文本渲染）"
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={edit.enabled} onChange={(e) => setEdit({ ...edit, enabled: e.target.checked })} />
+                  <input
+                    type="checkbox"
+                    checked={edit.enabled}
+                    onChange={(e) =>
+                      setEditSafe((prev) => {
+                        if (!prev.open) return prev;
+                        return { ...prev, enabled: e.target.checked };
+                      })
+                    }
+                  />
                   可用状态（允许新订单）
                 </label>
                 <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={edit.visible} onChange={(e) => setEdit({ ...edit, visible: e.target.checked })} />
+                  <input
+                    type="checkbox"
+                    checked={edit.visible}
+                    onChange={(e) =>
+                      setEditSafe((prev) => {
+                        if (!prev.open) return prev;
+                        return { ...prev, visible: e.target.checked };
+                      })
+                    }
+                  />
                   显示状态（前端展示）
                 </label>
               </div>
@@ -432,31 +464,97 @@ export function SubscriptionsClient() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <label className="text-sm">试用价格（可选）</label>
-                  <input className="mt-1 w-full border rounded px-3 py-2" value={edit.trialPrice} onChange={(e) => setEdit({ ...edit, trialPrice: e.target.value })} placeholder="例如 0 或 10" inputMode="numeric" />
+                  <input
+                    className="mt-1 w-full border rounded px-3 py-2"
+                    value={edit.trialPrice}
+                    onChange={(e) =>
+                      setEditSafe((prev) => {
+                        if (!prev.open) return prev;
+                        return { ...prev, trialPrice: e.target.value };
+                      })
+                    }
+                    placeholder="例如 0 或 10"
+                    inputMode="numeric"
+                  />
                 </div>
                 <div>
                   <label className="text-sm">试用天数（可选）</label>
-                  <input className="mt-1 w-full border rounded px-3 py-2" value={edit.trialDays} onChange={(e) => setEdit({ ...edit, trialDays: e.target.value })} placeholder="例如 3" />
+                  <input
+                    className="mt-1 w-full border rounded px-3 py-2"
+                    value={edit.trialDays}
+                    onChange={(e) =>
+                      setEditSafe((prev) => {
+                        if (!prev.open) return prev;
+                        return { ...prev, trialDays: e.target.value };
+                      })
+                    }
+                    placeholder="例如 3"
+                  />
                 </div>
                 <div>
                   <label className="text-sm">月付价格</label>
-                  <input className="mt-1 w-full border rounded px-3 py-2" value={edit.monthlyPrice} onChange={(e) => setEdit({ ...edit, monthlyPrice: e.target.value })} />
+                  <input
+                    className="mt-1 w-full border rounded px-3 py-2"
+                    value={edit.monthlyPrice}
+                    onChange={(e) =>
+                      setEditSafe((prev) => {
+                        if (!prev.open) return prev;
+                        return { ...prev, monthlyPrice: e.target.value };
+                      })
+                    }
+                  />
                 </div>
                 <div>
                   <label className="text-sm">季付价格</label>
-                  <input className="mt-1 w-full border rounded px-3 py-2" value={edit.quarterlyPrice} onChange={(e) => setEdit({ ...edit, quarterlyPrice: e.target.value })} />
+                  <input
+                    className="mt-1 w-full border rounded px-3 py-2"
+                    value={edit.quarterlyPrice}
+                    onChange={(e) =>
+                      setEditSafe((prev) => {
+                        if (!prev.open) return prev;
+                        return { ...prev, quarterlyPrice: e.target.value };
+                      })
+                    }
+                  />
                 </div>
                 <div>
                   <label className="text-sm">半年付价格</label>
-                  <input className="mt-1 w-full border rounded px-3 py-2" value={edit.halfYearlyPrice} onChange={(e) => setEdit({ ...edit, halfYearlyPrice: e.target.value })} />
+                  <input
+                    className="mt-1 w-full border rounded px-3 py-2"
+                    value={edit.halfYearlyPrice}
+                    onChange={(e) =>
+                      setEditSafe((prev) => {
+                        if (!prev.open) return prev;
+                        return { ...prev, halfYearlyPrice: e.target.value };
+                      })
+                    }
+                  />
                 </div>
                 <div>
                   <label className="text-sm">年付价格</label>
-                  <input className="mt-1 w-full border rounded px-3 py-2" value={edit.yearlyPrice} onChange={(e) => setEdit({ ...edit, yearlyPrice: e.target.value })} />
+                  <input
+                    className="mt-1 w-full border rounded px-3 py-2"
+                    value={edit.yearlyPrice}
+                    onChange={(e) =>
+                      setEditSafe((prev) => {
+                        if (!prev.open) return prev;
+                        return { ...prev, yearlyPrice: e.target.value };
+                      })
+                    }
+                  />
                 </div>
                 <div>
                   <label className="text-sm">两年付价格</label>
-                  <input className="mt-1 w-full border rounded px-3 py-2" value={edit.twoYearlyPrice} onChange={(e) => setEdit({ ...edit, twoYearlyPrice: e.target.value })} />
+                  <input
+                    className="mt-1 w-full border rounded px-3 py-2"
+                    value={edit.twoYearlyPrice}
+                    onChange={(e) =>
+                      setEditSafe((prev) => {
+                        if (!prev.open) return prev;
+                        return { ...prev, twoYearlyPrice: e.target.value };
+                      })
+                    }
+                  />
                 </div>
               </div>
               <div className="text-xs text-gray-500">价格为空的周期，前端不展示。至少需要设置一个周期价格。</div>
@@ -474,7 +572,10 @@ export function SubscriptionsClient() {
                         onClick={() => {
                           const next = edit.servers.slice();
                           next.splice(idx, 1);
-                          setEdit({ ...edit, servers: next });
+                          setEditSafe((prev) => {
+                            if (!prev.open) return prev;
+                            return { ...prev, servers: next };
+                          });
                         }}
                       >
                         删除
@@ -491,8 +592,16 @@ export function SubscriptionsClient() {
                             const v = e.target.value;
                             const next = edit.servers.slice();
                             next[idx] = { embyServerId: v, templateEmbyUserId: "" };
-                            setEdit({ ...edit, servers: next });
-                            loadTemplateUsers(v).catch((err) => setEdit({ ...edit, error: String(err?.message ?? err) }));
+                            setEditSafe((prev) => {
+                              if (!prev.open) return prev;
+                              return { ...prev, servers: next };
+                            });
+                            loadTemplateUsers(v).catch((err) =>
+                              setEditSafe((prev) => {
+                                if (!prev.open) return prev;
+                                return { ...prev, error: String(err?.message ?? err) };
+                              })
+                            );
                           }}
                         >
                           <option value="">选择服务器…</option>
@@ -515,7 +624,10 @@ export function SubscriptionsClient() {
                             const v = e.target.value;
                             const next = edit.servers.slice();
                             next[idx] = { ...next[idx], templateEmbyUserId: v };
-                            setEdit({ ...edit, servers: next });
+                            setEditSafe((prev) => {
+                              if (!prev.open) return prev;
+                              return { ...prev, servers: next };
+                            });
                           }}
                           disabled={!row.embyServerId}
                         >
@@ -535,14 +647,25 @@ export function SubscriptionsClient() {
 
               <button
                 className="border rounded px-3 py-2"
-                onClick={() => setEdit({ ...edit, servers: [...edit.servers, { embyServerId: "", templateEmbyUserId: "" }] })}
+                onClick={() =>
+                  setEditSafe((prev) => {
+                    if (!prev.open) return prev;
+                    return { ...prev, servers: [...prev.servers, { embyServerId: "", templateEmbyUserId: "" }] };
+                  })
+                }
               >
                 + 添加 Emby 服务器
               </button>
             </section>
 
             <div className="flex gap-3 justify-end pt-2">
-              <button className="border rounded px-3 py-2" onClick={() => setEdit({ open: false })}>
+              <button
+                className="border rounded px-3 py-2"
+                onClick={() => {
+                  editRef.current = { open: false };
+                  setEdit({ open: false });
+                }}
+              >
                 取消
               </button>
               <button className="bg-black text-white rounded px-3 py-2 disabled:opacity-50" disabled={!canSave || edit.loading} onClick={save}>
