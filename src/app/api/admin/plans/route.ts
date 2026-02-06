@@ -65,10 +65,14 @@ export async function GET() {
     },
   });
 
+  // Define subscription count as ACTIVE subscriptions only (matches delete rule).
   const counts = await prisma.subscription.groupBy({
     by: ["planId"],
     _count: { _all: true },
-    where: { planId: { in: plans.map((p) => p.id) } },
+    where: {
+      status: "ACTIVE",
+      planId: { in: plans.map((p) => p.id) },
+    },
   });
   const countMap = new Map<string, number>();
   for (const c of counts) {

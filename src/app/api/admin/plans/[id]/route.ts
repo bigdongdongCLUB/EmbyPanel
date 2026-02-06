@@ -138,10 +138,15 @@ export async function DELETE(_req: Request, { params }: any) {
   const auth = await requireAdmin();
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
-  // if there are subscriptions, we can either block or allow delete. For now: block.
-  const subCount = await prisma.subscription.count({ where: { planId: params.id } });
-  if (subCount > 0) return NextResponse.json({ error: "plan_in_use", subscriptionCount: subCount }, { status: 409 });
+  // Delete rule: block only when there are ACTIVE subscriptions.
+  const activeCount = await prisma.subscription.count({ where: { planId: params.id, status: "ACTIVE" } });
+  if (activeCount > 0) return NextResponse.json({ error: "plan_in_use", subscriptionCount: activeCount }, { status: 409 });
 
-  await prisma.plan.delete({ where: { id: params.id } });
+  // Keep historical subscriptions but detach them from the plan to satisfy FK constraints.
+  await prisma.$transaction(async (tx) => {
+    await tx.subscription.updateMany({ where: { planId: params.id }, data: { planId: null } });
+    await tx.plan.delete({ where: { id: params.id } });
+  });
+
   return NextResponse.json({ ok: true });
 }

@@ -331,7 +331,7 @@ export function SubscriptionsClient() {
               <th className="py-2 px-3">可用</th>
               <th className="py-2 px-3">显示</th>
               <th className="py-2 px-3">服务器数</th>
-              <th className="py-2 px-3">订阅数</th>
+              <th className="py-2 px-3">订阅数（有效）</th>
               <th className="py-2 px-3">策略</th>
               <th className="py-2 px-3">操作</th>
             </tr>
