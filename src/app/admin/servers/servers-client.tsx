@@ -58,6 +58,7 @@ type UsersModalState =
     };
 
 function UsersTable({
+  serverId,
   users,
   q,
   setQ,
@@ -67,7 +68,8 @@ function UsersTable({
   setPageSize,
   onRefresh,
 }: {
-  users: UsersModalState extends { open: true } ? any : any;
+  serverId: string;
+  users: any[];
   q: string;
   setQ: (v: string) => void;
   page: number;
@@ -120,7 +122,7 @@ function UsersTable({
 
       <div className="border rounded-lg overflow-hidden">
         <div className="max-h-[70vh] overflow-auto">
-          <table className="min-w-[1100px] w-full text-sm">
+          <table className="min-w-[1250px] w-full text-sm">
             <thead className="text-left text-gray-600 sticky top-0 bg-white border-b">
               <tr>
                 <th className="py-2 px-3">用户名</th>
@@ -129,6 +131,7 @@ function UsersTable({
                 <th className="py-2 px-3">面板账号</th>
                 <th className="py-2 px-3">邮箱</th>
                 <th className="py-2 px-3">最后活动</th>
+                <th className="py-2 px-3">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -140,11 +143,52 @@ function UsersTable({
                   <td className="py-2 px-3 font-mono">{u.panel?.username ?? "-"}</td>
                   <td className="py-2 px-3">{u.panel?.email ?? "-"}</td>
                   <td className="py-2 px-3 font-mono text-xs">{u.lastActivityDate ?? "-"}</td>
+                  <td className="py-2 px-3">
+                    <div className="flex gap-2">
+                      <button
+                        className="border rounded px-2 py-1"
+                        onClick={async () => {
+                          const nextDisabled = !u.policy?.isDisabled;
+                          const label = nextDisabled ? "禁用" : "启用";
+                          if (!confirm(`确定${label} Emby 用户：${u.name} ?`)) return;
+                          const res = await fetch(`/api/admin/emby-servers/${serverId}/users/${u.id}`, {
+                            method: "PATCH",
+                            headers: { "content-type": "application/json" },
+                            body: JSON.stringify({ disabled: nextDisabled }),
+                          });
+                          const txt = await res.text();
+                          if (!res.ok) {
+                            alert(`操作失败: ${txt}`);
+                            return;
+                          }
+                          onRefresh();
+                        }}
+                      >
+                        {u.policy?.isDisabled ? "启用" : "禁用"}
+                      </button>
+
+                      <button
+                        className="border rounded px-2 py-1 text-red-600"
+                        onClick={async () => {
+                          if (!confirm(`确定从 Emby 服务器删除用户：${u.name} ?\n\n注意：此操作不可恢复。`)) return;
+                          const res = await fetch(`/api/admin/emby-servers/${serverId}/users/${u.id}`, { method: "DELETE" });
+                          const txt = await res.text();
+                          if (!res.ok) {
+                            alert(`删除失败: ${txt}`);
+                            return;
+                          }
+                          onRefresh();
+                        }}
+                      >
+                        删除
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
               {total === 0 ? (
                 <tr>
-                  <td className="py-6 px-3 text-gray-500" colSpan={6}>
+                  <td className="py-6 px-3 text-gray-500" colSpan={7}>
                     无用户
                   </td>
                 </tr>
@@ -452,6 +496,7 @@ export function ServersClient() {
 
             {!usersModal.loading ? (
               <UsersTable
+                serverId={usersModal.id}
                 users={usersModal.users}
                 q={usersQ}
                 setQ={setUsersQ}
@@ -459,7 +504,7 @@ export function ServersClient() {
                 setPage={setUsersPage}
                 pageSize={usersPageSize}
                 setPageSize={setUsersPageSize}
-                onRefresh={async () => {
+                onRefresh={async () => { 
                   if (!usersModal.open) return;
                   setUsersModal({ ...usersModal, loading: true, error: null });
                   try {
