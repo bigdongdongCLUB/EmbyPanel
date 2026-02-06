@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type EmbyServer = { id: string; name: string; enabled: boolean };
 
@@ -67,6 +67,15 @@ export function SubscriptionsClient() {
   const [servers, setServers] = useState<EmbyServer[]>([]);
 
   const [edit, setEdit] = useState<EditState>({ open: false });
+  const editRef = useRef<EditState>(edit);
+
+  function setEditSafe(updater: (prev: EditState) => EditState) {
+    setEdit((prev) => {
+      const next = updater(prev);
+      editRef.current = next;
+      return next;
+    });
+  }
   const [templateUsers, setTemplateUsers] = useState<Record<string, Array<{ id: string; name: string }>>>({});
 
   async function refreshAll() {
@@ -107,7 +116,7 @@ export function SubscriptionsClient() {
   }
 
   function openCreate() {
-    setEdit({
+    const next: EditState = {
       open: true,
       id: null,
       loading: false,
@@ -125,12 +134,14 @@ export function SubscriptionsClient() {
       yearlyPrice: "",
       twoYearlyPrice: "",
       servers: [],
-    });
+    };
+    editRef.current = next;
+    setEdit(next);
   }
 
   function openEdit(p: PlanRow) {
     const pricing = p.pricingJson ?? {};
-    setEdit({
+    const next: EditState = {
       open: true,
       id: p.id,
       loading: false,
@@ -148,7 +159,9 @@ export function SubscriptionsClient() {
       yearlyPrice: centsToYuanInt(pricing?.yearly?.priceCents),
       twoYearlyPrice: centsToYuanInt(pricing?.twoYearly?.priceCents),
       servers: (p.serverConfigs ?? []).map((c) => ({ embyServerId: c.embyServerId, templateEmbyUserId: c.templateEmbyUserId })),
-    });
+    };
+    editRef.current = next;
+    setEdit(next);
 
     // preload template users for current servers
     (p.serverConfigs ?? []).forEach((c) => {
@@ -189,17 +202,20 @@ export function SubscriptionsClient() {
   }, [edit]);
 
   async function save() {
-    if (!edit.open) return;
-    setEdit((prev) => {
+    const cur = editRef.current;
+    if (!cur.open) return;
+
+    setEditSafe((prev) => {
       if (!prev.open) return prev;
       return { ...prev, loading: true, error: null };
     });
+
     try {
       const pricing: any = {};
 
-      const trialC = yuanIntToCents(edit.trialPrice);
-      const trialD = edit.trialDays.trim() ? Number(edit.trialDays.trim()) : null;
-      const trialEnabled = edit.trialPrice.trim() || edit.trialDays.trim();
+      const trialC = yuanIntToCents(cur.trialPrice);
+      const trialD = cur.trialDays.trim() ? Number(cur.trialDays.trim()) : null;
+      const trialEnabled = cur.trialPrice.trim() || cur.trialDays.trim();
       if (trialEnabled) {
         if (trialC === null || Number.isNaN(trialC)) throw new Error("trial_price_invalid");
         if (trialD === null || !Number.isFinite(trialD) || trialD <= 0) throw new Error("trial_days_invalid");
@@ -212,32 +228,36 @@ export function SubscriptionsClient() {
         if (Number.isNaN(c)) throw new Error(`${key}_price_invalid`);
         pricing[key] = { priceCents: c };
       };
-      setPrice("monthly", edit.monthlyPrice);
-      setPrice("quarterly", edit.quarterlyPrice);
-      setPrice("halfYearly", edit.halfYearlyPrice);
-      setPrice("yearly", edit.yearlyPrice);
-      setPrice("twoYearly", edit.twoYearlyPrice);
+      setPrice("monthly", cur.monthlyPrice);
+      setPrice("quarterly", cur.quarterlyPrice);
+      setPrice("halfYearly", cur.halfYearlyPrice);
+      setPrice("yearly", cur.yearlyPrice);
+      setPrice("twoYearly", cur.twoYearlyPrice);
 
       const payload = {
-        name: edit.name.trim(),
-        description: edit.description,
-        enabled: edit.enabled,
-        visible: edit.visible,
-        serverAssignStrategy: edit.serverAssignStrategy,
+        name: cur.name.trim(),
+        description: cur.description,
+        enabled: cur.enabled,
+        visible: cur.visible,
+        serverAssignStrategy: cur.serverAssignStrategy,
         pricing,
-        servers: edit.servers,
+        servers: cur.servers,
       };
 
-      const url = edit.id ? `/api/admin/plans/${edit.id}` : "/api/admin/plans";
-      const method = edit.id ? "PATCH" : "POST";
+      const url = cur.id ? `/api/admin/plans/${cur.id}` : "/api/admin/plans";
+      const method = cur.id ? "PATCH" : "POST";
       const res = await fetch(url, { method, headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
       const json = await res.json().catch(() => null);
       if (!res.ok) throw new Error(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
 
+      editRef.current = { open: false };
       setEdit({ open: false });
       await refreshAll();
     } catch (e: any) {
-      setEdit((s: any) => ({ ...s, loading: false, error: e?.message ?? "save_failed" }));
+      setEditSafe((s) => {
+        if (!s.open) return s;
+        return { ...s, loading: false, error: e?.message ?? "save_failed" };
+      });
     }
   }
 
@@ -328,7 +348,7 @@ export function SubscriptionsClient() {
                     className="mt-1 w-full border rounded px-3 py-2"
                     value={edit.serverAssignStrategy}
                     onChange={(e) =>
-                      setEdit((prev) => {
+                      setEditSafe((prev) => {
                         if (!prev.open) return prev;
                         return { ...prev, serverAssignStrategy: e.target.value as any };
                       })
