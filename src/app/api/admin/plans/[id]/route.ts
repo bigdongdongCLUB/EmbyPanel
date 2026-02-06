@@ -38,11 +38,13 @@ const PatchSchema = z.object({
 });
 
 export async function GET(_req: Request, { params }: any) {
+  const p0 = await params;
+  const id = p0?.id;
   const auth = await requireAdmin();
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   const plan = await prisma.plan.findUnique({
-    where: { id: params.id },
+    where: { id },
     select: {
       id: true,
       name: true,
@@ -70,6 +72,8 @@ export async function GET(_req: Request, { params }: any) {
 }
 
 export async function PATCH(req: Request, { params }: any) {
+  const p0 = await params;
+  const id = p0?.id;
   const auth = await requireAdmin();
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
@@ -82,11 +86,11 @@ export async function PATCH(req: Request, { params }: any) {
   const updated = await prisma.$transaction(async (tx) => {
     // replace server configs if provided
     if (p.servers) {
-      await tx.planServerConfig.deleteMany({ where: { planId: params.id } });
+      await tx.planServerConfig.deleteMany({ where: { planId: id } });
       if (p.servers.length) {
         await tx.planServerConfig.createMany({
           data: p.servers.map((s) => ({
-            planId: params.id,
+            planId: id,
             embyServerId: s.embyServerId,
             templateEmbyUserId: s.templateEmbyUserId,
           })),
@@ -95,7 +99,7 @@ export async function PATCH(req: Request, { params }: any) {
     }
 
     await tx.plan.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         name: p.name,
         description: p.description !== undefined ? (p.description ? p.description : null) : undefined,
@@ -107,7 +111,7 @@ export async function PATCH(req: Request, { params }: any) {
     });
 
     return tx.plan.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         id: true,
         name: true,
@@ -135,17 +139,19 @@ export async function PATCH(req: Request, { params }: any) {
 }
 
 export async function DELETE(_req: Request, { params }: any) {
+  const p0 = await params;
+  const id = p0?.id;
   const auth = await requireAdmin();
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   // Delete rule: block only when there are ACTIVE subscriptions.
-  const activeCount = await prisma.subscription.count({ where: { planId: params.id, status: "ACTIVE" } });
+  const activeCount = await prisma.subscription.count({ where: { planId: id, status: "ACTIVE" } });
   if (activeCount > 0) return NextResponse.json({ error: "plan_in_use", subscriptionCount: activeCount }, { status: 409 });
 
   // Keep historical subscriptions but detach them from the plan to satisfy FK constraints.
   await prisma.$transaction(async (tx) => {
-    await tx.subscription.updateMany({ where: { planId: params.id }, data: { planId: null } });
-    await tx.plan.delete({ where: { id: params.id } });
+    await tx.subscription.updateMany({ where: { planId: id }, data: { planId: null } });
+    await tx.plan.delete({ where: { id } });
   });
 
   return NextResponse.json({ ok: true });
