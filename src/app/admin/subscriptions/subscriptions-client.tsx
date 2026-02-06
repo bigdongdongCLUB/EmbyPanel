@@ -190,7 +190,10 @@ export function SubscriptionsClient() {
 
   async function save() {
     if (!edit.open) return;
-    setEdit({ ...edit, loading: true, error: null });
+    setEdit((prev) => {
+      if (!prev.open) return prev;
+      return { ...prev, loading: true, error: null };
+    });
     try {
       const pricing: any = {};
 
@@ -324,7 +327,12 @@ export function SubscriptionsClient() {
                   <select
                     className="mt-1 w-full border rounded px-3 py-2"
                     value={edit.serverAssignStrategy}
-                    onChange={(e) => setEdit({ ...edit, serverAssignStrategy: e.target.value as any })}
+                    onChange={(e) =>
+                      setEdit((prev) => {
+                        if (!prev.open) return prev;
+                        return { ...prev, serverAssignStrategy: e.target.value as any };
+                      })
+                    }
                   >
                     <option value="LOAD_BALANCE">负载均衡（默认）</option>
                     <option value="ALL">全部分配（每个服务器都创建账号）</option>
