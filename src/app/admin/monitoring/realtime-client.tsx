@@ -31,6 +31,10 @@ export function RealtimeMonitorClient() {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const intervalSec = 120;
 
+  const [q, setQ] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<Data | null>(null);
@@ -68,6 +72,9 @@ export function RealtimeMonitorClient() {
   }, []);
 
   useEffect(() => {
+    setQ("");
+    setPage(1);
+    setPageSize(10);
     refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serverId]);
@@ -84,6 +91,27 @@ export function RealtimeMonitorClient() {
     if (!data.online) return "离线";
     return `在线（${data.latencyMs}ms）`;
   }, [data]);
+
+  const filtered = useMemo(() => {
+    const list = data?.sessions ?? [];
+    const qq = q.trim().toLowerCase();
+    if (!qq) return list;
+    return list.filter((s) => {
+      const hay = [s.userName, s.device, s.client, s.nowPlaying, s.ip].filter(Boolean).join(" ").toLowerCase();
+      return hay.includes(qq);
+    });
+  }, [data, q]);
+
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(Math.max(1, page), totalPages);
+  const start = (safePage - 1) * pageSize;
+  const pageRows = filtered.slice(start, start + pageSize);
+
+  useEffect(() => {
+    if (page !== safePage) setPage(safePage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [safePage]);
 
   return (
     <div className="space-y-4">
@@ -125,9 +153,37 @@ export function RealtimeMonitorClient() {
       </div>
 
       <div className="bg-white border rounded-lg p-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="font-medium text-sm">正在播放列表</div>
-          <div className="text-xs text-gray-500">{data ? `共 ${data.sessions.length} 条` : ""}</div>
+          <div className="text-xs text-gray-500">{data ? `共 ${total} 条` : ""}</div>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2 justify-between">
+          <input
+            className="border rounded px-3 py-2 w-[260px]"
+            placeholder="搜索用户名/设备/客户端/IP/正在播放"
+            value={q}
+            onChange={(e) => {
+              setQ(e.target.value);
+              setPage(1);
+            }}
+          />
+
+          <div className="flex items-center gap-2">
+            <select
+              className="border rounded px-2 py-2"
+              value={String(pageSize)}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setPage(1);
+              }}
+            >
+              <option value="10">10 / page</option>
+              <option value="20">20 / page</option>
+              <option value="50">50 / page</option>
+              <option value="100">100 / page</option>
+            </select>
+          </div>
         </div>
 
         <div className="mt-3 overflow-auto">
@@ -143,7 +199,7 @@ export function RealtimeMonitorClient() {
               </tr>
             </thead>
             <tbody>
-              {(data?.sessions ?? []).map((s) => (
+              {pageRows.map((s) => (
                 <tr key={s.id} className="border-b last:border-b-0">
                   <td className="py-2 px-3">{s.userName || "-"}</td>
                   <td className="py-2 px-3">{s.device || "-"}</td>
@@ -153,7 +209,7 @@ export function RealtimeMonitorClient() {
                   <td className="py-2 px-3">{s.paused ? "暂停" : "播放中"}</td>
                 </tr>
               ))}
-              {data && data.sessions.length === 0 ? (
+              {data && total === 0 ? (
                 <tr>
                   <td className="py-6 px-3 text-gray-500" colSpan={6}>
                     当前无播放会话
@@ -162,6 +218,18 @@ export function RealtimeMonitorClient() {
               ) : null}
             </tbody>
           </table>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm border-t pt-3">
+          <div className="text-gray-600">{total > 0 ? `第 ${safePage} / ${totalPages} 页 · 本页 ${pageRows.length} 条` : ""}</div>
+          <div className="flex items-center gap-2">
+            <button className="border rounded px-2 py-1 disabled:opacity-50" disabled={safePage <= 1} onClick={() => setPage(safePage - 1)}>
+              上一页
+            </button>
+            <button className="border rounded px-2 py-1 disabled:opacity-50" disabled={safePage >= totalPages} onClick={() => setPage(safePage + 1)}>
+              下一页
+            </button>
+          </div>
         </div>
       </div>
     </div>
