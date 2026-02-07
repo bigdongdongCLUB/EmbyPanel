@@ -686,9 +686,7 @@ export function UsersClient() {
           <div className="bg-white rounded-lg w-full max-w-xl p-4 space-y-4 max-h-[85vh] overflow-auto">
             <div className="flex items-center justify-between">
               <div className="font-semibold">从 Emby 服务器导入用户</div>
-              <button className="text-sm underline" onClick={() => setImportOpen(false)}>
-                关闭
-              </button>
+              <div />
             </div>
 
             {importLoading ? <div className="text-sm text-gray-500">加载中…</div> : null}
