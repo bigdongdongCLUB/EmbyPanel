@@ -798,9 +798,10 @@ export function UsersClient() {
                       请先加载用户列表。点击上方的“加载 Emby 用户列表”按钮来查看和选择要导入的用户。
                     </div>
                   ) : (
-                    <div className="border rounded overflow-auto">
-                      <table className="min-w-[520px] w-full text-sm">
-                        <thead className="text-left text-gray-600 border-b">
+                    <div className="border rounded overflow-hidden">
+                      <div className="max-h-[520px] overflow-auto">
+                        <table className="min-w-[520px] w-full text-sm">
+                        <thead className="text-left text-gray-600 border-b sticky top-0 bg-white">
                           <tr>
                             <th className="py-2 px-3">
                               <input
@@ -844,7 +845,8 @@ export function UsersClient() {
                             </tr>
                           ) : null}
                         </tbody>
-                      </table>
+                        </table>
+                      </div>
                     </div>
                   )}
 
