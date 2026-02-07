@@ -683,7 +683,7 @@ export function UsersClient() {
 
       {importOpen ? (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg w-full max-w-xl p-4 space-y-4">
+          <div className="bg-white rounded-lg w-full max-w-xl p-4 space-y-4 max-h-[85vh] overflow-auto">
             <div className="flex items-center justify-between">
               <div className="font-semibold">从 Emby 服务器导入用户</div>
               <button className="text-sm underline" onClick={() => setImportOpen(false)}>
