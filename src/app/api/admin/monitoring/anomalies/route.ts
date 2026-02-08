@@ -13,6 +13,8 @@ export async function GET(req: Request) {
   const serverId = (url.searchParams.get("serverId") ?? "").trim();
   const rangeDays = Math.max(1, Math.min(365, Number(url.searchParams.get("rangeDays") ?? "7") || 7));
   const q = (url.searchParams.get("q") ?? "").trim();
+  const page = Math.max(1, Number(url.searchParams.get("page") ?? "1") || 1);
+  const pageSize = Math.max(10, Math.min(200, Number(url.searchParams.get("pageSize") ?? "20") || 20));
 
   const since = new Date(Date.now() - rangeDays * 24 * 3600 * 1000);
 
@@ -27,7 +29,8 @@ export async function GET(req: Request) {
     prisma.anomaly.findMany({
       where,
       orderBy: { detectedAt: "desc" },
-      take: 200,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
       select: {
         id: true,
         detectedAt: true,
@@ -60,6 +63,7 @@ export async function GET(req: Request) {
       sessionCount,
       ips,
       description: ev.description ?? (sessionCount >= 2 ? `同一时间检测到 ${sessionCount} 个设备播放` : ""),
+      excerpt: String(ev.excerpt ?? ""),
       sessions,
     };
   });
@@ -68,6 +72,10 @@ export async function GET(req: Request) {
     ok: true,
     rangeDays,
     since: since.toISOString(),
+    page,
+    pageSize,
+    total,
+    totalPages: Math.max(1, Math.ceil(total / pageSize)),
     summary: {
       totalEvents: total,
       totalUsers: distinctUsers.length,

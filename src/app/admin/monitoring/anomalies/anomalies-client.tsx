@@ -12,6 +12,7 @@ type Anomaly = {
   sessionCount: number;
   ips: string[];
   description: string;
+  excerpt?: string;
   detectedAt: string;
   sessions: Array<{ device: string; client: string; ip: string; nowPlaying: string }>;
 };
@@ -20,6 +21,10 @@ type Data = {
   ok: boolean;
   rangeDays: number;
   since: string;
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
   summary: { totalEvents: number; totalUsers: number };
   anomalies: Anomaly[];
 };
@@ -32,14 +37,23 @@ function TypeBadge() {
   );
 }
 
+function formatDateTimeShanghai(v?: string) {
+  if (!v) return "-";
+  return new Date(v).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false });
+}
+
 export function MonitoringAnomaliesClient() {
   const [servers, setServers] = useState<ServerOption[]>([]);
   const [serverId, setServerId] = useState<string>("__ALL__");
   const [rangeDays, setRangeDays] = useState<number>(7);
+  const [q, setQ] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const intervalSec = 120;
 
   const [loading, setLoading] = useState(false);
+  const [runningScan, setRunningScan] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<Data | null>(null);
   const [open, setOpen] = useState<Record<string, boolean>>({});
@@ -58,7 +72,10 @@ export function MonitoringAnomaliesClient() {
     try {
       const url = new URL(window.location.origin + "/api/admin/monitoring/anomalies");
       if (serverId && serverId !== "__ALL__") url.searchParams.set("serverId", serverId);
+      if (q.trim()) url.searchParams.set("q", q.trim());
       url.searchParams.set("rangeDays", String(rangeDays));
+      url.searchParams.set("page", String(page));
+      url.searchParams.set("pageSize", String(pageSize));
       const res = await fetch(url.toString(), { cache: "no-store" });
       const json = (await res.json().catch(() => null)) as any;
       if (!res.ok) throw new Error(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
@@ -70,25 +87,51 @@ export function MonitoringAnomaliesClient() {
     }
   }
 
+  async function runScanNow() {
+    setRunningScan(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/jobs/anomaly-scan", { method: "POST" });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
+      await refresh();
+    } catch (e: any) {
+      setError(e?.message ?? "scan_failed");
+    } finally {
+      setRunningScan(false);
+    }
+  }
+
   useEffect(() => {
     loadServers().catch((e) => setError(e?.message ?? "load_servers_failed"));
   }, []);
 
   useEffect(() => {
+    setPage(1);
+  }, [serverId, rangeDays, q, pageSize]);
+
+  useEffect(() => {
     refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [serverId, rangeDays]);
+  }, [serverId, rangeDays, q, page, pageSize]);
 
   useEffect(() => {
     if (!autoRefresh) return;
     const t = setInterval(() => refresh(), intervalSec * 1000);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoRefresh, serverId, rangeDays]);
+  }, [autoRefresh, serverId, rangeDays, q, page, pageSize]);
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2 items-center">
+        <input
+          className="border rounded px-3 py-2 min-w-[220px]"
+          placeholder="搜索用户名"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
+
         <select className="border rounded px-3 py-2" value={serverId} onChange={(e) => setServerId(e.target.value)}>
           <option value="__ALL__">全部服务器</option>
           {servers.map((s) => (
@@ -103,8 +146,18 @@ export function MonitoringAnomaliesClient() {
           <option value="30">最近 30 天</option>
         </select>
 
+        <select className="border rounded px-3 py-2" value={String(pageSize)} onChange={(e) => setPageSize(Number(e.target.value))}>
+          <option value="20">20/页</option>
+          <option value="50">50/页</option>
+          <option value="100">100/页</option>
+        </select>
+
         <button className="border rounded px-3 py-2" onClick={refresh} disabled={loading}>
           刷新
+        </button>
+
+        <button className="border rounded px-3 py-2" onClick={runScanNow} disabled={runningScan}>
+          {runningScan ? "检测中..." : "立即检测"}
         </button>
 
         <label className="flex items-center gap-2 text-sm text-gray-700 ml-2">
@@ -119,8 +172,8 @@ export function MonitoringAnomaliesClient() {
 
       <div className="bg-white border rounded-lg p-4">
         <div className="flex items-center justify-between">
-          <div className="font-medium text-sm">异常列表</div>
-          <div className="text-xs text-gray-500">{data ? `共 ${data.anomalies.length} 条` : ""}</div>
+          <div className="font-medium text-sm">异常列表（定时任务每10分钟检测）</div>
+          <div className="text-xs text-gray-500">{data ? `共 ${data.total} 条，当前第 ${data.page}/${data.totalPages} 页` : ""}</div>
         </div>
 
         <div className="mt-3 overflow-auto">
@@ -174,8 +227,11 @@ export function MonitoringAnomaliesClient() {
                             : "-"}
                         </div>
                       </td>
-                      <td className="py-2 px-3 text-xs text-gray-700">{a.description || "-"}</td>
-                      <td className="py-2 px-3 text-xs text-gray-700">{a.detectedAt ? new Date(a.detectedAt).toLocaleString() : "-"}</td>
+                      <td className="py-2 px-3 text-xs text-gray-700">
+                        <div>{a.description || "-"}</div>
+                        {a.excerpt ? <div className="text-[11px] text-gray-500 mt-1">{a.excerpt}</div> : null}
+                      </td>
+                      <td className="py-2 px-3 text-xs text-gray-700">{formatDateTimeShanghai(a.detectedAt)}</td>
                     </tr>
                     {isOpen ? (
                       <tr className="border-b">
@@ -222,6 +278,24 @@ export function MonitoringAnomaliesClient() {
             </tbody>
           </table>
         </div>
+
+        {data ? (
+          <div className="mt-3 flex items-center justify-end gap-2 text-sm">
+            <button className="border rounded px-3 py-1.5 disabled:opacity-50" disabled={page <= 1 || loading} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+              上一页
+            </button>
+            <span className="text-gray-600">
+              第 {data.page} / {data.totalPages} 页
+            </span>
+            <button
+              className="border rounded px-3 py-1.5 disabled:opacity-50"
+              disabled={page >= data.totalPages || loading}
+              onClick={() => setPage((p) => Math.min(data.totalPages, p + 1))}
+            >
+              下一页
+            </button>
+          </div>
+        ) : null}
       </div>
     </div>
   );
