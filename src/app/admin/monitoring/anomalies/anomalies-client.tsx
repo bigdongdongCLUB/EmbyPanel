@@ -229,7 +229,22 @@ export function MonitoringAnomaliesClient() {
                       </td>
                       <td className="py-2 px-3 text-xs text-gray-700">
                         <div>{a.description || "-"}</div>
-                        {a.excerpt ? <div className="text-[11px] text-gray-500 mt-1">{a.excerpt}</div> : null}
+                        <div className="mt-1 space-y-1">
+                          {a.sessions.length ? (
+                            a.sessions.slice(0, 2).map((s, idx) => (
+                              <div key={idx} className="text-[11px] leading-4 text-gray-600">
+                                <div>
+                                  📱 {s.device || "未知设备"}
+                                  {s.client ? ` (${s.client})` : ""}
+                                </div>
+                                <div>正在播放: {s.nowPlaying || "未知"}</div>
+                              </div>
+                            ))
+                          ) : a.excerpt ? (
+                            <div className="text-[11px] text-gray-500">{a.excerpt}</div>
+                          ) : null}
+                          {a.sessions.length > 2 ? <div className="text-[11px] text-gray-500">… 另有 {a.sessions.length - 2} 台设备</div> : null}
+                        </div>
                       </td>
                       <td className="py-2 px-3 text-xs text-gray-700">{formatDateTimeShanghai(a.detectedAt)}</td>
                     </tr>
