@@ -44,7 +44,7 @@ function TypeBadge({ crossRegion }: { crossRegion: boolean }) {
   if (crossRegion) {
     return (
       <span className="inline-flex items-center px-2 py-0.5 rounded border text-xs bg-red-50 text-red-700 border-red-200">
-        异地对设备
+        异地多设备
       </span>
     );
   }
