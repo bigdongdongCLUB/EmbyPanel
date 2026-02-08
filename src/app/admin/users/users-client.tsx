@@ -52,6 +52,17 @@ function dash(v: any) {
   return String(v);
 }
 
+function formatDateYmdShanghai(v: any) {
+  if (v === null || v === undefined || v === "") return "-";
+  const ms = new Date(v).getTime();
+  if (!Number.isFinite(ms)) return "-";
+  const sh = new Date(ms + 8 * 60 * 60 * 1000);
+  const y = sh.getUTCFullYear();
+  const m = String(sh.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(sh.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 export function UsersClient() {
   const [q, setQ] = useState("");
   const [filterPlanId, setFilterPlanId] = useState("");
@@ -404,8 +415,8 @@ export function UsersClient() {
                 <td className="py-2 px-3">{dash(r.payCycle)}</td>
                 <td className="py-2 px-3">{dash(r.remark)}</td>
                 <td className="py-2 px-3">{r.servers.length ? r.servers.join(",") : "-"}</td>
-                <td className="py-2 px-3 font-mono text-xs">{dash(r.endAt)}</td>
-                <td className="py-2 px-3 font-mono text-xs">{dash(r.createdAt)}</td>
+                <td className="py-2 px-3 font-mono text-xs">{formatDateYmdShanghai(r.endAt)}</td>
+                <td className="py-2 px-3 font-mono text-xs">{formatDateYmdShanghai(r.createdAt)}</td>
                 <td className="py-2 px-3">
                   <button
                     className="border rounded px-2 py-1"
