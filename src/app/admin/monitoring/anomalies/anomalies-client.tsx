@@ -29,7 +29,25 @@ type Data = {
   anomalies: Anomaly[];
 };
 
-function TypeBadge() {
+function ipPrefix3(ip: string) {
+  const m = String(ip || "").trim().match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\./);
+  if (!m) return "";
+  return `${m[1]}.${m[2]}.${m[3]}`;
+}
+
+function isCrossRegionByIp(ips: string[]) {
+  const prefixes = Array.from(new Set((ips || []).map(ipPrefix3).filter(Boolean)));
+  return prefixes.length >= 2;
+}
+
+function TypeBadge({ crossRegion }: { crossRegion: boolean }) {
+  if (crossRegion) {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded border text-xs bg-red-50 text-red-700 border-red-200">
+        异地对设备
+      </span>
+    );
+  }
   return (
     <span className="inline-flex items-center px-2 py-0.5 rounded border text-xs bg-amber-50 text-amber-700 border-amber-200">
       同时多设备
@@ -193,6 +211,7 @@ export function MonitoringAnomaliesClient() {
             <tbody>
               {(data?.anomalies ?? []).map((a) => {
                 const isOpen = !!open[a.id];
+                const crossRegion = isCrossRegionByIp(a.ips || []);
                 return (
                   <React.Fragment key={a.id}>
                     <tr className="border-b">
@@ -204,7 +223,7 @@ export function MonitoringAnomaliesClient() {
                       <td className="py-2 px-3">{a.user?.name || "-"}</td>
                       <td className="py-2 px-3">{a.server?.name || "-"}</td>
                       <td className="py-2 px-3">
-                        <TypeBadge />
+                        <TypeBadge crossRegion={crossRegion} />
                       </td>
                       <td className="py-2 px-3">
                         <div className="text-xs text-gray-700">
