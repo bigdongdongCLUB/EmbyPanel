@@ -66,7 +66,7 @@ export function MonitoringAnomaliesClient() {
   const [rangeDays, setRangeDays] = useState<number>(7);
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(10);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const intervalSec = 120;
 
@@ -165,6 +165,7 @@ export function MonitoringAnomaliesClient() {
         </select>
 
         <select className="border rounded px-3 py-2" value={String(pageSize)} onChange={(e) => setPageSize(Number(e.target.value))}>
+          <option value="10">10/页</option>
           <option value="20">20/页</option>
           <option value="50">50/页</option>
           <option value="100">100/页</option>

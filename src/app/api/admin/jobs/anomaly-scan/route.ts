@@ -51,6 +51,10 @@ export async function POST(req: Request) {
   }
 
   const startedAt = new Date();
+  const retentionCutoff = new Date(Date.now() - 30 * 24 * 3600 * 1000);
+  // Retention policy: keep at most last 30 days anomalies
+  await prisma.anomaly.deleteMany({ where: { type: "MULTI_DEVICE_CONCURRENCY", detectedAt: { lt: retentionCutoff } } });
+
   const job = await prisma.jobRun.create({ data: { jobName: "anomaly-scan", startedAt } });
 
   try {

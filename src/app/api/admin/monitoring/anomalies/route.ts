@@ -11,10 +11,10 @@ export async function GET(req: Request) {
 
   const url = new URL(req.url);
   const serverId = (url.searchParams.get("serverId") ?? "").trim();
-  const rangeDays = Math.max(1, Math.min(365, Number(url.searchParams.get("rangeDays") ?? "7") || 7));
+  const rangeDays = Math.max(1, Math.min(30, Number(url.searchParams.get("rangeDays") ?? "7") || 7));
   const q = (url.searchParams.get("q") ?? "").trim();
   const page = Math.max(1, Number(url.searchParams.get("page") ?? "1") || 1);
-  const pageSize = Math.max(10, Math.min(200, Number(url.searchParams.get("pageSize") ?? "20") || 20));
+  const pageSize = Math.max(10, Math.min(200, Number(url.searchParams.get("pageSize") ?? "10") || 10));
 
   const since = new Date(Date.now() - rangeDays * 24 * 3600 * 1000);
 
