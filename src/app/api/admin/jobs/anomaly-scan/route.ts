@@ -104,20 +104,7 @@ export async function POST(req: Request) {
       for (const [embyUserId, sessions] of byUser.entries()) {
         if (sessions.length <= 1) continue;
 
-        let link = linkMap.get(embyUserId);
-        if (!link) {
-          // fallback: try map by username (important for admin accounts not imported as EmbyUserLink)
-          const embyUserName = String(sessions[0]?.UserName ?? sessions[0]?.User?.Name ?? "").trim();
-          if (embyUserName) {
-            const panelUser = await prisma.user.findFirst({
-              where: { username: { equals: embyUserName, mode: "insensitive" } },
-              select: { id: true, username: true },
-            });
-            if (panelUser) {
-              link = { userId: panelUser.id, username: panelUser.username };
-            }
-          }
-        }
+        const link = linkMap.get(embyUserId);
         if (!link) {
           skippedOrphanSessions += sessions.length;
           continue;
