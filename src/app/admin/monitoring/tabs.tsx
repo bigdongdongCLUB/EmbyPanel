@@ -23,7 +23,6 @@ export function MonitoringTabs() {
   return (
     <div className="flex gap-2 border-b">
       <Tab href="/admin/monitoring" label="实时监控" />
-      <Tab href="/admin/monitoring/playback" label="播放统计" />
       <Tab href="/admin/monitoring/anomalies" label="异常监控" />
     </div>
   );
