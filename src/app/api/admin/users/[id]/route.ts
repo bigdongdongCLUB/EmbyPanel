@@ -197,7 +197,25 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     }
   }
 
-  // 3) Provision to newly assigned servers (by plan)
+  // 3) If password changed, sync password to all currently linked Emby users (independent of plan changes)
+  if (newPlainPassword) {
+    const links = await prisma.embyUserLink.findMany({ where: { userId: id }, select: { embyServerId: true, embyUserId: true } });
+    if (links.length) {
+      const servers = await prisma.embyServer.findMany({
+        where: { id: { in: links.map((x) => x.embyServerId) } },
+        select: { id: true, baseUrl: true, apiKey: true, apiKeyEnc: true, apiKeyIv: true, apiKeyTag: true },
+      });
+      const serverById = new Map(servers.map((s) => [s.id, s] as const));
+      for (const l of links) {
+        const s = serverById.get(l.embyServerId);
+        if (!s) continue;
+        const apiKey = getEmbyApiKeyForServer(s);
+        await embySetUserPassword(s.baseUrl, apiKey, l.embyUserId, newPlainPassword);
+      }
+    }
+  }
+
+  // 4) Provision to newly assigned servers (by plan)
   if (subscription && subscription.planId && nextServers.length) {
     const [user, servers, serverConfigs] = await Promise.all([
       prisma.user.findUnique({
