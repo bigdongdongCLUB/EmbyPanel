@@ -28,7 +28,7 @@ const PatchSchema = z.object({
 
   subscription: z
     .object({
-      planId: z.string().min(1),
+      planId: z.union([z.string().min(1), z.null()]).optional(),
       payCycle: z.enum(["TRIAL", "MONTHLY", "QUARTERLY", "HALF_YEARLY", "YEARLY", "TWO_YEARLY"]).nullable().optional(),
       startAt: z.string().datetime(),
       endAt: z.string().datetime(),
@@ -135,7 +135,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         const sub = await tx.subscription.create({
           data: {
             userId: id,
-            planId: subscription.planId,
+            planId: subscription.planId ?? null,
             status: "ACTIVE",
             payCycle: subscription.payCycle ?? null,
             startAt: new Date(subscription.startAt),

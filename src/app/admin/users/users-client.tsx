@@ -580,7 +580,7 @@ export function UsersClient() {
                       </option>
                     ))}
                   </select>
-                  <div className="text-xs text-gray-500 mt-1">不选择则表示无订阅（仅存在面板）。</div>
+                  <div className="text-xs text-gray-500 mt-1">可不选计划，仅在面板记录订阅时间（不下发Emby分配）。</div>
                 </div>
 
                 <div>
@@ -588,7 +588,6 @@ export function UsersClient() {
                   <select
                     className="mt-1 w-full border rounded px-3 py-2"
                     value={edit.payCycle}
-                    disabled={!edit.planId}
                     onChange={(e) => setEdit({ ...edit, payCycle: e.target.value as any })}
                   >
                     <option value="MONTHLY">月付</option>
@@ -605,7 +604,6 @@ export function UsersClient() {
                     className="mt-1 w-full border rounded px-3 py-2"
                     type="date"
                     value={edit.startAt}
-                    disabled={!edit.planId}
                     onChange={(e) => setEdit({ ...edit, startAt: e.target.value })}
                   />
                 </div>
@@ -616,7 +614,6 @@ export function UsersClient() {
                     className="mt-1 w-full border rounded px-3 py-2"
                     type="date"
                     value={edit.endAt}
-                    disabled={!edit.planId}
                     onChange={(e) => setEdit({ ...edit, endAt: e.target.value })}
                   />
                 </div>
@@ -644,16 +641,12 @@ export function UsersClient() {
                     ...(edit.changePassword ? { newPassword: edit.newPassword } : {}),
                   };
 
-                  if (edit.planId) {
-                    payload.subscription = {
-                      planId: edit.planId,
-                      payCycle: edit.payCycle,
-                      startAt: new Date(edit.startAt + "T00:00:00.000Z").toISOString(),
-                      endAt: new Date(edit.endAt + "T00:00:00.000Z").toISOString(),
-                    };
-                  } else {
-                    payload.subscription = null;
-                  }
+                  payload.subscription = {
+                    planId: edit.planId || null,
+                    payCycle: edit.payCycle,
+                    startAt: new Date(edit.startAt + "T00:00:00.000Z").toISOString(),
+                    endAt: new Date(edit.endAt + "T00:00:00.000Z").toISOString(),
+                  };
 
                   const res = await fetch(`/api/admin/users/${edit.id}`, {
                     method: "PATCH",
