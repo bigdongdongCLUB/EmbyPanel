@@ -96,15 +96,28 @@ export async function POST(req: Request) {
 
       const links = await prisma.embyUserLink.findMany({
         where: { embyServerId: server.id, embyUserId: { in: embyUserIds } },
-        select: { userId: true, embyUserId: true, user: { select: { username: true } } },
+        select: { userId: true, embyUserId: true, user: { select: { id: true, username: true } } },
       });
       const linkMap = new Map<string, { userId: string; username: string }>();
-      for (const l of links) linkMap.set(l.embyUserId, { userId: l.userId, username: l.user.username });
+      for (const l of links) linkMap.set(l.embyUserId, { userId: l.user.id, username: l.user.username });
 
       for (const [embyUserId, sessions] of byUser.entries()) {
         if (sessions.length <= 1) continue;
 
-        const link = linkMap.get(embyUserId);
+        let link = linkMap.get(embyUserId);
+        if (!link) {
+          // fallback: try map by username (important for admin accounts not imported as EmbyUserLink)
+          const embyUserName = String(sessions[0]?.UserName ?? sessions[0]?.User?.Name ?? "").trim();
+          if (embyUserName) {
+            const panelUser = await prisma.user.findFirst({
+              where: { username: { equals: embyUserName, mode: "insensitive" } },
+              select: { id: true, username: true },
+            });
+            if (panelUser) {
+              link = { userId: panelUser.id, username: panelUser.username };
+            }
+          }
+        }
         if (!link) {
           skippedOrphanSessions += sessions.length;
           continue;
