@@ -241,9 +241,11 @@ export function UsersClient() {
             <div className="absolute right-0 mt-2 w-56 bg-white border rounded shadow p-2 text-sm space-y-1 z-10">
               <button
                 className="w-full text-left px-2 py-2 hover:bg-gray-50 rounded"
-                onClick={() => {
+                onClick={(e) => {
+                  // close the "更多" dropdown
+                  (e.currentTarget as any)?.closest?.("details")?.removeAttribute?.("open");
                   (document.activeElement as any)?.blur?.();
-                  openImportModal().catch((e) => alert(e?.message ?? String(e)));
+                  openImportModal().catch((err) => alert(err?.message ?? String(err)));
                 }}
               >
                 从 Emby 导入用户
