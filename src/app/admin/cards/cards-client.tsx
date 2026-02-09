@@ -34,6 +34,8 @@ export function CardCodesClient() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const [resultOpen, setResultOpen] = useState(false);
+  const [createdCodes, setCreatedCodes] = useState<string[]>([]);
 
   const [count, setCount] = useState("10");
   const [createType, setCreateType] = useState<"BALANCE" | "SUBSCRIPTION">("BALANCE");
@@ -252,11 +254,55 @@ export function CardCodesClient() {
                   let json: any = null;
                   try { json = txt ? JSON.parse(txt) : null; } catch { json = null; }
                   if (!res.ok) { alert(json?.error || txt || `HTTP ${res.status}`); return; }
-                  alert(`创建成功：${json?.created || 0} 个`);
+                  setCreatedCodes(Array.isArray(json?.preview) ? json.preview : []);
                   setOpen(false);
+                  setResultOpen(true);
                   await refresh();
                 }}
               >生成</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {resultOpen ? (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg w-full max-w-3xl p-4 space-y-4 max-h-[85vh] overflow-auto">
+            <div className="text-2xl font-semibold">批量创建卡密</div>
+            <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+              <div className="text-2xl font-semibold text-green-700">已生成 {createdCodes.length} 个卡密</div>
+              <div className="text-sm text-gray-700 mt-2">请及时复制，卡密仅显示一次。</div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                className="bg-blue-600 text-white rounded px-4 py-2"
+                onClick={async () => {
+                  const all = createdCodes.join("\n");
+                  try {
+                    await navigator.clipboard.writeText(all);
+                  } catch {
+                    alert("复制失败，请手动复制");
+                  }
+                }}
+              >
+                复制全部
+              </button>
+              <button className="border rounded px-4 py-2" onClick={() => { setResultOpen(false); setOpen(true); }}>
+                再次生成
+              </button>
+            </div>
+
+            <div className="border rounded overflow-hidden">
+              {createdCodes.map((c) => (
+                <div key={c} className="px-4 py-3 border-b last:border-b-0 font-mono text-xl font-semibold">
+                  {c}
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <button className="border rounded px-4 py-2" onClick={() => setResultOpen(false)}>关闭</button>
             </div>
           </div>
         </div>
