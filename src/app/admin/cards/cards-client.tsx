@@ -10,7 +10,6 @@ type Row = {
   amountCents: number | null;
   payCycle: string | null;
   subscriptionDays: number | null;
-  batchTag: string | null;
   note: string | null;
   createdAt: string;
   usedAt: string | null;
@@ -68,7 +67,6 @@ export function CardCodesClient() {
   const [planId, setPlanId] = useState("");
   const [payCycle, setPayCycle] = useState("YEARLY");
   const [subscriptionDays, setSubscriptionDays] = useState("");
-  const [batchTag, setBatchTag] = useState("");
   const [note, setNote] = useState("");
 
   const canCreate = useMemo(() => {
@@ -130,7 +128,7 @@ export function CardCodesClient() {
       {error ? <div className="text-sm text-red-600">{error}</div> : null}
 
       <div className="flex flex-wrap gap-2">
-        <input className="border rounded px-3 py-2" placeholder="搜索卡密/批次/备注" value={q} onChange={(e) => setQ(e.target.value)} />
+        <input className="border rounded px-3 py-2" placeholder="搜索卡密/备注" value={q} onChange={(e) => setQ(e.target.value)} />
         <select className="border rounded px-3 py-2" value={type} onChange={(e) => setType(e.target.value)}>
           <option value="">全部类型</option>
           <option value="BALANCE">余额卡密</option>
@@ -150,7 +148,7 @@ export function CardCodesClient() {
         <table className="min-w-[1100px] w-full text-sm">
           <thead className="border-b text-left text-gray-600">
             <tr>
-              <th className="px-3 py-2">卡密</th><th className="px-3 py-2">类型</th><th className="px-3 py-2">内容</th><th className="px-3 py-2">批次</th><th className="px-3 py-2">状态</th><th className="px-3 py-2">使用时间</th><th className="px-3 py-2">创建时间</th><th className="px-3 py-2">操作</th>
+              <th className="px-3 py-2">卡密</th><th className="px-3 py-2">类型</th><th className="px-3 py-2">内容</th><th className="px-3 py-2">状态</th><th className="px-3 py-2">使用时间</th><th className="px-3 py-2">创建时间</th><th className="px-3 py-2">操作</th>
             </tr>
           </thead>
           <tbody>
@@ -161,8 +159,7 @@ export function CardCodesClient() {
                 <td className="px-3 py-2 text-xs">
                   {r.type === "BALANCE" ? `充值 ¥${((r.amountCents || 0) / 100).toFixed(0)}` : `${r.plan?.name || "-"} / ${r.subscriptionDays || 0} 天 / ${r.payCycle || "-"}`}
                 </td>
-                <td className="px-3 py-2">{r.batchTag || "-"}</td>
-                <td className="px-3 py-2">{r.status === "UNUSED" ? "未使用" : r.status === "USED" ? "已使用" : "已禁用"}</td>
+                                <td className="px-3 py-2">{r.status === "UNUSED" ? "未使用" : r.status === "USED" ? "已使用" : "已禁用"}</td>
                 <td className="px-3 py-2">{fmt(r.usedAt)}</td>
                 <td className="px-3 py-2">{fmt(r.createdAt)}</td>
                 <td className="px-3 py-2">
@@ -198,7 +195,7 @@ export function CardCodesClient() {
                 </td>
               </tr>
             ))}
-            {!rows.length ? <tr><td className="px-3 py-6 text-gray-500" colSpan={8}>暂无数据</td></tr> : null}
+            {!rows.length ? <tr><td className="px-3 py-6 text-gray-500" colSpan={7}>暂无数据</td></tr> : null}
           </tbody>
         </table>
       </div>
@@ -253,9 +250,7 @@ export function CardCodesClient() {
             )}
 
             <div>
-              <label className="text-sm">批次标签</label>
-              <input className="mt-1 w-full border rounded px-3 py-2" value={batchTag} onChange={(e) => setBatchTag(e.target.value)} placeholder="例如：2025Q4促销" />
-            </div>
+                          </div>
             <div>
               <label className="text-sm">备注</label>
               <textarea className="mt-1 w-full border rounded px-3 py-2 min-h-[100px]" value={note} onChange={(e) => setNote(e.target.value)} />
@@ -274,7 +269,6 @@ export function CardCodesClient() {
                     planId: createType === "SUBSCRIPTION" ? planId : undefined,
                     payCycle: createType === "SUBSCRIPTION" ? payCycle : undefined,
                     subscriptionDays: createType === "SUBSCRIPTION" && subscriptionDays.trim() ? Number(subscriptionDays) : undefined,
-                    batchTag: batchTag.trim() || undefined,
                     note: note.trim() || undefined,
                   };
                   const res = await fetch('/api/admin/card-codes', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) });

@@ -13,7 +13,6 @@ const CreateSchema = z.object({
   planId: z.string().min(1).optional(),
   payCycle: z.enum(["TRIAL", "MONTHLY", "QUARTERLY", "HALF_YEARLY", "YEARLY", "TWO_YEARLY"]).optional(),
   subscriptionDays: z.number().int().min(1).max(3650).optional(),
-  batchTag: z.string().max(100).optional(),
   note: z.string().max(500).optional(),
 });
 
@@ -60,7 +59,6 @@ export async function GET(req: Request) {
         ? {
             OR: [
               { code: { contains: q, mode: "insensitive" } },
-              { batchTag: { contains: q, mode: "insensitive" } },
               { note: { contains: q, mode: "insensitive" } },
             ],
           }
@@ -72,7 +70,7 @@ export async function GET(req: Request) {
     const cardCodeModel: any = (prisma as any).cardCode;
     if (!cardCodeModel) {
       const rows = await prisma.$queryRaw<any[]>`
-        SELECT c."id", c."code", c."type", c."status", c."amountCents", c."payCycle", c."subscriptionDays", c."batchTag", c."note", c."createdAt", c."usedAt",
+        SELECT c."id", c."code", c."type", c."status", c."amountCents", c."payCycle", c."subscriptionDays", c."note", c."createdAt", c."usedAt",
                p."id" as "planId", p."name" as "planName"
         FROM "CardCode" c
         LEFT JOIN "Plan" p ON p."id" = c."planId"
@@ -100,7 +98,6 @@ export async function GET(req: Request) {
           amountCents: r.amountCents,
           payCycle: r.payCycle,
           subscriptionDays: r.subscriptionDays,
-          batchTag: r.batchTag,
           note: r.note,
           createdAt: r.createdAt,
           usedAt: r.usedAt,
@@ -123,7 +120,6 @@ export async function GET(req: Request) {
           amountCents: true,
           payCycle: true,
           subscriptionDays: true,
-          batchTag: true,
           note: true,
           createdAt: true,
           usedAt: true,
@@ -196,7 +192,6 @@ export async function POST(req: Request) {
         planId: p.type === "SUBSCRIPTION" ? p.planId : null,
         payCycle: p.type === "SUBSCRIPTION" ? (p.payCycle ?? "MONTHLY") : null,
         subscriptionDays: p.type === "SUBSCRIPTION" ? days : null,
-        batchTag: p.batchTag?.trim() || null,
         note: p.note?.trim() || null,
       });
     }
@@ -207,8 +202,8 @@ export async function POST(req: Request) {
     } else {
       for (const d of data) {
         await prisma.$executeRaw`
-          INSERT INTO "CardCode" ("id","code","type","status","amountCents","planId","payCycle","subscriptionDays","batchTag","note","createdAt","updatedAt")
-          VALUES (${crypto.randomUUID()}, ${d.code}, ${d.type}::"CardCodeType", 'UNUSED'::"CardCodeStatus", ${d.amountCents}, ${d.planId}, ${d.payCycle}::"PayCycle", ${d.subscriptionDays}, ${d.batchTag}, ${d.note}, NOW(), NOW())
+          INSERT INTO "CardCode" ("id","code","type","status","amountCents","planId","payCycle","subscriptionDays","note","createdAt","updatedAt")
+          VALUES (${crypto.randomUUID()}, ${d.code}, ${d.type}::"CardCodeType", 'UNUSED'::"CardCodeStatus", ${d.amountCents}, ${d.planId}, ${d.payCycle}::"PayCycle", ${d.subscriptionDays}, ${d.note}, NOW(), NOW())
           ON CONFLICT ("code") DO NOTHING
         `;
       }
