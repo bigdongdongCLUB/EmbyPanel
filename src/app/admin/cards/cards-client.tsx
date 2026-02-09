@@ -61,8 +61,14 @@ export function CardCodesClient() {
       if (type) url.searchParams.set("type", type);
       if (status) url.searchParams.set("status", status);
       const res = await fetch(url.toString(), { cache: "no-store" });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+      const txt = await res.text();
+      let json: any = null;
+      try {
+        json = txt ? JSON.parse(txt) : null;
+      } catch {
+        json = null;
+      }
+      if (!res.ok) throw new Error(json?.error || txt || `HTTP ${res.status}`);
       setRows(json.rows || []);
       setPlans(json.plans || []);
       setSummary(json.summary || { total: 0, used: 0, balanceTotal: 0, subTotal: 0 });
@@ -205,8 +211,10 @@ export function CardCodesClient() {
                     note: note.trim() || undefined,
                   };
                   const res = await fetch('/api/admin/card-codes', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) });
-                  const json = await res.json().catch(() => null);
-                  if (!res.ok) { alert(json?.error || `HTTP ${res.status}`); return; }
+                  const txt = await res.text();
+                  let json: any = null;
+                  try { json = txt ? JSON.parse(txt) : null; } catch { json = null; }
+                  if (!res.ok) { alert(json?.error || txt || `HTTP ${res.status}`); return; }
                   alert(`创建成功：${json?.created || 0} 个`);
                   setOpen(false);
                   await refresh();
