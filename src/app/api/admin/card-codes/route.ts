@@ -67,8 +67,51 @@ export async function GET(req: Request) {
         : {}),
     };
 
-    const [rows, total, used, balanceTotal, subTotal, plans] = await Promise.all([
-      prisma.cardCode.findMany({
+    const plans = await prisma.plan.findMany({ where: { enabled: true }, orderBy: { createdAt: "desc" }, select: { id: true, name: true } });
+
+    const cardCodeModel: any = (prisma as any).cardCode;
+    if (!cardCodeModel) {
+      const rows = await prisma.$queryRaw<any[]>`
+        SELECT c."id", c."code", c."type", c."status", c."amountCents", c."payCycle", c."subscriptionDays", c."batchTag", c."note", c."createdAt", c."usedAt",
+               p."id" as "planId", p."name" as "planName"
+        FROM "CardCode" c
+        LEFT JOIN "Plan" p ON p."id" = c."planId"
+        ORDER BY c."createdAt" DESC
+        LIMIT 500
+      `;
+      const totalRes = await prisma.$queryRaw<any[]>`SELECT COUNT(*)::int as c FROM "CardCode"`;
+      const usedRes = await prisma.$queryRaw<any[]>`SELECT COUNT(*)::int as c FROM "CardCode" WHERE "status"='USED'`;
+      const balanceRes = await prisma.$queryRaw<any[]>`SELECT COUNT(*)::int as c FROM "CardCode" WHERE "type"='BALANCE'`;
+      const subRes = await prisma.$queryRaw<any[]>`SELECT COUNT(*)::int as c FROM "CardCode" WHERE "type"='SUBSCRIPTION'`;
+
+      return NextResponse.json({
+        ok: true,
+        summary: {
+          total: Number(totalRes?.[0]?.c ?? 0),
+          used: Number(usedRes?.[0]?.c ?? 0),
+          balanceTotal: Number(balanceRes?.[0]?.c ?? 0),
+          subTotal: Number(subRes?.[0]?.c ?? 0),
+        },
+        rows: rows.map((r) => ({
+          id: r.id,
+          code: r.code,
+          type: r.type,
+          status: r.status,
+          amountCents: r.amountCents,
+          payCycle: r.payCycle,
+          subscriptionDays: r.subscriptionDays,
+          batchTag: r.batchTag,
+          note: r.note,
+          createdAt: r.createdAt,
+          usedAt: r.usedAt,
+          plan: r.planId ? { id: r.planId, name: r.planName } : null,
+        })),
+        plans,
+      });
+    }
+
+    const [rows, total, used, balanceTotal, subTotal] = await Promise.all([
+      cardCodeModel.findMany({
         where,
         orderBy: { createdAt: "desc" },
         take: 500,
@@ -87,19 +130,13 @@ export async function GET(req: Request) {
           plan: { select: { id: true, name: true } },
         },
       }),
-      prisma.cardCode.count(),
-      prisma.cardCode.count({ where: { status: "USED" } }),
-      prisma.cardCode.count({ where: { type: "BALANCE" } }),
-      prisma.cardCode.count({ where: { type: "SUBSCRIPTION" } }),
-      prisma.plan.findMany({ where: { enabled: true }, orderBy: { createdAt: "desc" }, select: { id: true, name: true } }),
+      cardCodeModel.count(),
+      cardCodeModel.count({ where: { status: "USED" } }),
+      cardCodeModel.count({ where: { type: "BALANCE" } }),
+      cardCodeModel.count({ where: { type: "SUBSCRIPTION" } }),
     ]);
 
-    return NextResponse.json({
-      ok: true,
-      summary: { total, used, balanceTotal, subTotal },
-      rows,
-      plans,
-    });
+    return NextResponse.json({ ok: true, summary: { total, used, balanceTotal, subTotal }, rows, plans });
   } catch (e: any) {
     return NextResponse.json({ error: "card_codes_query_failed", message: String(e?.message ?? e) }, { status: 500 });
   }
@@ -142,7 +179,18 @@ export async function POST(req: Request) {
       });
     }
 
-    await prisma.cardCode.createMany({ data, skipDuplicates: true });
+    const cardCodeModel: any = (prisma as any).cardCode;
+    if (cardCodeModel) {
+      await cardCodeModel.createMany({ data, skipDuplicates: true });
+    } else {
+      for (const d of data) {
+        await prisma.$executeRaw`
+          INSERT INTO "CardCode" ("id","code","type","status","amountCents","planId","payCycle","subscriptionDays","batchTag","note","createdAt","updatedAt")
+          VALUES (${crypto.randomUUID()}, ${d.code}, ${d.type}::"CardCodeType", 'UNUSED'::"CardCodeStatus", ${d.amountCents}, ${d.planId}, ${d.payCycle}::"PayCycle", ${d.subscriptionDays}, ${d.batchTag}, ${d.note}, NOW(), NOW())
+          ON CONFLICT ("code") DO NOTHING
+        `;
+      }
+    }
 
     return NextResponse.json({ ok: true, created: data.length, preview: data.slice(0, 20).map((x) => x.code) });
   } catch (e: any) {
