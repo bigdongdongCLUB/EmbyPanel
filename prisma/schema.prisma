@@ -44,6 +44,17 @@ enum AnomalyType {
   MULTI_DEVICE_CONCURRENCY
 }
 
+enum CardCodeType {
+  BALANCE
+  SUBSCRIPTION
+}
+
+enum CardCodeStatus {
+  UNUSED
+  USED
+  DISABLED
+}
+
 model User {
   id           String   @id @default(cuid())
   username     String   @unique
@@ -64,6 +75,7 @@ model User {
   subscriptions Subscription[]
   embyLinks     EmbyUserLink[]
   anomalies     Anomaly[]
+  usedCardCodes CardCode[]
 }
 
 model Plan {
@@ -85,6 +97,7 @@ model Plan {
 
   subscriptions Subscription[]
   serverConfigs PlanServerConfig[]
+  cardCodes      CardCode[]
 }
 
 model PlanServerConfig {
@@ -202,6 +215,36 @@ model Anomaly {
 
   @@index([status, detectedAt])
   @@index([userId, detectedAt])
+}
+
+model CardCode {
+  id        String         @id @default(cuid())
+  code      String         @unique
+  type      CardCodeType
+  status    CardCodeStatus @default(UNUSED)
+
+  // BALANCE card payload
+  amountCents Int?
+
+  // SUBSCRIPTION card payload
+  planId          String?
+  payCycle        PayCycle?
+  subscriptionDays Int?
+
+  batchTag String?
+  note     String?
+
+  usedAt    DateTime?
+  usedByUserId String?
+  usedByUser   User? @relation(fields: [usedByUserId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  plan Plan? @relation(fields: [planId], references: [id], onDelete: SetNull)
+
+  @@index([type, status, createdAt])
+  @@index([planId])
 }
 
 model JobRun {

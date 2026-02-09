@@ -46,6 +46,13 @@ export function AdminSidebarClient({ username }: { username: string }) {
         </div>
 
         <div className="my-3 border-t border-white/10" />
+
+        <div className="space-y-1">
+          <div className="px-3 py-1 text-xs text-white/50">支付管理</div>
+          <Item href="/admin/cards" label="卡密管理" />
+        </div>
+
+        <div className="my-3 border-t border-white/10" />
       </nav>
 
       <div className="p-3 border-t border-white/10 text-xs text-white/70">{username}</div>

@@ -1,0 +1,21 @@
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
+
+import { authOptions } from "@/lib/auth";
+import { CardCodesClient } from "./cards-client";
+
+export default async function CardCodesPage() {
+  const session = await getServerSession(authOptions);
+  if (!session) redirect("/login");
+  const role = (session as any)?.role;
+  if (role !== "ADMIN") redirect("/portal");
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h1 className="text-xl font-semibold">卡密管理</h1>
+      </div>
+      <CardCodesClient />
+    </div>
+  );
+}
