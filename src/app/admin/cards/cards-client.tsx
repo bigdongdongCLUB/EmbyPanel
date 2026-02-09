@@ -172,7 +172,7 @@ export function CardCodesClient() {
                       onClick={async () => {
                         const ok = await copyTextSafe(r.code);
                         if (!ok) alert("复制失败，请手动复制");
-                        else showToast("复制成功");
+                        else showToast("已复制卡密");
                       }}
                     >
                       复制卡密
@@ -309,7 +309,7 @@ export function CardCodesClient() {
                   const all = createdCodes.join("\n");
                   const ok = await copyTextSafe(all);
                   if (!ok) alert("复制失败，请手动复制");
-                  else showToast("复制成功");
+                  else showToast("已复制生成的卡密");
                 }}
               >
                 复制全部
@@ -335,8 +335,9 @@ export function CardCodesClient() {
       ) : null}
 
       {toast ? (
-        <div className="fixed right-6 bottom-6 z-[60] rounded bg-black text-white text-sm px-4 py-2 shadow-lg">
-          {toast}
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[80] rounded-xl bg-white text-gray-900 text-sm px-5 py-3 shadow-xl border flex items-center gap-2">
+          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500 text-white text-xs">✓</span>
+          <span>{toast}</span>
         </div>
       ) : null}
     </div>
