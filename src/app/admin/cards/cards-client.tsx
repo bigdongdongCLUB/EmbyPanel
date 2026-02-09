@@ -24,6 +24,30 @@ function fmt(v?: string | null) {
   return new Date(v).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false });
 }
 
+async function copyTextSafe(text: string) {
+  try {
+    if (navigator?.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {}
+
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return !!ok;
+  } catch {
+    return false;
+  }
+}
+
 export function CardCodesClient() {
   const [rows, setRows] = useState<Row[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -140,11 +164,8 @@ export function CardCodesClient() {
                     <button
                       className="text-gray-700 hover:text-black"
                       onClick={async () => {
-                        try {
-                          await navigator.clipboard.writeText(r.code);
-                        } catch {
-                          alert("复制失败，请手动复制");
-                        }
+                        const ok = await copyTextSafe(r.code);
+                        if (!ok) alert("复制失败，请手动复制");
                       }}
                     >
                       复制卡密
@@ -279,11 +300,8 @@ export function CardCodesClient() {
                 className="bg-blue-600 text-white rounded px-4 py-2"
                 onClick={async () => {
                   const all = createdCodes.join("\n");
-                  try {
-                    await navigator.clipboard.writeText(all);
-                  } catch {
-                    alert("复制失败，请手动复制");
-                  }
+                  const ok = await copyTextSafe(all);
+                  if (!ok) alert("复制失败，请手动复制");
                 }}
               >
                 复制全部
