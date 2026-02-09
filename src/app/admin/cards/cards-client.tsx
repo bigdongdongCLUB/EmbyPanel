@@ -60,6 +60,7 @@ export function CardCodesClient() {
   const [open, setOpen] = useState(false);
   const [resultOpen, setResultOpen] = useState(false);
   const [createdCodes, setCreatedCodes] = useState<string[]>([]);
+  const [toast, setToast] = useState<string | null>(null);
 
   const [count, setCount] = useState("10");
   const [createType, setCreateType] = useState<"BALANCE" | "SUBSCRIPTION">("BALANCE");
@@ -79,6 +80,11 @@ export function CardCodesClient() {
     }
     return !!planId;
   }, [count, createType, amountYuan, planId]);
+
+  function showToast(msg: string) {
+    setToast(msg);
+    window.setTimeout(() => setToast(null), 1800);
+  }
 
   async function refresh() {
     setLoading(true);
@@ -166,6 +172,7 @@ export function CardCodesClient() {
                       onClick={async () => {
                         const ok = await copyTextSafe(r.code);
                         if (!ok) alert("复制失败，请手动复制");
+                        else showToast("复制成功");
                       }}
                     >
                       复制卡密
@@ -302,6 +309,7 @@ export function CardCodesClient() {
                   const all = createdCodes.join("\n");
                   const ok = await copyTextSafe(all);
                   if (!ok) alert("复制失败，请手动复制");
+                  else showToast("复制成功");
                 }}
               >
                 复制全部
@@ -323,6 +331,12 @@ export function CardCodesClient() {
               <button className="border rounded px-4 py-2" onClick={() => setResultOpen(false)}>关闭</button>
             </div>
           </div>
+        </div>
+      ) : null}
+
+      {toast ? (
+        <div className="fixed right-6 bottom-6 z-[60] rounded bg-black text-white text-sm px-4 py-2 shadow-lg">
+          {toast}
         </div>
       ) : null}
     </div>
