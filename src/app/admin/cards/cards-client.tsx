@@ -32,6 +32,7 @@ export function CardCodesClient() {
   const [status, setStatus] = useState("");
   const [summary, setSummary] = useState({ total: 0, used: 0, balanceTotal: 0, subTotal: 0 });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
 
   const [count, setCount] = useState("10");
@@ -55,6 +56,7 @@ export function CardCodesClient() {
 
   async function refresh() {
     setLoading(true);
+    setError(null);
     try {
       const url = new URL(window.location.origin + "/api/admin/card-codes");
       if (q.trim()) url.searchParams.set("q", q.trim());
@@ -68,12 +70,12 @@ export function CardCodesClient() {
       } catch {
         json = null;
       }
-      if (!res.ok) throw new Error(json?.error || txt || `HTTP ${res.status}`);
+      if (!res.ok) throw new Error(json?.message || json?.error || txt || `HTTP ${res.status}`);
       setRows(json.rows || []);
       setPlans(json.plans || []);
       setSummary(json.summary || { total: 0, used: 0, balanceTotal: 0, subTotal: 0 });
     } catch (e: any) {
-      alert(e?.message || "加载失败");
+      setError(e?.message || "加载失败");
     } finally {
       setLoading(false);
     }
@@ -92,6 +94,8 @@ export function CardCodesClient() {
         <div className="border rounded p-3"><div className="text-xs text-gray-500">余额卡密总数</div><div className="text-2xl text-green-600">{summary.balanceTotal}</div></div>
         <div className="border rounded p-3"><div className="text-xs text-gray-500">订阅卡密总数</div><div className="text-2xl text-purple-600">{summary.subTotal}</div></div>
       </div>
+
+      {error ? <div className="text-sm text-red-600">{error}</div> : null}
 
       <div className="flex flex-wrap gap-2">
         <input className="border rounded px-3 py-2" placeholder="搜索卡密/批次/备注" value={q} onChange={(e) => setQ(e.target.value)} />
