@@ -243,7 +243,7 @@ export function UsersClient() {
           </button>
         </div>
         <div className="flex gap-2 items-center">
-          <button className="bg-black text-white rounded px-3 py-2" onClick={() => setCreateOpen(true)}>
+          <button className="bg-blue-600 text-white rounded px-3 py-2" onClick={() => setCreateOpen(true)}>
             + 创建用户
           </button>
 
