@@ -60,6 +60,7 @@ export function CardCodesClient() {
   const [resultOpen, setResultOpen] = useState(false);
   const [createdCodes, setCreatedCodes] = useState<string[]>([]);
   const [toast, setToast] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Record<string, boolean>>({});
 
   const [count, setCount] = useState("10");
   const [createType, setCreateType] = useState<"BALANCE" | "SUBSCRIPTION">("BALANCE");
@@ -68,6 +69,8 @@ export function CardCodesClient() {
   const [payCycle, setPayCycle] = useState("YEARLY");
   const [subscriptionDays, setSubscriptionDays] = useState("");
   const [note, setNote] = useState("");
+
+  const selectedIds = useMemo(() => Object.keys(selected).filter((id) => selected[id]), [selected]);
 
   const canCreate = useMemo(() => {
     const c = Number(count);
@@ -78,6 +81,8 @@ export function CardCodesClient() {
     }
     return !!planId;
   }, [count, createType, amountYuan, planId]);
+
+  const allSelected = rows.length > 0 && rows.every((r) => !!selected[r.id]);
 
   function showToast(msg: string) {
     setToast(msg);
@@ -101,7 +106,14 @@ export function CardCodesClient() {
         json = null;
       }
       if (!res.ok) throw new Error(json?.message || json?.error || txt || `HTTP ${res.status}`);
-      setRows(json.rows || []);
+      const nextRows = json.rows || [];
+      setRows(nextRows);
+      setSelected((m) => {
+        const valid = new Set(nextRows.map((r: any) => r.id));
+        const out: Record<string, boolean> = {};
+        for (const [k, v] of Object.entries(m)) if (v && valid.has(k)) out[k] = true;
+        return out;
+      });
       setPlans(json.plans || []);
       setSummary(json.summary || { total: 0, used: 0, balanceTotal: 0, subTotal: 0 });
     } catch (e: any) {
@@ -142,18 +154,56 @@ export function CardCodesClient() {
         </select>
         <button className="border rounded px-3 py-2" onClick={refresh} disabled={loading}>刷新</button>
         <button className="bg-blue-600 text-white rounded px-3 py-2 ml-auto" onClick={() => setOpen(true)}>创建卡密</button>
+        <details className="relative">
+          <summary className="list-none border rounded px-3 py-2 cursor-pointer select-none">更多</summary>
+          <div className="absolute right-0 mt-2 w-44 bg-white border rounded shadow z-20 p-1 text-sm">
+            <button
+              className="w-full text-left px-2 py-1.5 hover:bg-gray-50 disabled:opacity-50"
+              disabled={!selectedIds.length}
+              onClick={async () => {
+                const codes = rows.filter((r) => selected[r.id]).map((r) => r.code).join("\n");
+                const ok = await copyTextSafe(codes);
+                if (!ok) alert("复制失败，请手动复制");
+                else showToast(`已复制 ${selectedIds.length} 个卡密`);
+              }}
+            >
+              复制选中卡密
+            </button>
+            <button
+              className="w-full text-left px-2 py-1.5 hover:bg-gray-50 text-red-600 disabled:opacity-50"
+              disabled={!selectedIds.length}
+              onClick={async () => {
+                if (!confirm(`确认批量删除 ${selectedIds.length} 个卡密？`)) return;
+                for (const id of selectedIds) {
+                  await fetch(`/api/admin/card-codes?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+                }
+                setSelected({});
+                await refresh();
+              }}
+            >
+              批量删除
+            </button>
+          </div>
+        </details>
       </div>
 
       <div className="border rounded overflow-auto">
         <table className="min-w-[1100px] w-full text-sm">
           <thead className="border-b text-left text-gray-600">
             <tr>
-              <th className="px-3 py-2">卡密</th><th className="px-3 py-2">类型</th><th className="px-3 py-2">内容</th><th className="px-3 py-2">状态</th><th className="px-3 py-2">使用时间</th><th className="px-3 py-2">创建时间</th><th className="px-3 py-2">操作</th>
+              <th className="px-3 py-2 w-10"><input type="checkbox" checked={allSelected} onChange={(e) => {
+                const v = e.target.checked;
+                if (!v) { setSelected({}); return; }
+                const next: Record<string, boolean> = {};
+                for (const r of rows) next[r.id] = true;
+                setSelected(next);
+              }} /></th><th className="px-3 py-2">卡密</th><th className="px-3 py-2">类型</th><th className="px-3 py-2">内容</th><th className="px-3 py-2">状态</th><th className="px-3 py-2">使用时间</th><th className="px-3 py-2">创建时间</th><th className="px-3 py-2">操作</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((r) => (
               <tr key={r.id} className="border-b">
+                <td className="px-3 py-2"><input type="checkbox" checked={!!selected[r.id]} onChange={(e) => setSelected((m) => ({ ...m, [r.id]: e.target.checked }))} /></td>
                 <td className="px-3 py-2 font-mono">{r.code}</td>
                 <td className="px-3 py-2">{r.type === "BALANCE" ? "余额卡密" : "订阅卡密"}</td>
                 <td className="px-3 py-2 text-xs">
@@ -195,7 +245,7 @@ export function CardCodesClient() {
                 </td>
               </tr>
             ))}
-            {!rows.length ? <tr><td className="px-3 py-6 text-gray-500" colSpan={7}>暂无数据</td></tr> : null}
+            {!rows.length ? <tr><td className="px-3 py-6 text-gray-500" colSpan={8}>暂无数据</td></tr> : null}
           </tbody>
         </table>
       </div>
