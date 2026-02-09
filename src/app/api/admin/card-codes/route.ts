@@ -142,6 +142,28 @@ export async function GET(req: Request) {
   }
 }
 
+export async function DELETE(req: Request) {
+  try {
+    const auth = await requireAdmin();
+    if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
+    const url = new URL(req.url);
+    const id = (url.searchParams.get("id") ?? "").trim();
+    if (!id) return NextResponse.json({ error: "id_required" }, { status: 400 });
+
+    const cardCodeModel: any = (prisma as any).cardCode;
+    if (cardCodeModel) {
+      await cardCodeModel.delete({ where: { id } });
+    } else {
+      await prisma.$executeRaw`DELETE FROM "CardCode" WHERE "id"=${id}`;
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (e: any) {
+    return NextResponse.json({ error: "card_codes_delete_failed", message: String(e?.message ?? e) }, { status: 500 });
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const auth = await requireAdmin();

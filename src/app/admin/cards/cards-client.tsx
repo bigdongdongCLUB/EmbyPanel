@@ -118,7 +118,7 @@ export function CardCodesClient() {
         <table className="min-w-[1100px] w-full text-sm">
           <thead className="border-b text-left text-gray-600">
             <tr>
-              <th className="px-3 py-2">卡密</th><th className="px-3 py-2">类型</th><th className="px-3 py-2">内容</th><th className="px-3 py-2">批次</th><th className="px-3 py-2">状态</th><th className="px-3 py-2">使用时间</th><th className="px-3 py-2">创建时间</th>
+              <th className="px-3 py-2">卡密</th><th className="px-3 py-2">类型</th><th className="px-3 py-2">内容</th><th className="px-3 py-2">批次</th><th className="px-3 py-2">状态</th><th className="px-3 py-2">使用时间</th><th className="px-3 py-2">创建时间</th><th className="px-3 py-2">操作</th>
             </tr>
           </thead>
           <tbody>
@@ -133,9 +133,42 @@ export function CardCodesClient() {
                 <td className="px-3 py-2">{r.status === "UNUSED" ? "未使用" : r.status === "USED" ? "已使用" : "已禁用"}</td>
                 <td className="px-3 py-2">{fmt(r.usedAt)}</td>
                 <td className="px-3 py-2">{fmt(r.createdAt)}</td>
+                <td className="px-3 py-2">
+                  <div className="flex items-center gap-3 text-sm">
+                    <button
+                      className="text-gray-700 hover:text-black"
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(r.code);
+                        } catch {
+                          alert("复制失败，请手动复制");
+                        }
+                      }}
+                    >
+                      复制卡密
+                    </button>
+                    <button
+                      className="text-red-600 hover:text-red-700"
+                      onClick={async () => {
+                        if (!confirm("确认删除该卡密？")) return;
+                        const res = await fetch(`/api/admin/card-codes?id=${encodeURIComponent(r.id)}`, { method: "DELETE" });
+                        const txt = await res.text();
+                        let json: any = null;
+                        try { json = txt ? JSON.parse(txt) : null; } catch { json = null; }
+                        if (!res.ok) {
+                          alert(json?.message || json?.error || txt || `HTTP ${res.status}`);
+                          return;
+                        }
+                        await refresh();
+                      }}
+                    >
+                      删除
+                    </button>
+                  </div>
+                </td>
               </tr>
             ))}
-            {!rows.length ? <tr><td className="px-3 py-6 text-gray-500" colSpan={7}>暂无数据</td></tr> : null}
+            {!rows.length ? <tr><td className="px-3 py-6 text-gray-500" colSpan={8}>暂无数据</td></tr> : null}
           </tbody>
         </table>
       </div>
