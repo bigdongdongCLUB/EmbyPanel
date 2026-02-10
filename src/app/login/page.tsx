@@ -73,22 +73,28 @@ export default function LoginPage() {
       .catch(() => null);
   }, []);
 
-  async function doLogin(e: React.FormEvent) {
+  async function doLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoginError(null);
     setLoginLoading(true);
     try {
+      const fd = new FormData(e.currentTarget);
+      const u = String(fd.get("username") || loginUsername || "").trim();
+      const p = String(fd.get("password") || loginPassword || "");
+
       const res = await signIn("credentials", {
-        username: loginUsername,
-        password: loginPassword,
+        username: u,
+        password: p,
         redirect: false,
+        callbackUrl: "/",
       });
-      if ((res as any)?.error) {
+
+      if ((res as any)?.error || !(res as any)?.ok) {
         setLoginError("用户名或密码错误");
         return;
       }
-      router.push("/");
-      router.refresh();
+
+      window.location.href = (res as any)?.url || "/";
     } finally {
       setLoginLoading(false);
     }
@@ -166,6 +172,7 @@ export default function LoginPage() {
             <div className="border rounded-xl px-3 py-1.5 flex items-center gap-2">
               <span className="text-gray-400 text-sm">👤</span>
               <input
+                name="username"
                 className="w-full text-sm outline-none"
                 placeholder="用户名"
                 value={loginUsername}
@@ -178,6 +185,7 @@ export default function LoginPage() {
             <div className="border rounded-xl px-3 py-1.5 flex items-center gap-2">
               <span className="text-gray-400 text-sm">🔒</span>
               <input
+                name="password"
                 className="w-full text-sm outline-none"
                 placeholder="密码"
                 value={loginPassword}
