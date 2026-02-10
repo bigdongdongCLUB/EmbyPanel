@@ -16,7 +16,6 @@ type UserRow = {
   subscriptionStatus: string | null;
   planId?: string | null;
   planName: string | null;
-  payCycle: string | null;
   servers: string[];
   endAt: string | null;
   createdAt: string;
@@ -39,7 +38,6 @@ type EditState =
       enabled: boolean;
       // subscription
       planId: string;
-      payCycle: "TRIAL" | "MONTHLY" | "QUARTERLY" | "HALF_YEARLY" | "YEARLY" | "TWO_YEARLY";
       startAt: string;
       endAt: string;
       servers: Array<{ id: string; name: string }>;
@@ -89,7 +87,6 @@ export function UsersClient() {
   const [importServerId, setImportServerId] = useState("");
   const [importDefaultPassword, setImportDefaultPassword] = useState("");
   const [importPlanId, setImportPlanId] = useState("");
-  const [importPayCycle, setImportPayCycle] = useState<"" | "MONTHLY" | "QUARTERLY" | "HALF_YEARLY" | "YEARLY" | "TWO_YEARLY">("");
   const [importStartAt, setImportStartAt] = useState("");
   const [importEndAt, setImportEndAt] = useState("");
   const [importMode, setImportMode] = useState<"ALL" | "SELECTED">("ALL");
@@ -289,15 +286,14 @@ export function UsersClient() {
                     setMoreOpen(false);
                     const planId = prompt("批量更改订阅计划：请输入 PlanId（在订阅管理页面可看到）");
                     if (!planId) return;
-                    const payCycle = prompt("付费周期：MONTHLY/QUARTERLY/HALF_YEARLY/YEARLY/TWO_YEARLY", "YEARLY") || "YEARLY";
-                    const startAt = prompt("开始日期(YYYY-MM-DD)", new Date().toISOString().slice(0, 10)) || new Date().toISOString().slice(0, 10);
+                      const startAt = prompt("开始日期(YYYY-MM-DD)", new Date().toISOString().slice(0, 10)) || new Date().toISOString().slice(0, 10);
                     const endAt = prompt("结束日期(YYYY-MM-DD)", startAt) || startAt;
 
                     for (const id of selectedIds) {
                       await fetch(`/api/admin/users/${id}`, {
                         method: "PATCH",
                         headers: { "content-type": "application/json" },
-                        body: JSON.stringify({ subscription: { planId, payCycle, startAt: new Date(startAt + "T00:00:00.000Z").toISOString(), endAt: new Date(endAt + "T00:00:00.000Z").toISOString() } }),
+                        body: JSON.stringify({ subscription: { planId, payCycle: null, startAt: new Date(startAt + "T00:00:00.000Z").toISOString(), endAt: new Date(endAt + "T00:00:00.000Z").toISOString() } }),
                       });
                     }
                     alert("批量更改订阅计划已提交（逐个更新）");
@@ -331,7 +327,7 @@ export function UsersClient() {
                       await fetch(`/api/admin/users/${id}`, {
                         method: "PATCH",
                         headers: { "content-type": "application/json" },
-                        body: JSON.stringify({ subscription: { planId: sub.planId, payCycle: sub.payCycle, startAt: sub.startAt, endAt: nextEnd.toISOString() } }),
+                        body: JSON.stringify({ subscription: { planId: sub.planId, payCycle: null, startAt: sub.startAt, endAt: nextEnd.toISOString() } }),
                       });
                     }
 
@@ -411,7 +407,6 @@ export function UsersClient() {
               <th className="py-2 px-3">余额</th>
               <th className="py-2 px-3">订阅状态</th>
               <th className="py-2 px-3">订阅计划</th>
-              <th className="py-2 px-3">付费周期</th>
               <th className="py-2 px-3">所属服务器</th>
               <th className="py-2 px-3">到期时间</th>
               <th className="py-2 px-3">创建时间</th>
@@ -435,7 +430,6 @@ export function UsersClient() {
                 <td className="py-2 px-3">{dash(r.balance)}</td>
                 <td className="py-2 px-3">{dash(r.subscriptionStatus)}</td>
                 <td className="py-2 px-3">{dash(r.planName)}</td>
-                <td className="py-2 px-3">{dash(r.payCycle)}</td>
                 <td className="py-2 px-3">{r.servers.length ? r.servers.join(",") : "-"}</td>
                 <td className="py-2 px-3 font-mono text-xs">{formatDateYmdShanghai(r.endAt)}</td>
                 <td className="py-2 px-3 font-mono text-xs">{formatDateYmdShanghai(r.createdAt)}</td>
@@ -457,7 +451,6 @@ export function UsersClient() {
                         expiryReminderEnabled: !!r.expiryReminderEnabled,
                         enabled: r.enabled,
                         planId: "",
-                        payCycle: "MONTHLY",
                         startAt: new Date().toISOString().slice(0, 10),
                         endAt: new Date().toISOString().slice(0, 10),
                         servers: [],
@@ -485,7 +478,6 @@ export function UsersClient() {
                           expiryReminderEnabled: !!u.expiryReminderEnabled,
                           enabled: !!u.enabled,
                           planId: sub?.planId ?? "",
-                          payCycle: (sub?.payCycle ?? "MONTHLY") as any,
                           startAt: sub?.startAt ? String(sub.startAt).slice(0, 10) : new Date().toISOString().slice(0, 10),
                           endAt: sub?.endAt ? String(sub.endAt).slice(0, 10) : new Date().toISOString().slice(0, 10),
                           servers: json.servers ?? [],
@@ -503,7 +495,7 @@ export function UsersClient() {
             ))}
             {!loading && rows.length === 0 ? (
               <tr>
-                <td className="py-6 px-3 text-gray-500" colSpan={13}>
+                <td className="py-6 px-3 text-gray-500" colSpan={12}>
                   无数据
                 </td>
               </tr>
@@ -606,21 +598,6 @@ export function UsersClient() {
                 </div>
 
                 <div>
-                  <label className="text-sm">付款周期</label>
-                  <select
-                    className="mt-1 w-full border rounded px-3 py-2"
-                    value={edit.payCycle}
-                    onChange={(e) => setEdit({ ...edit, payCycle: e.target.value as any })}
-                  >
-                    <option value="MONTHLY">月付</option>
-                    <option value="QUARTERLY">季付</option>
-                    <option value="HALF_YEARLY">半年付</option>
-                    <option value="YEARLY">年付</option>
-                    <option value="TWO_YEARLY">两年付</option>
-                  </select>
-                </div>
-
-                <div>
                   <label className="text-sm">订阅开始日期</label>
                   <input
                     className="mt-1 w-full border rounded px-3 py-2"
@@ -665,7 +642,7 @@ export function UsersClient() {
 
                   payload.subscription = {
                     planId: edit.planId || null,
-                    payCycle: edit.payCycle,
+                    payCycle: null,
                     startAt: new Date(edit.startAt + "T00:00:00.000Z").toISOString(),
                     endAt: new Date(edit.endAt + "T00:00:00.000Z").toISOString(),
                   };
@@ -768,9 +745,6 @@ export function UsersClient() {
                   onChange={(e) => {
                     const v = e.target.value;
                     setImportPlanId(v);
-                    if (!v) {
-                      setImportPayCycle("");
-                    }
                   }}
                 >
                   <option value="">不分配</option>
@@ -784,18 +758,6 @@ export function UsersClient() {
 
               {importPlanId ? (
                 <>
-                  <div>
-                    <label className="text-sm">付款周期 *</label>
-                    <select className="mt-1 w-full border rounded px-3 py-2" value={importPayCycle} onChange={(e) => setImportPayCycle(e.target.value as any)}>
-                      <option value="">请选择付款周期</option>
-                      <option value="MONTHLY">月付</option>
-                      <option value="QUARTERLY">季付</option>
-                      <option value="HALF_YEARLY">半年付</option>
-                      <option value="YEARLY">年付</option>
-                      <option value="TWO_YEARLY">两年付</option>
-                    </select>
-                  </div>
-
                   <div>
                     <label className="text-sm">订阅开始日期 *</label>
                     <input className="mt-1 w-full border rounded px-3 py-2" type="date" value={importStartAt} onChange={(e) => setImportStartAt(e.target.value)} />
@@ -920,7 +882,7 @@ export function UsersClient() {
                   importDefaultPassword.trim().length < 6 ||
                   importLoading ||
                   (importMode === "SELECTED" && importSelectedIds.length === 0 && importNamesText.trim().length === 0) ||
-                  (importPlanId ? !importPayCycle || !importStartAt || !importEndAt || importStartAt >= importEndAt : false)
+                  (importPlanId ? !importStartAt || !importEndAt || importStartAt >= importEndAt : false)
                 }
                 onClick={async () => {
                   setImportLoading(true);
@@ -948,7 +910,7 @@ export function UsersClient() {
                         embyServerId: importServerId,
                         defaultPassword: importDefaultPassword,
                         planId: importPlanId || null,
-                        payCycle: importPlanId ? importPayCycle : null,
+                        payCycle: null,
                         startAt: importPlanId ? new Date(importStartAt + "T00:00:00.000Z").toISOString() : null,
                         endAt: importPlanId ? new Date(importEndAt + "T00:00:00.000Z").toISOString() : null,
                         mode: importMode,
