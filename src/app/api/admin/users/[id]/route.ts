@@ -260,10 +260,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     const templateByServerId = new Map(serverConfigs.map((c) => [c.embyServerId, c.templateEmbyUserId] as const));
 
     if (user) {
-      const pw = newPlainPassword ?? getSyncPassword(user);
-      if (!pw) {
-        return NextResponse.json({ ok: true, warn: "missing_sync_password" });
-      }
+      const fallbackPw = getSyncPassword(user);
 
       // persist subscription servers mapping
       const activeSub = await prisma.subscription.findFirst({ where: { userId: id, status: "ACTIVE" }, orderBy: { endAt: "desc" }, select: { id: true } });
@@ -284,9 +281,13 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         // find emby user by name
         const usersRes = await embyFetchUsers(s.baseUrl, apiKey);
         let embyUserId: string | null = null;
+        let existed = false;
         if (usersRes.ok) {
           const found = usersRes.users.find((u: any) => String(u?.Name ?? "").toLowerCase() === user.username.toLowerCase());
-          if (found?.Id) embyUserId = String(found.Id);
+          if (found?.Id) {
+            embyUserId = String(found.Id);
+            existed = true;
+          }
         }
 
         if (!embyUserId) {
@@ -295,7 +296,13 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         }
 
         if (embyUserId) {
-          await embySetUserPassword(s.baseUrl, apiKey, embyUserId, pw);
+          // 仅在“修改密码”时同步到现有 Emby 账号；
+          // 对新建的 Emby 账号，仍需设置一次密码以确保可登录。
+          if (newPlainPassword) {
+            await embySetUserPassword(s.baseUrl, apiKey, embyUserId, newPlainPassword);
+          } else if (!existed && fallbackPw) {
+            await embySetUserPassword(s.baseUrl, apiKey, embyUserId, fallbackPw);
+          }
 
           const templateId = templateByServerId.get(s.id);
           if (templateId) {
