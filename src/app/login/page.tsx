@@ -147,11 +147,11 @@ export default function LoginPage() {
         <div className="flex flex-col items-center text-center">
           <div className="flex items-center gap-3">
             {siteLogoDataUrl ? (
-              <img src={siteLogoDataUrl} alt="logo" className="h-10 w-10 rounded-full object-cover border" />
+              <img src={siteLogoDataUrl} alt="logo" className="h-14 w-14 rounded-full object-cover" />
             ) : (
-              <div className="h-10 w-10 rounded-full bg-red-600 text-white text-xs flex items-center justify-center font-bold">BigTv</div>
+              <div className="h-12 w-12 rounded-full bg-red-600 text-white text-xs flex items-center justify-center font-bold">BigTv</div>
             )}
-            <div className="text-4xl font-semibold tracking-tight">{siteName}</div>
+            <div className="text-3xl font-semibold tracking-tight">{siteName}</div>
           </div>
           <p className="text-gray-500 mt-3 text-lg">{siteDescription}</p>
         </div>
