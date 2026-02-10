@@ -189,6 +189,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       if (!s) continue;
       const apiKey = getEmbyApiKeyForServer(s);
       await embySetUserDisabled(s.baseUrl, apiKey, l.embyUserId, true);
+      await prisma.embyUserLink.updateMany({ where: { userId: id, embyServerId: l.embyServerId, embyUserId: l.embyUserId }, data: { disabled: true } });
     }
   }
 
@@ -205,6 +206,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       if (!s) continue;
       const apiKey = getEmbyApiKeyForServer(s);
       await embySetUserDisabled(s.baseUrl, apiKey, l.embyUserId, true);
+      await prisma.embyUserLink.updateMany({ where: { userId: id, embyServerId: l.embyServerId, embyUserId: l.embyUserId }, data: { disabled: true } });
     }
   }
 
@@ -320,8 +322,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
           await prisma.embyUserLink.upsert({
             where: { userId_embyServerId: { userId: user.id, embyServerId: s.id } },
-            update: { embyUserId: embyUserId },
-            create: { userId: user.id, embyServerId: s.id, embyUserId: embyUserId },
+            update: { embyUserId: embyUserId, disabled: false },
+            create: { userId: user.id, embyServerId: s.id, embyUserId: embyUserId, disabled: false },
           });
         }
       }
