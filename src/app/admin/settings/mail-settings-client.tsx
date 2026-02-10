@@ -19,7 +19,6 @@ export function MailSettingsClient() {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [testTo, setTestTo] = useState("");
   const [form, setForm] = useState<FormState>({
     enabled: false,
     smtpHost: "",
@@ -156,15 +155,9 @@ export function MailSettingsClient() {
             {saving ? "保存中…" : "保存设置"}
           </button>
 
-          <input
-            className="border rounded px-3 py-2 min-w-[260px]"
-            placeholder="测试收件邮箱"
-            value={testTo}
-            onChange={(e) => setTestTo(e.target.value)}
-          />
           <button
             className="border rounded px-4 py-2 disabled:opacity-60"
-            disabled={testing || !testTo.trim()}
+            disabled={testing || !form.fromEmail.trim()}
             onClick={async () => {
               setTesting(true);
               setError(null);
@@ -172,7 +165,7 @@ export function MailSettingsClient() {
                 const res = await fetch("/api/admin/settings/mail/test", {
                   method: "POST",
                   headers: { "content-type": "application/json" },
-                  body: JSON.stringify({ to: testTo.trim(), ...form }),
+                  body: JSON.stringify({ ...form }),
                 });
                 const json = await res.json().catch(() => null);
                 if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
@@ -184,7 +177,7 @@ export function MailSettingsClient() {
               }
             }}
           >
-            {testing ? "发送中…" : "发送测试邮件"}
+            {testing ? "发送中…" : "发送测试邮件（发给自己）"}
           </button>
         </div>
       </div>

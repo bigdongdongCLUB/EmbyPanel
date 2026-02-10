@@ -11,7 +11,7 @@ import { decryptString } from "@/lib/crypto";
 const KEY = "mail_basic";
 
 const Schema = z.object({
-  to: z.string().email(),
+  to: z.string().email().optional(),
   enabled: z.boolean().optional(),
   smtpHost: z.string().min(1).max(200),
   secureMode: z.enum(["ssl", "starttls", "none"]).default("ssl"),
@@ -58,10 +58,12 @@ export async function POST(req: Request) {
     auth: p.smtpUser ? { user: p.smtpUser, pass: password } : undefined,
   });
 
+  const to = p.to || p.fromEmail;
+
   await transporter.sendMail({
     from: p.fromName ? `${p.fromName} <${p.fromEmail}>` : p.fromEmail,
-    to: p.to,
-    subject: "[EmbyPanel] SMTP 测试邮件",
+    to,
+    subject: "[EmbyPanel] SMTP 测试邮件", 
     text: `这是一封来自 EmbyPanel 的测试邮件。\n\n发送时间: ${new Date().toISOString()}`,
   });
 
