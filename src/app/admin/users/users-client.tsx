@@ -16,7 +16,16 @@ type UserRow = {
   subscriptionStatus: string | null;
   planId?: string | null;
   planName: string | null;
-  servers: string[];
+  servers: Array<{
+    embyServerId: string;
+    name: string;
+    baseUrl: string;
+    status: "ACTIVE" | "DISABLED" | "CONFLICT";
+    assignedAt: string | null;
+  }>;
+  serverCount?: number;
+  serverOnlineCount?: number;
+  serverHasConflict?: boolean;
   endAt: string | null;
   createdAt: string;
 };
@@ -58,6 +67,12 @@ function formatDateYmdShanghai(v: any) {
   const m = String(sh.getUTCMonth() + 1).padStart(2, "0");
   const d = String(sh.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
+}
+
+function serverBadgeText(r: UserRow) {
+  const total = r.serverCount ?? r.servers?.length ?? 0;
+  const online = r.serverOnlineCount ?? (r.servers ?? []).filter((x) => x.status === "ACTIVE").length;
+  return `${total}台服务器（${online}在线）`;
 }
 
 export function UsersClient() {
@@ -363,7 +378,7 @@ export function UsersClient() {
               <th className="py-2 px-3">余额</th>
               <th className="py-2 px-3">订阅状态</th>
               <th className="py-2 px-3">订阅计划</th>
-              <th className="py-2 px-3">所属服务器</th>
+              <th className="py-2 px-3">服务器分配</th>
               <th className="py-2 px-3">到期时间</th>
               <th className="py-2 px-3">创建时间</th>
               <th className="py-2 px-3">操作</th>
@@ -386,7 +401,44 @@ export function UsersClient() {
                 <td className="py-2 px-3">{dash(r.balance)}</td>
                 <td className="py-2 px-3">{dash(r.subscriptionStatus)}</td>
                 <td className="py-2 px-3">{dash(r.planName)}</td>
-                <td className="py-2 px-3">{r.servers.length ? r.servers.join(",") : "-"}</td>
+                <td className="py-2 px-3">
+                  {r.servers?.length ? (
+                    <div className="relative group inline-block">
+                      <span
+                        className={
+                          "inline-flex items-center rounded border px-2.5 py-1 text-sm " +
+                          (r.serverHasConflict ? "border-amber-300 text-amber-700 bg-amber-50" : "border-gray-300 text-gray-800")
+                        }
+                      >
+                        {serverBadgeText(r)}
+                      </span>
+                      <div className="pointer-events-none absolute left-0 top-full z-20 mt-2 hidden w-[320px] rounded-xl border bg-white p-3 shadow-xl group-hover:block">
+                        <div className="text-lg font-semibold mb-2">服务器分配详情（{r.servers.length}台）</div>
+                        <div className="space-y-2 max-h-[360px] overflow-auto">
+                          {r.servers.map((sv) => (
+                            <div key={sv.embyServerId} className="border-b last:border-b-0 pb-2 last:pb-0">
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={
+                                    "inline-block h-2.5 w-2.5 rounded-full " +
+                                    (sv.status === "ACTIVE" ? "bg-green-500" : sv.status === "DISABLED" ? "bg-red-500" : "bg-amber-500")
+                                  }
+                                />
+                                <span className="font-semibold">{sv.name}</span>
+                                {sv.status === "DISABLED" ? <span className="text-xs rounded border border-red-200 bg-red-50 text-red-600 px-2 py-0.5">已禁用</span> : null}
+                                {sv.status === "CONFLICT" ? <span className="text-xs rounded border border-amber-200 bg-amber-50 text-amber-700 px-2 py-0.5">同名用户</span> : null}
+                              </div>
+                              <div className="text-sm text-gray-600 mt-1">{sv.baseUrl}</div>
+                              <div className="text-sm text-gray-500 mt-1">分配时间：{formatDateYmdShanghai(sv.assignedAt)}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    "-"
+                  )}
+                </td>
                 <td className="py-2 px-3 font-mono text-xs">{formatDateYmdShanghai(r.endAt)}</td>
                 <td className="py-2 px-3 font-mono text-xs">{formatDateYmdShanghai(r.createdAt)}</td>
                 <td className="py-2 px-3">
@@ -608,19 +660,23 @@ export function UsersClient() {
                     headers: { "content-type": "application/json" },
                     body: JSON.stringify(payload),
                   });
+                  const text = await res.text();
+                  let body: any = null;
+                  try {
+                    body = JSON.parse(text);
+                  } catch {}
                   if (!res.ok) {
-                    const text = await res.text();
                     let msg = text;
-                    try {
-                      const j = JSON.parse(text);
-                      if (j?.error === "cannot_demote_last_admin") {
-                        msg = "面板至少需要保留一位管理员";
-                      } else if (j?.error) {
-                        msg = String(j.error);
-                      }
-                    } catch {}
+                    if (body?.error === "cannot_demote_last_admin") {
+                      msg = "面板至少需要保留一位管理员";
+                    } else if (body?.error) {
+                      msg = String(body.error);
+                    }
                     alert(`保存失败: ${msg}`);
                     return;
+                  }
+                  if (body?.warn === "emby_name_conflict" && Array.isArray(body?.nameConflicts) && body.nameConflicts.length) {
+                    alert("已保存，但部分目标服务器存在同名用户，未自动创建：\n" + body.nameConflicts.map((x: any) => `- ${x.serverName}`).join("\n"));
                   }
                   setEdit({ open: false });
                   await refresh();

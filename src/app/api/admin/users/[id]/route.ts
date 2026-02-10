@@ -227,6 +227,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   }
 
   // 4) Provision to newly assigned servers (by plan)
+  const nameConflicts: Array<{ embyServerId: string; serverName: string; username: string }> = [];
   if (subscription && subscription.planId && nextServers.length) {
     const [user, servers, serverConfigs] = await Promise.all([
       prisma.user.findUnique({
@@ -285,12 +286,13 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         if (usersRes.ok) {
           const found = usersRes.users.find((u: any) => String(u?.Name ?? "").toLowerCase() === user.username.toLowerCase());
           if (found?.Id) {
-            embyUserId = String(found.Id);
+            // 新逻辑：遇到同名用户不自动接管，标记冲突并跳过该服务器分配
+            nameConflicts.push({ embyServerId: s.id, serverName: s.name, username: user.username });
             existed = true;
           }
         }
 
-        if (!embyUserId) {
+        if (!existed) {
           const created = await embyCreateUser(s.baseUrl, apiKey, user.username);
           if (created.ok) embyUserId = created.userId;
         }
@@ -300,7 +302,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
           // 对新建的 Emby 账号，仍需设置一次密码以确保可登录。
           if (newPlainPassword) {
             await embySetUserPassword(s.baseUrl, apiKey, embyUserId, newPlainPassword);
-          } else if (!existed && fallbackPw) {
+          } else if (fallbackPw) {
             await embySetUserPassword(s.baseUrl, apiKey, embyUserId, fallbackPw);
           }
 
@@ -326,5 +328,5 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     }
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, nameConflicts, warn: nameConflicts.length ? "emby_name_conflict" : undefined });
 }

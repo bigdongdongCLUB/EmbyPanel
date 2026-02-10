@@ -55,7 +55,8 @@ export async function GET(req: Request) {
           id: true,
           embyUserId: true,
           disabled: true,
-          embyServer: { select: { id: true, name: true } },
+          createdAt: true,
+          embyServer: { select: { id: true, name: true, baseUrl: true } },
         },
       },
       subscriptions: {
@@ -70,7 +71,7 @@ export async function GET(req: Request) {
           planId: true,
           payCycle: true,
           plan: { select: { id: true, name: true, enabled: true, visible: true } },
-          servers: { select: { embyServer: { select: { id: true, name: true } } } },
+          servers: { select: { embyServer: { select: { id: true, name: true, baseUrl: true } } } },
         },
       },
     },
@@ -81,9 +82,24 @@ export async function GET(req: Request) {
       const sub = u.subscriptions[0] as any;
       const subValid = sub && sub.endAt > now;
 
-      const linkedServers = (u.embyLinks ?? []).map((l) => l.embyServer.name);
-
       const statusLabel = sub ? (subValid ? "有效" : "已过期") : null;
+
+      const linkByServerId = new Map((u.embyLinks ?? []).map((l: any) => [l.embyServer.id, l] as const));
+      const assignedServers = (sub?.servers ?? []).map((x: any) => x.embyServer);
+      const serverAllocations = assignedServers.map((sv: any) => {
+        const link = linkByServerId.get(sv.id) as any;
+        const status = !link ? "CONFLICT" : link.disabled ? "DISABLED" : "ACTIVE";
+        return {
+          embyServerId: sv.id,
+          name: sv.name,
+          baseUrl: sv.baseUrl,
+          status,
+          assignedAt: (link?.createdAt ?? sub?.startAt ?? u.createdAt)?.toISOString?.() ?? null,
+        };
+      });
+
+      const activeCount = serverAllocations.filter((x: any) => x.status === "ACTIVE").length;
+      const hasConflict = serverAllocations.some((x: any) => x.status === "CONFLICT");
 
       return {
         id: u.id,
@@ -99,7 +115,10 @@ export async function GET(req: Request) {
         planName: sub?.plan?.name ?? null,
         payCycle: sub?.payCycle ?? null,
         remark: null,
-        servers: linkedServers,
+        servers: serverAllocations,
+        serverCount: serverAllocations.length,
+        serverOnlineCount: activeCount,
+        serverHasConflict: hasConflict,
         endAt: sub?.endAt?.toISOString() ?? null,
         createdAt: u.createdAt.toISOString(),
       };
