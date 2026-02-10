@@ -15,6 +15,15 @@ type Plan = {
   };
 };
 
+function pickMainPrice(p: Plan) {
+  if (p.prices.yearlyYuan !== null) return { price: p.prices.yearlyYuan, cycle: "年付" };
+  if (p.prices.monthlyYuan !== null) return { price: p.prices.monthlyYuan, cycle: "月付" };
+  if (p.prices.quarterlyYuan !== null) return { price: p.prices.quarterlyYuan, cycle: "季付" };
+  if (p.prices.halfYearlyYuan !== null) return { price: p.prices.halfYearlyYuan, cycle: "半年付" };
+  if (p.prices.twoYearlyYuan !== null) return { price: p.prices.twoYearlyYuan, cycle: "两年付" };
+  return { price: 0, cycle: "起" };
+}
+
 export function PortalPurchaseClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,33 +49,40 @@ export function PortalPurchaseClient() {
   }, []);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <h1 className="text-xl font-semibold">购买服务</h1>
       {error ? <div className="text-sm text-red-600">{error}</div> : null}
       {loading ? <div className="text-sm text-gray-500">加载中…</div> : null}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {plans.map((p) => (
-          <div key={p.id} className="border rounded-xl p-4 space-y-3 bg-white">
-            <div className="text-2xl font-semibold">{p.name}</div>
-            {p.description ? <div className="text-sm text-gray-600 whitespace-pre-wrap">{p.description}</div> : null}
+      <div className="text-center py-3">
+        <div className="text-4xl font-semibold">选择适合你的服务计划</div>
+        <div className="text-sm text-gray-500 mt-2">选择计划后，您可以查看详细的服务列表和支付方式。</div>
+      </div>
 
-            <div className="text-sm text-gray-700 space-y-1">
-              {p.prices.monthlyYuan !== null ? <div>月付：¥{p.prices.monthlyYuan}</div> : null}
-              {p.prices.quarterlyYuan !== null ? <div>季付：¥{p.prices.quarterlyYuan}</div> : null}
-              {p.prices.halfYearlyYuan !== null ? <div>半年付：¥{p.prices.halfYearlyYuan}</div> : null}
-              {p.prices.yearlyYuan !== null ? <div>年付：¥{p.prices.yearlyYuan}</div> : null}
-              {p.prices.twoYearlyYuan !== null ? <div>两年付：¥{p.prices.twoYearlyYuan}</div> : null}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {plans.map((p) => {
+          const main = pickMainPrice(p);
+          return (
+            <div key={p.id} className="border rounded-xl p-4 space-y-3 bg-white shadow-sm max-w-[360px]">
+              <div className="text-3xl font-semibold">{p.name}</div>
+
+              <div className="flex items-end gap-2">
+                <span className="text-5xl font-bold">¥{main.price}</span>
+                <span className="text-sm text-gray-500 pb-1">/{main.cycle}</span>
+              </div>
+
+              <div className="text-sm text-gray-500">起，更多周期可选</div>
+              {p.description ? <div className="text-sm text-gray-600 whitespace-pre-wrap">{p.description}</div> : null}
+
+              <button
+                className="w-full bg-blue-600 text-white rounded px-3 py-2"
+                onClick={() => alert(`立即购买：${p.name}（下单流程下一步接入）`)}
+              >
+                🛒 立即购买
+              </button>
             </div>
-
-            <button
-              className="w-full bg-blue-600 text-white rounded px-3 py-2"
-              onClick={() => alert(`立即购买：${p.name}（下单流程下一步接入）`)}
-            >
-              立即购买
-            </button>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {!loading && plans.length === 0 ? <div className="text-sm text-gray-500">暂无可用订阅计划</div> : null}
