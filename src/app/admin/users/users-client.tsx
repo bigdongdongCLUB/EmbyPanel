@@ -285,30 +285,6 @@ export function UsersClient() {
                 <button
                   className="w-full text-left px-2 py-2 hover:bg-gray-50 rounded disabled:opacity-50"
                   disabled={!selectedIds.length}
-                  onClick={async () => {
-                    setMoreOpen(false);
-                    const planId = prompt("批量更改订阅计划：请输入 PlanId（在订阅管理页面可看到）");
-                    if (!planId) return;
-                      const startAt = prompt("开始日期(YYYY-MM-DD)", new Date().toISOString().slice(0, 10)) || new Date().toISOString().slice(0, 10);
-                    const endAt = prompt("结束日期(YYYY-MM-DD)", startAt) || startAt;
-
-                    for (const id of selectedIds) {
-                      await fetch(`/api/admin/users/${id}`, {
-                        method: "PATCH",
-                        headers: { "content-type": "application/json" },
-                        body: JSON.stringify({ subscription: { planId, payCycle: null, startAt: new Date(startAt + "T00:00:00.000Z").toISOString(), endAt: new Date(endAt + "T00:00:00.000Z").toISOString() } }),
-                      });
-                    }
-                    alert("批量更改订阅计划已提交（逐个更新）");
-                    await refresh();
-                  }}
-                >
-                  批量更改订阅计划
-                </button>
-
-                <button
-                  className="w-full text-left px-2 py-2 hover:bg-gray-50 rounded disabled:opacity-50"
-                  disabled={!selectedIds.length}
                   onClick={() => {
                     setMoreOpen(false);
                     setBulkAddDays("30");
