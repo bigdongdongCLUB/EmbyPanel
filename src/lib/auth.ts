@@ -3,6 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 
 import { prisma } from "@/lib/db";
 import { verifyPassword } from "@/lib/password";
+import { encryptSyncPassword } from "@/lib/user-secrets";
 
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
@@ -23,6 +24,23 @@ export const authOptions: NextAuthOptions = {
 
         const ok = await verifyPassword(password, user.passwordHash);
         if (!ok) return null;
+
+        // Backfill sync password for old users created before this field existed.
+        if (!user.syncPasswordEnc || !user.syncPasswordIv || !user.syncPasswordTag) {
+          try {
+            const enc = encryptSyncPassword(password);
+            await prisma.user.update({
+              where: { id: user.id },
+              data: {
+                syncPasswordEnc: enc.enc,
+                syncPasswordIv: enc.iv,
+                syncPasswordTag: enc.tag,
+              },
+            });
+          } catch {
+            // best-effort only
+          }
+        }
 
         return {
           id: user.id,

@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
+import { encryptSyncPassword } from "@/lib/user-secrets";
 
 const schema = z.object({
   username: z.string().min(3).max(32).regex(/^[a-zA-Z0-9_]+$/),
@@ -36,6 +37,7 @@ export async function POST(req: Request) {
   }
 
   const passwordHash = await hashPassword(parsed.data.password);
+  const enc = encryptSyncPassword(parsed.data.password);
 
   const user = await prisma.user.create({
     data: {
@@ -43,6 +45,9 @@ export async function POST(req: Request) {
       email,
       name: parsed.data.name,
       passwordHash,
+      syncPasswordEnc: enc.enc,
+      syncPasswordIv: enc.iv,
+      syncPasswordTag: enc.tag,
       role: "USER",
     },
     select: { id: true, username: true, email: true, name: true, role: true },
