@@ -57,6 +57,16 @@ type UsersModalState =
       error: string | null;
     };
 
+function formatDateYmd(v?: string | null) {
+  if (!v) return "-";
+  const d = new Date(v);
+  if (!Number.isFinite(d.getTime())) return "-";
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 function UsersTable({
   serverId,
   users,
@@ -142,7 +152,7 @@ function UsersTable({
                   <td className="py-2 px-3">{u.policy?.isDisabled ? "Emby禁用" : "Emby正常"}</td>
                   <td className="py-2 px-3 font-mono">{u.panel?.username ?? "-"}</td>
                   <td className="py-2 px-3">{u.panel?.email ?? "-"}</td>
-                  <td className="py-2 px-3 font-mono text-xs">{u.lastActivityDate ?? "-"}</td>
+                  <td className="py-2 px-3 font-mono text-xs">{formatDateYmd(u.lastActivityDate)}</td>
                   <td className="py-2 px-3">
                     <div className="flex gap-2">
                       <button
