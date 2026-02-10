@@ -104,6 +104,30 @@ const PRESET_OVERRIDES: Record<string, { subject: string; bodyHtml: string }> = 
 </div>`,
   },
   sub_expired: {
+    subject: "{{siteName}} - 您的订阅已过期",
+    bodyHtml: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <h2 style="color: #dc3545;">订阅已过期</h2>
+  <p>尊敬的 {{username}}，</p>
+  <p>您在 {{siteName}} 的 <strong>{{subscriptionName}}</strong> 订阅已于 <strong>{{expiredDate}}</strong> 过期。</p>
+  
+  <p>您的账户已暂停使用，请续费以恢复服务：</p>
+  
+  <div style="text-align: center; margin: 30px 0;">
+    <a href="{{renewUrl}}" style="background: #dc3545; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">
+      立即续费恢复服务
+    </a>
+  </div>
+  
+  <p>如有任何问题，请联系我们的客服团队。</p>
+  
+  <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+  <p style="color: #666; font-size: 12px;">
+    此邮件由 {{siteName}} 系统自动发送，请勿回复。<br>
+    © {{currentYear}} {{siteName}}. 保留所有权利。
+  </p>
+</div>`,
+  },
+  order_confirm: {
     subject: "{{siteName}} - 订单确认 #{{orderNumber}}",
     bodyHtml: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
   <h2 style="color: #28a745;">订单确认</h2>
