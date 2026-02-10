@@ -143,7 +143,12 @@ export default function LoginPage() {
     <main className="min-h-screen bg-gray-100 flex items-center justify-center p-6">
       <LoginRedirect />
 
-      <div className="w-full max-w-[450px] h-[450px] bg-white rounded-2xl shadow-sm p-3 overflow-hidden">
+      <div
+        className={
+          "w-full max-w-[450px] bg-white rounded-2xl shadow-sm p-3 " +
+          (mode === "login" ? "h-[380px]" : "h-[450px] overflow-hidden")
+        }
+      >
         <div className="flex flex-col items-center text-center">
           <div className="flex items-center gap-2">
             {siteLogoDataUrl ? (
