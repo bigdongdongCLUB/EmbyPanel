@@ -55,6 +55,12 @@ enum CardCodeStatus {
   DISABLED
 }
 
+enum ServiceOrderStatus {
+  PENDING
+  PAID
+  CANCELED
+}
+
 model User {
   id           String   @id @default(cuid())
   username     String   @unique
@@ -76,6 +82,7 @@ model User {
   embyLinks     EmbyUserLink[]
   anomalies     Anomaly[]
   usedCardCodes CardCode[]
+  serviceOrders ServiceOrder[]
 }
 
 model Plan {
@@ -98,6 +105,7 @@ model Plan {
   subscriptions Subscription[]
   serverConfigs PlanServerConfig[]
   cardCodes      CardCode[]
+  serviceOrders  ServiceOrder[]
 }
 
 model PlanServerConfig {
@@ -245,6 +253,24 @@ model CardCode {
 
   @@index([type, status, createdAt])
   @@index([planId])
+}
+
+model ServiceOrder {
+  id        String             @id @default(uuid())
+  userId    String
+  planId    String
+  payCycle  PayCycle
+  days      Int
+  amountCents Int
+  status    ServiceOrderStatus @default(PENDING)
+  createdAt DateTime           @default(now())
+  paidAt    DateTime?
+  canceledAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  @@index([userId, status, createdAt])
 }
 
 model JobRun {

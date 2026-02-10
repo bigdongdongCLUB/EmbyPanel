@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 type Cycle = { key: string; label: string; priceYuan: number | null; days: number; available: boolean };
@@ -10,6 +11,7 @@ type Data = {
 };
 
 export function PortalPurchaseDetailClient({ planId }: { planId: string }) {
+  const router = useRouter();
   const [data, setData] = useState<Data | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -84,7 +86,24 @@ export function PortalPurchaseDetailClient({ planId }: { planId: string }) {
           <button
             className="w-full bg-blue-600 text-white rounded-xl px-4 py-3 text-2xl font-semibold disabled:opacity-50"
             disabled={!selectedCycle || !selectedCycle.available}
-            onClick={() => alert(`创建订单 ¥${selectedCycle?.priceYuan ?? 0}（下单流程下一步接入）`)}
+            onClick={async () => {
+              const res = await fetch("/api/portal/orders", {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({
+                  planId,
+                  payCycle: selectedCycle?.key,
+                  days: selectedCycle?.days,
+                  amountYuan: selectedCycle?.priceYuan ?? 0,
+                }),
+              });
+              const json = await res.json().catch(() => null);
+              if (!res.ok) {
+                alert(`创建订单失败: ${json?.error || `HTTP ${res.status}`}`);
+                return;
+              }
+              router.push(`/portal/orders/${json.orderId}`);
+            }}
           >
             创建订单 ¥{selectedCycle?.priceYuan ?? 0}
           </button>
