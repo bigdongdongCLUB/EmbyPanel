@@ -104,6 +104,7 @@ export function PortalOrderDetailClient({ orderId }: { orderId: string }) {
                   alert(`取消失败: ${json?.error || `HTTP ${res.status}`}`);
                   return;
                 }
+                alert("订单已取消");
                 await refresh();
               }}
             >

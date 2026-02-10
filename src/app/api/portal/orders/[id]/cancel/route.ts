@@ -16,10 +16,12 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   if (!user) return NextResponse.json({ error: "user_not_found" }, { status: 404 });
 
   const { id } = await ctx.params;
-  await prisma.serviceOrder.updateMany({
+  const r = await prisma.serviceOrder.updateMany({
     where: { id, userId: user.id, status: "PENDING" },
     data: { status: "CANCELED", canceledAt: new Date() },
   });
 
-  return NextResponse.json({ ok: true });
+  if (!r.count) return NextResponse.json({ error: "order_not_pending_or_not_found" }, { status: 400 });
+
+  return NextResponse.json({ ok: true, canceled: r.count });
 }
