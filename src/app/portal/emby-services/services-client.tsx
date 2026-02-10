@@ -107,7 +107,6 @@ export function PortalEmbyServicesClient() {
 
             <div className="flex gap-2">
               <a href={s.baseUrl} target="_blank" rel="noreferrer" className="flex-1 text-center bg-blue-600 text-white rounded px-3 py-2">访问服务器</a>
-              <button className="border rounded px-3 py-2" onClick={() => alert(`服务器ID: ${s.id}\nEmbyUserId: ${s.embyUserId ?? "-"}`)}>详情</button>
             </div>
           </div>
         ))}
