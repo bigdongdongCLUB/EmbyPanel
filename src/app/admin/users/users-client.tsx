@@ -683,32 +683,32 @@ export function UsersClient() {
       ) : null}
 
       {bulkAddOpen ? (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl w-full max-w-3xl p-6 border shadow-xl">
-            <div className="flex items-center justify-between border-b pb-4">
-              <div className="text-3xl font-semibold">为 {selectedIds.length} 个选中用户添加订阅时间</div>
-              <button className="text-2xl text-gray-500 hover:text-gray-800" onClick={() => setBulkAddOpen(false)}>
-                ×
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg w-full max-w-2xl p-4">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div className="font-semibold text-lg">为 {selectedIds.length} 个选中用户添加订阅时间</div>
+              <button className="text-sm underline" onClick={() => setBulkAddOpen(false)}>
+                关闭
               </button>
             </div>
 
-            <div className="mt-5">
-              <label className="block text-2xl font-medium mb-2">
+            <div className="mt-4">
+              <label className="block text-sm font-medium mb-1">
                 <span className="text-red-500 mr-1">*</span> 添加天数
               </label>
               <div className="flex w-full">
                 <input
-                  className="flex-1 border rounded-l-xl px-4 py-3 text-3xl"
+                  className="flex-1 border rounded-l px-3 py-2"
                   value={bulkAddDays}
                   onChange={(e) => setBulkAddDays(e.target.value)}
                 />
-                <div className="border border-l-0 rounded-r-xl px-5 py-3 text-3xl bg-gray-50">天</div>
+                <div className="border border-l-0 rounded-r px-4 py-2 bg-gray-50">天</div>
               </div>
             </div>
 
-            <div className="mt-5 rounded-xl border border-blue-200 bg-blue-50 p-5 text-gray-800">
-              <div className="text-3xl font-semibold mb-2">操作说明</div>
-              <ul className="list-disc pl-6 text-2xl space-y-1">
+            <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-4 text-gray-800">
+              <div className="font-semibold mb-1">操作说明</div>
+              <ul className="list-disc pl-5 text-sm space-y-1">
                 <li>将为 {selectedIds.length} 个选中用户添加订阅时间</li>
                 <li>只处理有订阅的用户</li>
                 <li>永久订阅用户将被自动跳过</li>
@@ -716,9 +716,9 @@ export function UsersClient() {
               </ul>
             </div>
 
-            <div className="mt-6 flex gap-3">
+            <div className="mt-5 flex gap-2">
               <button
-                className="bg-blue-600 text-white rounded-xl px-5 py-3 text-2xl disabled:opacity-50"
+                className="bg-black text-white rounded px-3 py-2 disabled:opacity-50"
                 disabled={bulkAddLoading}
                 onClick={async () => {
                   const addDays = Number(bulkAddDays);
@@ -750,9 +750,9 @@ export function UsersClient() {
                   }
                 }}
               >
-                ⓘ 开始处理
+                开始处理
               </button>
-              <button className="border rounded-xl px-5 py-3 text-2xl" disabled={bulkAddLoading} onClick={() => setBulkAddOpen(false)}>
+              <button className="border rounded px-3 py-2" disabled={bulkAddLoading} onClick={() => setBulkAddOpen(false)}>
                 取消
               </button>
             </div>
