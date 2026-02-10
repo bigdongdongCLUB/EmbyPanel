@@ -39,6 +39,9 @@ export async function POST(req: Request) {
   const passwordHash = await hashPassword(parsed.data.password);
   const enc = encryptSyncPassword(parsed.data.password);
 
+  const userCount = await prisma.user.count();
+  const role = userCount === 0 ? "ADMIN" : "USER";
+
   const user = await prisma.user.create({
     data: {
       username,
@@ -48,7 +51,7 @@ export async function POST(req: Request) {
       syncPasswordEnc: enc.enc,
       syncPasswordIv: enc.iv,
       syncPasswordTag: enc.tag,
-      role: "USER",
+      role,
     },
     select: { id: true, username: true, email: true, name: true, role: true },
   });
