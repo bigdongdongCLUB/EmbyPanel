@@ -416,7 +416,6 @@ export function UsersClient() {
                         {serverBadgeText(r)}
                       </span>
                       <div className="pointer-events-none absolute left-0 top-full z-20 mt-2 hidden w-[320px] rounded-xl border bg-white p-3 shadow-xl group-hover:block">
-                        <div className="text-lg font-semibold mb-2">服务器分配详情（{r.servers.length}台）</div>
                         <div className="space-y-2 max-h-[360px] overflow-auto">
                           {r.servers.map((sv) => (
                             <div key={sv.embyServerId} className="border-b last:border-b-0 pb-2 last:pb-0">
