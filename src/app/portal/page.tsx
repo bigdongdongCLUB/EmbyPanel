@@ -8,8 +8,5 @@ export default async function PortalPage() {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
 
-  const role = (session as any)?.role;
-  if (role === "ADMIN") redirect("/admin");
-
   return <PortalClient />;
 }
