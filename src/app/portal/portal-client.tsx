@@ -24,6 +24,14 @@ export function PortalClient() {
   const [redeemCode, setRedeemCode] = useState("");
   const [redeeming, setRedeeming] = useState(false);
 
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [expiryReminderEnabled, setExpiryReminderEnabled] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
   async function refresh() {
     setLoading(true);
     setError(null);
@@ -39,8 +47,35 @@ export function PortalClient() {
     }
   }
 
+  async function loadProfile() {
+    setProfileLoading(true);
+    try {
+      const res = await fetch("/api/portal/profile", { cache: "no-store" });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+      setEmail(json?.profile?.email || "");
+      setExpiryReminderEnabled(!!json?.profile?.expiryReminderEnabled);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (e: any) {
+      alert(`加载个人资料失败: ${e?.message || "unknown"}`);
+    } finally {
+      setProfileLoading(false);
+    }
+  }
+
   useEffect(() => {
     refresh();
+  }, []);
+
+  useEffect(() => {
+    const onOpen = () => {
+      setProfileOpen(true);
+      loadProfile();
+    };
+    window.addEventListener("portal:open-profile", onOpen);
+    return () => window.removeEventListener("portal:open-profile", onOpen);
   }, []);
 
   return (
@@ -102,6 +137,85 @@ export function PortalClient() {
           </div>
         </div>
       </div>
+
+      {profileOpen ? (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[85vh] overflow-auto p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="text-2xl font-semibold">账户设置</div>
+              <button className="text-gray-500 hover:text-gray-700 text-2xl leading-none" onClick={() => setProfileOpen(false)}>×</button>
+            </div>
+
+            {profileLoading ? <div className="text-sm text-gray-500">加载中…</div> : null}
+
+            <div className="space-y-3">
+              <div className="font-semibold">账户信息</div>
+              <div>
+                <label className="text-sm">电子邮箱</label>
+                <input className="mt-1 w-full border rounded px-3 py-2" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="请输入邮箱" />
+              </div>
+              <div>
+                <label className="text-sm">订阅到期提醒</label>
+                <div className="mt-2">
+                  <label className="inline-flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={expiryReminderEnabled} onChange={(e) => setExpiryReminderEnabled(e.target.checked)} />
+                    {expiryReminderEnabled ? "开启" : "关闭"}
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t pt-4 space-y-3">
+              <div className="font-semibold">密码设置</div>
+              <div>
+                <label className="text-sm">当前密码</label>
+                <input type="password" className="mt-1 w-full border rounded px-3 py-2" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="请输入当前密码" />
+              </div>
+              <div>
+                <label className="text-sm">新密码</label>
+                <input type="password" className="mt-1 w-full border rounded px-3 py-2" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="请输入新密码（至少6位）" />
+              </div>
+              <div>
+                <label className="text-sm">确认新密码</label>
+                <input type="password" className="mt-1 w-full border rounded px-3 py-2" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="请再次输入新密码" />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button className="border rounded px-4 py-2" onClick={() => setProfileOpen(false)}>取消</button>
+              <button
+                className="bg-blue-600 text-white rounded px-4 py-2"
+                onClick={async () => {
+                  const payload: any = {
+                    email: email.trim() || null,
+                    expiryReminderEnabled,
+                  };
+                  if (currentPassword || newPassword || confirmPassword) {
+                    payload.currentPassword = currentPassword;
+                    payload.newPassword = newPassword;
+                    payload.confirmPassword = confirmPassword;
+                  }
+
+                  const res = await fetch("/api/portal/profile", {
+                    method: "PATCH",
+                    headers: { "content-type": "application/json" },
+                    body: JSON.stringify(payload),
+                  });
+                  const json = await res.json().catch(() => null);
+                  if (!res.ok) {
+                    alert(`保存失败: ${json?.error || `HTTP ${res.status}`}`);
+                    return;
+                  }
+                  setProfileOpen(false);
+                  alert("设置已保存");
+                }}
+              >
+                保存设置
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

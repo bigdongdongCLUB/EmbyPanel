@@ -16,9 +16,15 @@ export function PortalHeaderClient({ username, role }: { username: string; role:
       </summary>
 
       <div className="absolute right-0 mt-2 w-44 bg-white border rounded-xl shadow-lg p-1 z-30">
-        <Link href="/portal/profile" className="block px-3 py-2 rounded hover:bg-gray-50 text-sm">
+        <button
+          className="w-full text-left px-3 py-2 rounded hover:bg-gray-50 text-sm"
+          onClick={() => {
+            window.dispatchEvent(new Event("portal:open-profile"));
+            (document.activeElement as any)?.blur?.();
+          }}
+        >
           个人资料
-        </Link>
+        </button>
 
         {role === "ADMIN" ? (
           <Link href="/admin" className="block px-3 py-2 rounded hover:bg-gray-50 text-sm">
