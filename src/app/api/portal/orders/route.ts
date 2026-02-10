@@ -30,6 +30,16 @@ export async function POST(req: Request) {
   const plan = await prisma.plan.findUnique({ where: { id: parsed.data.planId }, select: { id: true, enabled: true, visible: true } });
   if (!plan || !plan.enabled || !plan.visible) return NextResponse.json({ error: "plan_not_available" }, { status: 400 });
 
+  if (parsed.data.payCycle === "TRIAL") {
+    const [trialPaidCount, trialSubCount] = await Promise.all([
+      prisma.serviceOrder.count({ where: { userId: user.id, payCycle: "TRIAL", status: "PAID" } }),
+      prisma.subscription.count({ where: { userId: user.id, payCycle: "TRIAL" } }),
+    ]);
+    if (trialPaidCount > 0 || trialSubCount > 0) {
+      return NextResponse.json({ error: "trial_already_used" }, { status: 400 });
+    }
+  }
+
   const order = await prisma.serviceOrder.create({
     data: {
       userId: user.id,
