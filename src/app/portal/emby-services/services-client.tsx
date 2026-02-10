@@ -85,10 +85,10 @@ export function PortalEmbyServicesClient() {
         <div className="space-y-3">
           <div className="text-sm text-gray-500">媒体库统计</div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="border rounded p-4 text-center"><div className="text-sm text-gray-500">电影</div><div className="text-2xl font-semibold mt-1">{data?.aggregate.movieCount ?? 0}</div></div>
-            <div className="border rounded p-4 text-center"><div className="text-sm text-gray-500">电视剧</div><div className="text-2xl font-semibold mt-1">{data?.aggregate.seriesCount ?? 0}</div></div>
-            <div className="border rounded p-4 text-center"><div className="text-sm text-gray-500">集数</div><div className="text-2xl font-semibold mt-1">{data?.aggregate.episodeCount ?? 0}</div></div>
-            <div className="border rounded p-4 text-center"><div className="text-sm text-gray-500">音乐</div><div className="text-2xl font-semibold mt-1">{data?.aggregate.songCount ?? 0}</div></div>
+            <div className="border rounded p-4 text-center"><div className="text-sm text-gray-500">🎬 电影</div><div className="text-2xl font-semibold mt-1">{data?.aggregate.movieCount ?? 0}</div></div>
+            <div className="border rounded p-4 text-center"><div className="text-sm text-gray-500">📺 电视剧</div><div className="text-2xl font-semibold mt-1">{data?.aggregate.seriesCount ?? 0}</div></div>
+            <div className="border rounded p-4 text-center"><div className="text-sm text-gray-500">🎞️ 集数</div><div className="text-2xl font-semibold mt-1">{data?.aggregate.episodeCount ?? 0}</div></div>
+            <div className="border rounded p-4 text-center"><div className="text-sm text-gray-500">🎵 音乐</div><div className="text-2xl font-semibold mt-1">{data?.aggregate.songCount ?? 0}</div></div>
           </div>
         </div>
       </div>
