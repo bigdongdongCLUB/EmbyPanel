@@ -654,7 +654,17 @@ export function UsersClient() {
                     body: JSON.stringify(payload),
                   });
                   if (!res.ok) {
-                    alert(`保存失败: ${await res.text()}`);
+                    const text = await res.text();
+                    let msg = text;
+                    try {
+                      const j = JSON.parse(text);
+                      if (j?.error === "cannot_demote_last_admin") {
+                        msg = "面板至少需要保留一位管理员";
+                      } else if (j?.error) {
+                        msg = String(j.error);
+                      }
+                    } catch {}
+                    alert(`保存失败: ${msg}`);
                     return;
                   }
                   setEdit({ open: false });
