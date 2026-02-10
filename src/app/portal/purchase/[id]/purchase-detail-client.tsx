@@ -52,27 +52,29 @@ export function PortalPurchaseDetailClient({ planId }: { planId: string }) {
         <div className="p-5 space-y-4">
           <div className="text-sm text-red-500">* 选择支付周期</div>
 
-          {(data?.cycles ?? []).map((c) => {
-            const active = selected === c.key && c.available;
-            const unavailable = !c.available;
-            return (
-              <button
-                key={c.key}
-                disabled={unavailable}
-                onClick={() => setSelected(c.key)}
-                className={
-                  "w-full border rounded-xl p-4 text-left flex items-center justify-between " +
-                  (active ? "border-blue-500 bg-blue-50" : unavailable ? "opacity-40 cursor-not-allowed" : "hover:bg-gray-50")
-                }
-              >
-                <div>
-                  <div className="text-2xl font-semibold">{c.label}{c.key === "TRIAL" ? `${c.days || 1}天` : ""} {unavailable ? <span className="ml-2 text-sm border px-2 py-0.5 rounded">不可用</span> : null}</div>
-                  <div className="text-sm text-gray-500">服务期限：{c.days} 天</div>
-                </div>
-                <div className="text-4xl font-bold">¥{c.priceYuan ?? 0}</div>
-              </button>
-            );
-          })}
+          {(data?.cycles ?? [])
+            .filter((c) => c.key === "TRIAL" || c.available)
+            .map((c) => {
+              const active = selected === c.key && c.available;
+              const unavailable = !c.available;
+              return (
+                <button
+                  key={c.key}
+                  disabled={unavailable}
+                  onClick={() => setSelected(c.key)}
+                  className={
+                    "w-full border rounded-xl p-4 text-left flex items-center justify-between " +
+                    (active ? "border-blue-500 bg-blue-50" : unavailable ? "opacity-40 cursor-not-allowed" : "hover:bg-gray-50")
+                  }
+                >
+                  <div>
+                    <div className="text-2xl font-semibold">{c.label}{c.key === "TRIAL" ? `${c.days || 1}天` : ""} {unavailable ? <span className="ml-2 text-sm border px-2 py-0.5 rounded">不可用</span> : null}</div>
+                    <div className="text-sm text-gray-500">服务期限：{c.days} 天</div>
+                  </div>
+                  <div className="text-4xl font-bold">¥{c.priceYuan ?? 0}</div>
+                </button>
+              );
+            })}
 
           <div className="border rounded-xl p-4 bg-gray-50">
             <div className="flex items-center justify-between text-2xl font-semibold">
