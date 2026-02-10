@@ -6,7 +6,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
-import { embyFetchSystemInfo, normalizeBaseUrl } from "@/lib/emby";
+import { normalizeBaseUrl } from "@/lib/emby";
 
 async function fetchItemCounts(baseUrl: string, apiKey: string) {
   try {
@@ -64,7 +64,7 @@ export async function GET() {
 
   const servers = await prisma.embyServer.findMany({
     where: { id: { in: Array.from(serverIds) } },
-    select: { id: true, name: true, baseUrl: true, enabled: true, apiKey: true, apiKeyEnc: true, apiKeyIv: true, apiKeyTag: true },
+    select: { id: true, name: true, baseUrl: true, enabled: true, apiKey: true, apiKeyEnc: true, apiKeyIv: true, apiKeyTag: true, lastHealthOk: true },
     orderBy: { createdAt: "asc" },
   });
 
@@ -73,15 +73,14 @@ export async function GET() {
   const list = await Promise.all(
     servers.map(async (s) => {
       const apiKey = getEmbyApiKeyForServer(s as any);
-      const sys = apiKey ? await embyFetchSystemInfo(s.baseUrl, apiKey) : null;
       const counts = apiKey ? await fetchItemCounts(s.baseUrl, apiKey) : null;
 
       return {
         id: s.id,
         name: s.name,
         enabled: s.enabled,
-        online: !!sys?.ok,
-        version: sys?.ok ? String((sys as any).json?.Version ?? "") : "",
+        online: s.lastHealthOk === true,
+        version: "",
         baseUrl: s.baseUrl,
         embyUserId: linkMap.get(s.id) ?? null,
         counts: counts ?? { movieCount: 0, seriesCount: 0, episodeCount: 0, songCount: 0 },

@@ -51,8 +51,8 @@ async function ensureRepeatable(queue) {
   );
 }
 
-async function callInternalScan() {
-  const url = WEB_INTERNAL_URL + "/api/admin/jobs/anomaly-scan";
+async function callInternal(path) {
+  const url = WEB_INTERNAL_URL + path;
   const res = await fetch(url, {
     method: "POST",
     headers: {
@@ -64,7 +64,7 @@ async function callInternalScan() {
 
   const text = await res.text();
   if (!res.ok) {
-    throw new Error(`scan_failed HTTP ${res.status}: ${text.slice(0, 5000)}`);
+    throw new Error(`${path} failed HTTP ${res.status}: ${text.slice(0, 5000)}`);
   }
 
   try {
@@ -87,15 +87,18 @@ async function main() {
     queueName,
     async (job) => {
       const started = Date.now();
-      const result = await callInternalScan();
+      const health = await callInternal("/api/admin/jobs/emby-health-check");
+      const result = await callInternal("/api/admin/jobs/anomaly-scan");
       const ms = Date.now() - started;
-      console.log(`[worker] anomaly-scan ok in ${ms}ms`, {
+      console.log(`[worker] periodic jobs ok in ${ms}ms`, {
         jobId: job.id,
+        healthOk: health?.okCount,
+        healthFail: health?.failCount,
         createdEvents: result?.createdEvents,
         scannedSessions: result?.scannedSessions,
         warnings: result?.warnings,
       });
-      return result;
+      return { health, anomaly: result };
     },
     {
       connection,

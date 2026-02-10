@@ -2,9 +2,11 @@
 
 This folder contains background worker entrypoints.
 
-### anomaly scan worker
+### periodic worker
 
-Runs a BullMQ repeatable job every 10 minutes and triggers the internal scan endpoint.
+Runs a BullMQ repeatable job every 10 minutes and triggers:
+- Emby health check endpoint
+- anomaly scan endpoint
 
 Env:
 - `REDIS_URL`
