@@ -37,6 +37,7 @@ export function PortalEmbyServicesClient() {
   const [data, setData] = useState<Data | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [syncingServerId, setSyncingServerId] = useState<string | null>(null);
 
   async function refresh() {
     setLoading(true);
@@ -127,8 +128,36 @@ export function PortalEmbyServicesClient() {
                 <div><span className="font-semibold text-blue-700">协议：</span> {endpoint.protocol}</div>
               </div>
 
-              <div className="flex gap-2">
-                <a href={s.baseUrl} target="_blank" rel="noreferrer" className="flex-1 text-center bg-blue-600 text-white rounded px-3 py-2">访问服务器</a>
+              <div className="flex flex-col gap-2">
+                <a href={s.baseUrl} target="_blank" rel="noreferrer" className="w-full text-center bg-blue-600 text-white rounded px-3 py-2">访问服务器</a>
+                <button
+                  className="w-full text-center border border-blue-600 text-blue-600 rounded px-3 py-2 disabled:opacity-60"
+                  disabled={!!syncingServerId}
+                  onClick={async () => {
+                    setSyncingServerId(s.id);
+                    try {
+                      const res = await fetch("/api/portal/emby-services/sync-password", {
+                        method: "POST",
+                        headers: { "content-type": "application/json" },
+                        body: JSON.stringify({ embyServerId: s.id }),
+                      });
+                      const json = await res.json().catch(() => null);
+                      if (!res.ok) {
+                        alert(`同步失败: ${json?.error || `HTTP ${res.status}`}`);
+                        return;
+                      }
+                      if ((json?.failedCount ?? 0) > 0) {
+                        alert(`已部分同步：成功 ${json?.okCount ?? 0}，失败 ${json?.failedCount ?? 0}`);
+                      } else {
+                        alert("密码同步成功");
+                      }
+                    } finally {
+                      setSyncingServerId(null);
+                    }
+                  }}
+                >
+                  {syncingServerId === s.id ? "同步中..." : "同步面板和Emby密码"}
+                </button>
               </div>
             </div>
           );
