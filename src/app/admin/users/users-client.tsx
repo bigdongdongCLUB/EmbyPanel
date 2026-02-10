@@ -78,6 +78,9 @@ export function UsersClient() {
   const [createOpen, setCreateOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLDivElement | null>(null);
+  const [bulkAddOpen, setBulkAddOpen] = useState(false);
+  const [bulkAddDays, setBulkAddDays] = useState("30");
+  const [bulkAddLoading, setBulkAddLoading] = useState(false);
 
   const [importOpen, setImportOpen] = useState(false);
   const [importLoading, setImportLoading] = useState(false);
@@ -306,33 +309,10 @@ export function UsersClient() {
                 <button
                   className="w-full text-left px-2 py-2 hover:bg-gray-50 rounded disabled:opacity-50"
                   disabled={!selectedIds.length}
-                  onClick={async () => {
+                  onClick={() => {
                     setMoreOpen(false);
-                    const addDaysStr = prompt("批量增加订阅时间：增加多少天？", "30");
-                    if (!addDaysStr) return;
-                    const addDays = Number(addDaysStr);
-                    if (!Number.isFinite(addDays) || addDays <= 0) {
-                      alert("天数不合法");
-                      return;
-                    }
-
-                    for (const id of selectedIds) {
-                      const dRes = await fetch(`/api/admin/users/${id}`, { cache: "no-store" });
-                      const dJson = await dRes.json().catch(() => null);
-                      if (!dRes.ok) continue;
-                      const sub = dJson?.user?.subscriptions?.[0];
-                      if (!sub?.endAt || !sub?.planId) continue;
-                      const end = new Date(sub.endAt);
-                      const nextEnd = new Date(end.getTime() + addDays * 24 * 60 * 60 * 1000);
-                      await fetch(`/api/admin/users/${id}`, {
-                        method: "PATCH",
-                        headers: { "content-type": "application/json" },
-                        body: JSON.stringify({ subscription: { planId: sub.planId, payCycle: null, startAt: sub.startAt, endAt: nextEnd.toISOString() } }),
-                      });
-                    }
-
-                    alert("批量增加订阅时间已提交（逐个更新）");
-                    await refresh();
+                    setBulkAddDays("30");
+                    setBulkAddOpen(true);
                   }}
                 >
                   批量增加订阅时间
@@ -696,6 +676,84 @@ export function UsersClient() {
                 }}
               >
                 删除用户
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {bulkAddOpen ? (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl w-full max-w-3xl p-6 border shadow-xl">
+            <div className="flex items-center justify-between border-b pb-4">
+              <div className="text-3xl font-semibold">为 {selectedIds.length} 个选中用户添加订阅时间</div>
+              <button className="text-2xl text-gray-500 hover:text-gray-800" onClick={() => setBulkAddOpen(false)}>
+                ×
+              </button>
+            </div>
+
+            <div className="mt-5">
+              <label className="block text-2xl font-medium mb-2">
+                <span className="text-red-500 mr-1">*</span> 添加天数
+              </label>
+              <div className="flex w-full">
+                <input
+                  className="flex-1 border rounded-l-xl px-4 py-3 text-3xl"
+                  value={bulkAddDays}
+                  onChange={(e) => setBulkAddDays(e.target.value)}
+                />
+                <div className="border border-l-0 rounded-r-xl px-5 py-3 text-3xl bg-gray-50">天</div>
+              </div>
+            </div>
+
+            <div className="mt-5 rounded-xl border border-blue-200 bg-blue-50 p-5 text-gray-800">
+              <div className="text-3xl font-semibold mb-2">操作说明</div>
+              <ul className="list-disc pl-6 text-2xl space-y-1">
+                <li>将为 {selectedIds.length} 个选中用户添加订阅时间</li>
+                <li>只处理有订阅的用户</li>
+                <li>永久订阅用户将被自动跳过</li>
+                <li>更新后将自动同步到Emby服务器</li>
+              </ul>
+            </div>
+
+            <div className="mt-6 flex gap-3">
+              <button
+                className="bg-blue-600 text-white rounded-xl px-5 py-3 text-2xl disabled:opacity-50"
+                disabled={bulkAddLoading}
+                onClick={async () => {
+                  const addDays = Number(bulkAddDays);
+                  if (!Number.isFinite(addDays) || addDays <= 0) {
+                    alert("天数不合法");
+                    return;
+                  }
+                  setBulkAddLoading(true);
+                  try {
+                    for (const id of selectedIds) {
+                      const dRes = await fetch(`/api/admin/users/${id}`, { cache: "no-store" });
+                      const dJson = await dRes.json().catch(() => null);
+                      if (!dRes.ok) continue;
+                      const sub = dJson?.user?.subscriptions?.[0];
+                      if (!sub?.endAt || !sub?.planId) continue;
+                      const end = new Date(sub.endAt);
+                      const nextEnd = new Date(end.getTime() + addDays * 24 * 60 * 60 * 1000);
+                      await fetch(`/api/admin/users/${id}`, {
+                        method: "PATCH",
+                        headers: { "content-type": "application/json" },
+                        body: JSON.stringify({ subscription: { planId: sub.planId, payCycle: null, startAt: sub.startAt, endAt: nextEnd.toISOString() } }),
+                      });
+                    }
+                    alert("批量增加订阅时间已提交（逐个更新）");
+                    setBulkAddOpen(false);
+                    await refresh();
+                  } finally {
+                    setBulkAddLoading(false);
+                  }
+                }}
+              >
+                ⓘ 开始处理
+              </button>
+              <button className="border rounded-xl px-5 py-3 text-2xl" disabled={bulkAddLoading} onClick={() => setBulkAddOpen(false)}>
+                取消
               </button>
             </div>
           </div>
