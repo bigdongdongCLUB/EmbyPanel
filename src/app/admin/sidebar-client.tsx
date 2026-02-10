@@ -49,6 +49,7 @@ export function AdminSidebarClient({ username }: { username: string }) {
 
         <div className="space-y-1">
           <Item href="/admin/cards" label="卡密管理" />
+          <Item href="/admin/settings" label="系统设置" />
         </div>
 
         <div className="my-3 border-t border-white/10" />

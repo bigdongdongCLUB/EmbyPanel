@@ -2,7 +2,7 @@
 
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { LoginRedirect } from "./login-redirect";
 
@@ -32,6 +32,10 @@ export default function LoginPage() {
   const [registerError, setRegisterError] = useState<string | null>(null);
   const [registerLoading, setRegisterLoading] = useState(false);
 
+  const [siteName, setSiteName] = useState("BestEmby");
+  const [siteDescription, setSiteDescription] = useState("See the BestEmby");
+  const [siteLogoDataUrl, setSiteLogoDataUrl] = useState<string | null>(null);
+
   const usernameErrors = useMemo(() => {
     const list: string[] = [];
     if (username && (username.length < 3 || username.length > 24)) list.push("用户名长度必须在3-24个字符之间");
@@ -56,6 +60,18 @@ export default function LoginPage() {
     !passwordErrors.length &&
     !!confirmPassword &&
     !confirmError;
+
+  useEffect(() => {
+    fetch("/api/public/site-settings", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j) => {
+        if (!j?.data) return;
+        setSiteName(j.data.siteName || "BestEmby");
+        setSiteDescription(j.data.siteDescription || "See the BestEmby");
+        setSiteLogoDataUrl(j.data.siteLogoDataUrl ?? null);
+      })
+      .catch(() => null);
+  }, []);
 
   async function doLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -130,10 +146,14 @@ export default function LoginPage() {
       <div className="w-full max-w-[450px] h-[450px] bg-white rounded-2xl shadow-sm p-4 overflow-auto">
         <div className="flex flex-col items-center text-center">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-red-600 text-white text-xs flex items-center justify-center font-bold">BigTv</div>
-            <div className="text-4xl font-semibold tracking-tight">BestEmby</div>
+            {siteLogoDataUrl ? (
+              <img src={siteLogoDataUrl} alt="logo" className="h-10 w-10 rounded-full object-cover border" />
+            ) : (
+              <div className="h-10 w-10 rounded-full bg-red-600 text-white text-xs flex items-center justify-center font-bold">BigTv</div>
+            )}
+            <div className="text-4xl font-semibold tracking-tight">{siteName}</div>
           </div>
-          <p className="text-gray-500 mt-3 text-lg">See the BestEmby</p>
+          <p className="text-gray-500 mt-3 text-lg">{siteDescription}</p>
         </div>
 
         {mode === "login" ? (
