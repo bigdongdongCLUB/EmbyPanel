@@ -22,12 +22,13 @@ function Item({ href, label }: { href: string; label: string }) {
   );
 }
 
-export function AdminSidebarClient({ username }: { username: string }) {
+export function AdminSidebarClient({ username, siteName, siteLogoDataUrl }: { username: string; siteName: string; siteLogoDataUrl: string | null }) {
   return (
     <aside className="fixed inset-y-0 left-0 w-60 bg-[#0b1220] text-white flex flex-col">
-      <div className="h-16 flex items-center justify-center px-4 border-b border-white/10">
-        <Link href="/admin" className="font-semibold text-3xl tracking-wide leading-none text-center">
-          BestEmby
+      <div className="h-16 flex items-center justify-center px-3 border-b border-white/10">
+        <Link href="/admin" className="flex items-center gap-2 min-w-0">
+          {siteLogoDataUrl ? <img src={siteLogoDataUrl} alt="logo" className="h-8 w-8 rounded-full object-cover shrink-0" /> : null}
+          <span className="font-semibold text-2xl tracking-wide leading-none text-center truncate">{siteName}</span>
         </Link>
       </div>
 
