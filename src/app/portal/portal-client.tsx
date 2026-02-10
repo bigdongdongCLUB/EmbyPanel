@@ -165,24 +165,15 @@ export function PortalClient() {
                   </span>
                 </div>
                 <div className="mt-2">
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={expiryReminderEnabled}
-                    onClick={() => setExpiryReminderEnabled((v) => !v)}
-                    className={
-                      "inline-flex items-center h-10 w-32 rounded-full border px-2 transition-colors " +
-                      (expiryReminderEnabled ? "bg-blue-500 border-blue-500 text-white" : "bg-white border-blue-500 text-blue-500")
-                    }
-                  >
-                    <span className="text-sm leading-none mr-2 font-medium">{expiryReminderEnabled ? "开启" : "关闭"}</span>
-                    <span
-                      className={
-                        "inline-block h-8 w-8 rounded-full bg-white shadow transition-transform " +
-                        (expiryReminderEnabled ? "translate-x-4" : "translate-x-0 border border-blue-500")
-                      }
+                  <label className="inline-flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="h-5 w-5 rounded border-gray-300"
+                      checked={expiryReminderEnabled}
+                      onChange={(e) => setExpiryReminderEnabled(e.target.checked)}
                     />
-                  </button>
+                    {expiryReminderEnabled ? "开启" : "关闭"}
+                  </label>
                 </div>
               </div>
             </div>
