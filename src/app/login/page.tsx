@@ -2,72 +2,250 @@
 
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { LoginRedirect } from "./login-redirect";
 
+type Mode = "login" | "register";
+
+function EyeIcon({ off }: { off?: boolean }) {
+  return <span className="text-gray-400 text-xl leading-none">{off ? "🙈" : "👁️"}</span>;
+}
+
 export default function LoginPage() {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
   const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
+  const [mode, setMode] = useState<Mode>("login");
+
+  const [loginUsername, setLoginUsername] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginPwdVisible, setLoginPwdVisible] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [loginLoading, setLoginLoading] = useState(false);
+
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
+  const [pwdVisible, setPwdVisible] = useState(false);
+  const [confirmPwdVisible, setConfirmPwdVisible] = useState(false);
+  const [registerError, setRegisterError] = useState<string | null>(null);
+  const [registerLoading, setRegisterLoading] = useState(false);
+
+  const usernameErrors = useMemo(() => {
+    const list: string[] = [];
+    if (username && (username.length < 3 || username.length > 24)) list.push("用户名长度必须在3-24个字符之间");
+    if (username && !/^[a-zA-Z0-9_]+$/.test(username)) list.push("用户名只能包含字母、数字和下划线");
+    return list;
+  }, [username]);
+
+  const passwordErrors = useMemo(() => {
+    const list: string[] = [];
+    if (password && password.length < 8) list.push("密码必须至少8个字符");
+    if (password && !/[A-Za-z]/.test(password)) list.push("密码必须包含至少一个字母和一个数字");
+    if (password && !/[0-9]/.test(password)) list.push("密码必须包含至少一个字母和一个数字");
+    return Array.from(new Set(list));
+  }, [password]);
+
+  const confirmError = confirmPassword && password !== confirmPassword ? "两次输入的密码不一致" : null;
+
+  const canRegister =
+    !!username &&
+    !usernameErrors.length &&
+    !!password &&
+    !passwordErrors.length &&
+    !!confirmPassword &&
+    !confirmError;
+
+  async function doLogin(e: React.FormEvent) {
+    e.preventDefault();
+    setLoginError(null);
+    setLoginLoading(true);
+    try {
+      const res = await signIn("credentials", {
+        username: loginUsername,
+        password: loginPassword,
+        redirect: false,
+      });
+      if ((res as any)?.error) {
+        setLoginError("用户名或密码错误");
+        return;
+      }
+      router.push("/");
+      router.refresh();
+    } finally {
+      setLoginLoading(false);
+    }
+  }
+
+  async function doRegister(e: React.FormEvent) {
+    e.preventDefault();
+    if (!canRegister) return;
+    setRegisterError(null);
+    setRegisterLoading(true);
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          username: username.trim(),
+          email: email.trim() || undefined,
+          password,
+          name: username.trim(),
+          inviteCode: inviteCode.trim() || undefined,
+        }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        if (json?.error === "username_taken") setRegisterError("用户名已存在");
+        else if (json?.error === "email_taken") setRegisterError("邮箱已被使用");
+        else setRegisterError("注册失败，请检查输入后重试");
+        return;
+      }
+
+      const loginRes = await signIn("credentials", {
+        username: username.trim(),
+        password,
+        redirect: false,
+      });
+      if ((loginRes as any)?.error) {
+        setMode("login");
+        setLoginUsername(username.trim());
+        setLoginPassword("");
+        setLoginError("注册成功，请登录");
+        return;
+      }
+
+      router.push("/");
+      router.refresh();
+    } finally {
+      setRegisterLoading(false);
+    }
+  }
 
   return (
-    <main className="min-h-screen flex items-center justify-center p-6">
+    <main className="min-h-screen bg-gray-100 flex items-center justify-center p-6">
       <LoginRedirect />
-      <div className="w-full max-w-sm border rounded-lg p-6">
-        <h1 className="text-xl font-semibold">登录</h1>
-        <p className="text-sm text-gray-500 mt-1">使用用户名 + 密码登录</p>
 
-        <form
-          className="mt-6 space-y-3"
-          onSubmit={async (e) => {
-            e.preventDefault();
-            setError(null);
-            const res = await signIn("credentials", {
-              username,
-              password,
-              redirect: false,
-            });
-            if ((res as any)?.error) {
-              setError((res as any).error);
-              return;
-            }
-            router.push("/");
-            router.refresh();
-          }}
-        >
-          <div>
-            <label className="text-sm">Username</label>
-            <input
-              className="mt-1 w-full border rounded px-3 py-2"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              type="text"
-              autoComplete="username"
-              required
-            />
+      <div className="w-full max-w-4xl bg-white rounded-2xl shadow-sm p-10 md:p-12">
+        <div className="flex flex-col items-center text-center">
+          <div className="flex items-center gap-4">
+            <div className="h-14 w-14 rounded-full bg-red-600 text-white flex items-center justify-center font-bold">BigTv</div>
+            <div className="text-6xl font-semibold tracking-tight">BestEmby</div>
           </div>
-          <div>
-            <label className="text-sm">Password</label>
-            <input
-              className="mt-1 w-full border rounded px-3 py-2"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              type="password"
-              autoComplete="current-password"
-              required
-            />
-          </div>
+          <p className="text-gray-500 mt-5 text-2xl">See the BestEmby</p>
+        </div>
 
-          {error ? <div className="text-sm text-red-600">{error}</div> : null}
+        {mode === "login" ? (
+          <form className="mt-10 max-w-3xl mx-auto space-y-5" onSubmit={doLogin}>
+            <div className="border rounded-2xl px-4 py-3 flex items-center gap-3">
+              <span className="text-gray-400 text-2xl">👤</span>
+              <input
+                className="w-full text-4xl outline-none"
+                placeholder="用户名"
+                value={loginUsername}
+                onChange={(e) => setLoginUsername(e.target.value)}
+                autoComplete="username"
+                required
+              />
+            </div>
 
-          <button className="w-full bg-black text-white rounded px-3 py-2">登录</button>
-        </form>
+            <div className="border rounded-2xl px-4 py-3 flex items-center gap-3">
+              <span className="text-gray-400 text-2xl">🔒</span>
+              <input
+                className="w-full text-4xl outline-none"
+                placeholder="密码"
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                type={loginPwdVisible ? "text" : "password"}
+                autoComplete="current-password"
+                required
+              />
+              <button type="button" onClick={() => setLoginPwdVisible((v) => !v)}>
+                <EyeIcon off={!loginPwdVisible} />
+              </button>
+            </div>
 
-        <p className="mt-4 text-xs text-gray-500">
-          还没有账号？先调用 <code className="px-1">/api/auth/register</code> 注册（MVP）。
-        </p>
+            {loginError ? <div className="text-red-500 text-lg">{loginError}</div> : null}
+
+            <button className="w-full bg-blue-600 text-white rounded-2xl py-4 text-4xl font-semibold disabled:opacity-60" disabled={loginLoading}>
+              {loginLoading ? "登录中..." : "登 录"}
+            </button>
+
+            <div className="text-center text-blue-500 text-2xl pt-2">忘记密码?</div>
+            <div className="text-center text-2xl">
+              还没有账户？
+              <button type="button" className="text-blue-500 ml-2" onClick={() => setMode("register")}>
+                注册
+              </button>
+            </div>
+          </form>
+        ) : (
+          <form className="mt-10 max-w-3xl mx-auto space-y-4" onSubmit={doRegister}>
+            <div className={`border rounded-2xl px-4 py-3 flex items-center gap-3 ${usernameErrors.length ? "border-red-300" : ""}`}>
+              <span className="text-gray-400 text-2xl">👤</span>
+              <input className="w-full text-4xl outline-none" placeholder="用户名" value={username} onChange={(e) => setUsername(e.target.value)} />
+            </div>
+            {usernameErrors.map((x) => (
+              <div key={x} className="text-red-500 text-lg -mt-2">{x}</div>
+            ))}
+
+            <div className="border rounded-2xl px-4 py-3 flex items-center gap-3">
+              <span className="text-gray-400 text-2xl">✉️</span>
+              <input className="w-full text-4xl outline-none" placeholder="邮箱" value={email} onChange={(e) => setEmail(e.target.value)} />
+            </div>
+
+            <div className={`border rounded-2xl px-4 py-3 flex items-center gap-3 ${passwordErrors.length ? "border-red-300" : ""}`}>
+              <span className="text-gray-400 text-2xl">🔒</span>
+              <input
+                className="w-full text-4xl outline-none"
+                placeholder="密码"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                type={pwdVisible ? "text" : "password"}
+              />
+              <button type="button" onClick={() => setPwdVisible((v) => !v)}>
+                <EyeIcon off={!pwdVisible} />
+              </button>
+            </div>
+            {passwordErrors.map((x) => (
+              <div key={x} className="text-red-500 text-lg -mt-2">{x}</div>
+            ))}
+            <div className="text-gray-500 text-lg -mt-2">ⓘ 8-24个字符, 包含至少一个字母和一个数字</div>
+
+            <div className={`border rounded-2xl px-4 py-3 flex items-center gap-3 ${confirmError ? "border-red-300" : ""}`}>
+              <span className="text-gray-400 text-2xl">🔒</span>
+              <input
+                className="w-full text-4xl outline-none"
+                placeholder="确认密码"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                type={confirmPwdVisible ? "text" : "password"}
+              />
+              <button type="button" onClick={() => setConfirmPwdVisible((v) => !v)}>
+                <EyeIcon off={!confirmPwdVisible} />
+              </button>
+            </div>
+            {confirmError ? <div className="text-red-500 text-lg -mt-2">{confirmError}</div> : null}
+
+            <div className="border rounded-2xl px-4 py-3 flex items-center gap-3">
+              <input className="w-full text-4xl outline-none" placeholder="邀请码（选填）" value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} />
+            </div>
+
+            {registerError ? <div className="text-red-500 text-lg">{registerError}</div> : null}
+
+            <button className="w-full bg-blue-600 text-white rounded-2xl py-4 text-4xl font-semibold disabled:opacity-60" disabled={!canRegister || registerLoading}>
+              {registerLoading ? "注册中..." : "注 册"}
+            </button>
+
+            <div className="text-center text-2xl pt-2">
+              已有账户？
+              <button type="button" className="text-blue-500 ml-2" onClick={() => setMode("login")}>
+                登录
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </main>
   );
