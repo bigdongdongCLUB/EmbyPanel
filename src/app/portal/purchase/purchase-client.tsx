@@ -293,7 +293,7 @@ export function PortalPurchaseClient() {
                             return;
                           }
                           alert("支付成功");
-                          await loadOrder(order.order.id);
+                          window.location.href = "/portal";
                         }}
                       >
                         立即支付（余额 ¥{orderAmountYuan.toFixed(2)}）
