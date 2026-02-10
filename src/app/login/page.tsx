@@ -143,25 +143,25 @@ export default function LoginPage() {
     <main className="min-h-screen bg-gray-100 flex items-center justify-center p-6">
       <LoginRedirect />
 
-      <div className="w-full max-w-[450px] h-[450px] bg-white rounded-2xl shadow-sm p-4 overflow-auto">
+      <div className="w-full max-w-[450px] h-[450px] bg-white rounded-2xl shadow-sm p-3 overflow-hidden">
         <div className="flex flex-col items-center text-center">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {siteLogoDataUrl ? (
-              <img src={siteLogoDataUrl} alt="logo" className="h-14 w-14 rounded-full object-cover" />
+              <img src={siteLogoDataUrl} alt="logo" className="h-10 w-10 rounded-full object-cover" />
             ) : (
-              <div className="h-12 w-12 rounded-full bg-red-600 text-white text-xs flex items-center justify-center font-bold">BigTv</div>
+              <div className="h-9 w-9 rounded-full bg-red-600 text-white text-[10px] flex items-center justify-center font-bold">BigTv</div>
             )}
-            <div className="text-3xl font-semibold tracking-tight">{siteName}</div>
+            <div className="text-2xl font-semibold tracking-tight">{siteName}</div>
           </div>
-          <p className="text-gray-500 mt-3 text-lg">{siteDescription}</p>
+          <p className="text-gray-500 mt-1 text-sm">{siteDescription}</p>
         </div>
 
         {mode === "login" ? (
-          <form className="mt-6 max-w-3xl mx-auto space-y-3" onSubmit={doLogin}>
-            <div className="border rounded-xl px-3 py-2 flex items-center gap-2">
-              <span className="text-gray-400 text-lg">👤</span>
+          <form className="mt-3 max-w-3xl mx-auto space-y-2" onSubmit={doLogin}>
+            <div className="border rounded-xl px-3 py-1.5 flex items-center gap-2">
+              <span className="text-gray-400 text-sm">👤</span>
               <input
-                className="w-full text-base outline-none"
+                className="w-full text-sm outline-none"
                 placeholder="用户名"
                 value={loginUsername}
                 onChange={(e) => setLoginUsername(e.target.value)}
@@ -170,10 +170,10 @@ export default function LoginPage() {
               />
             </div>
 
-            <div className="border rounded-xl px-3 py-2 flex items-center gap-2">
-              <span className="text-gray-400 text-lg">🔒</span>
+            <div className="border rounded-xl px-3 py-1.5 flex items-center gap-2">
+              <span className="text-gray-400 text-sm">🔒</span>
               <input
-                className="w-full text-base outline-none"
+                className="w-full text-sm outline-none"
                 placeholder="密码"
                 value={loginPassword}
                 onChange={(e) => setLoginPassword(e.target.value)}
@@ -186,14 +186,14 @@ export default function LoginPage() {
               </button>
             </div>
 
-            {loginError ? <div className="text-red-500 text-sm">{loginError}</div> : null}
+            {loginError ? <div className="text-red-500 text-xs">{loginError}</div> : null}
 
-            <button className="w-full bg-blue-600 text-white rounded-xl py-2.5 text-xl font-semibold disabled:opacity-60" disabled={loginLoading}>
+            <button className="w-full bg-blue-600 text-white rounded-xl py-2 text-base font-semibold disabled:opacity-60" disabled={loginLoading}>
               {loginLoading ? "登录中..." : "登 录"}
             </button>
 
-            <div className="text-center text-blue-500 text-base pt-1">忘记密码?</div>
-            <div className="text-center text-base">
+            <div className="text-center text-blue-500 text-sm pt-0.5">忘记密码?</div>
+            <div className="text-center text-sm">
               还没有账户？
               <button type="button" className="text-blue-500 ml-2" onClick={() => setMode("register")}>
                 注册
@@ -201,24 +201,24 @@ export default function LoginPage() {
             </div>
           </form>
         ) : (
-          <form className="mt-6 max-w-3xl mx-auto space-y-3" onSubmit={doRegister}>
-            <div className={`border rounded-xl px-3 py-2 flex items-center gap-2 ${usernameErrors.length ? "border-red-300" : ""}`}>
-              <span className="text-gray-400 text-lg">👤</span>
-              <input className="w-full text-base outline-none" placeholder="用户名" value={username} onChange={(e) => setUsername(e.target.value)} />
+          <form className="mt-3 max-w-3xl mx-auto space-y-1.5" onSubmit={doRegister}>
+            <div className={`border rounded-xl px-3 py-1.5 flex items-center gap-2 ${usernameErrors.length ? "border-red-300" : ""}`}>
+              <span className="text-gray-400 text-sm">👤</span>
+              <input className="w-full text-sm outline-none" placeholder="用户名" value={username} onChange={(e) => setUsername(e.target.value)} />
             </div>
             {usernameErrors.map((x) => (
-              <div key={x} className="text-red-500 text-sm -mt-2">{x}</div>
+              <div key={x} className="text-red-500 text-[11px]">{x}</div>
             ))}
 
-            <div className="border rounded-xl px-3 py-2 flex items-center gap-2">
-              <span className="text-gray-400 text-lg">✉️</span>
-              <input className="w-full text-base outline-none" placeholder="邮箱" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <div className="border rounded-xl px-3 py-1.5 flex items-center gap-2">
+              <span className="text-gray-400 text-sm">✉️</span>
+              <input className="w-full text-sm outline-none" placeholder="邮箱" value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
 
-            <div className={`border rounded-xl px-3 py-2 flex items-center gap-2 ${passwordErrors.length ? "border-red-300" : ""}`}>
-              <span className="text-gray-400 text-lg">🔒</span>
+            <div className={`border rounded-xl px-3 py-1.5 flex items-center gap-2 ${passwordErrors.length ? "border-red-300" : ""}`}>
+              <span className="text-gray-400 text-sm">🔒</span>
               <input
-                className="w-full text-base outline-none"
+                className="w-full text-sm outline-none"
                 placeholder="密码"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -229,14 +229,14 @@ export default function LoginPage() {
               </button>
             </div>
             {passwordErrors.map((x) => (
-              <div key={x} className="text-red-500 text-sm -mt-2">{x}</div>
+              <div key={x} className="text-red-500 text-[11px]">{x}</div>
             ))}
-            <div className="text-gray-500 text-sm -mt-2">ⓘ 8-24个字符, 包含至少一个字母和一个数字</div>
+            <div className="text-gray-500 text-[11px]">ⓘ 8-24个字符, 包含至少一个字母和一个数字</div>
 
-            <div className={`border rounded-xl px-3 py-2 flex items-center gap-2 ${confirmError ? "border-red-300" : ""}`}>
-              <span className="text-gray-400 text-lg">🔒</span>
+            <div className={`border rounded-xl px-3 py-1.5 flex items-center gap-2 ${confirmError ? "border-red-300" : ""}`}>
+              <span className="text-gray-400 text-sm">🔒</span>
               <input
-                className="w-full text-base outline-none"
+                className="w-full text-sm outline-none"
                 placeholder="确认密码"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
@@ -246,19 +246,19 @@ export default function LoginPage() {
                 <EyeIcon off={!confirmPwdVisible} />
               </button>
             </div>
-            {confirmError ? <div className="text-red-500 text-sm -mt-2">{confirmError}</div> : null}
+            {confirmError ? <div className="text-red-500 text-[11px]">{confirmError}</div> : null}
 
-            <div className="border rounded-xl px-3 py-2 flex items-center gap-2">
-              <input className="w-full text-base outline-none" placeholder="邀请码（选填）" value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} />
+            <div className="border rounded-xl px-3 py-1.5 flex items-center gap-2">
+              <input className="w-full text-sm outline-none" placeholder="邀请码（选填）" value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} />
             </div>
 
-            {registerError ? <div className="text-red-500 text-sm">{registerError}</div> : null}
+            {registerError ? <div className="text-red-500 text-[11px]">{registerError}</div> : null}
 
-            <button className="w-full bg-blue-600 text-white rounded-xl py-2.5 text-xl font-semibold disabled:opacity-60" disabled={!canRegister || registerLoading}>
+            <button className="w-full bg-blue-600 text-white rounded-xl py-2 text-base font-semibold disabled:opacity-60" disabled={!canRegister || registerLoading}>
               {registerLoading ? "注册中..." : "注 册"}
             </button>
 
-            <div className="text-center text-base pt-1">
+            <div className="text-center text-sm pt-0.5">
               已有账户？
               <button type="button" className="text-blue-500 ml-2" onClick={() => setMode("login")}>
                 登录
