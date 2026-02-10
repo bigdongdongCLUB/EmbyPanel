@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { PortalSidebarClient } from "./sidebar-client";
 import { PortalHeaderClient } from "./header-client";
+import { PortalProfileModalClient } from "./profile-modal-client";
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
@@ -22,6 +23,7 @@ export default async function PortalLayout({ children }: { children: React.React
         </header>
         <main className="p-6">{children}</main>
       </div>
+      <PortalProfileModalClient />
     </div>
   );
 }
