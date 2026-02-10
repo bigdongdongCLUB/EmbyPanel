@@ -22,11 +22,14 @@ function fmtDate(v?: string | null) {
   return new Date(v).toLocaleDateString("zh-CN", { timeZone: "Asia/Shanghai" });
 }
 
-function hostFromUrl(u: string) {
+function parseBaseUrl(u: string) {
   try {
-    return new URL(u).host;
+    const x = new URL(u);
+    const protocol = x.protocol.replace(":", "").toUpperCase();
+    const port = x.port || (x.protocol === "https:" ? "443" : x.protocol === "http:" ? "80" : "-");
+    return { host: x.hostname, port, protocol };
   } catch {
-    return u;
+    return { host: u, port: "-", protocol: "-" };
   }
 }
 
@@ -91,25 +94,45 @@ export function PortalEmbyServicesClient() {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-        {(data?.servers ?? []).map((s) => (
-          <div key={s.id} className="border rounded-lg p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="text-2xl font-semibold">{s.name}</div>
-              <span className={"text-xs px-2 py-1 rounded border " + (s.online ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-700 border-red-200")}>{s.online ? "在线" : "离线"}</span>
-            </div>
+        {(data?.servers ?? []).map((s) => {
+          const endpoint = parseBaseUrl(s.baseUrl);
+          return (
+            <div key={s.id} className="border rounded-xl p-4 space-y-3">
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="text-3xl font-semibold">{s.name}</div>
+                  <div className="text-sm text-gray-600 mt-1">版本：{s.version || "-"}</div>
+                </div>
+                <span className={"text-xs px-3 py-1 rounded-full border " + (s.online ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-700 border-red-200")}>{s.online ? "在线" : "离线"}</span>
+              </div>
 
-            <div className="text-sm text-gray-600">版本：{s.version || "-"}</div>
-            <div className="border rounded p-3 bg-blue-50/40 text-sm space-y-1">
-              <div>用户名：{data?.user.username ?? "-"}</div>
-              <div>地址：{hostFromUrl(s.baseUrl)}</div>
-              <div>协议：{String(s.baseUrl).startsWith("https") ? "HTTPS" : "HTTP"}</div>
-            </div>
+              <div className="rounded-lg bg-gray-50 border p-3">
+                <div className="font-medium mb-2">媒体库统计</div>
+                <div className="grid grid-cols-2 gap-y-2 text-sm">
+                  <div>🎬 电影</div><div className="text-right font-semibold">{s.counts.movieCount}</div>
+                  <div>📺 电视剧</div><div className="text-right font-semibold">{s.counts.seriesCount}</div>
+                  <div>🎞️ 集数</div><div className="text-right font-semibold">{s.counts.episodeCount}</div>
+                  <div>🎵 音乐</div><div className="text-right font-semibold">{s.counts.songCount}</div>
+                </div>
+              </div>
 
-            <div className="flex gap-2">
-              <a href={s.baseUrl} target="_blank" rel="noreferrer" className="flex-1 text-center bg-blue-600 text-white rounded px-3 py-2">访问服务器</a>
+              <div className="rounded-lg bg-blue-50/60 border p-3 text-sm space-y-2">
+                <div><span className="font-semibold text-blue-700">用户名：</span> {data?.user.username ?? "-"}</div>
+                <div><span className="font-semibold text-blue-700">密码：</span> 当前站点密码</div>
+
+                <div className="my-1 border-t border-dashed" />
+
+                <div><span className="font-semibold text-blue-700">地址：</span> {endpoint.host}</div>
+                <div><span className="font-semibold text-blue-700">端口：</span> {endpoint.port}</div>
+                <div><span className="font-semibold text-blue-700">协议：</span> {endpoint.protocol}</div>
+              </div>
+
+              <div className="flex gap-2">
+                <a href={s.baseUrl} target="_blank" rel="noreferrer" className="flex-1 text-center bg-blue-600 text-white rounded px-3 py-2">访问服务器</a>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
