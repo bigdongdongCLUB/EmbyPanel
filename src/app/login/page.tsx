@@ -127,7 +127,7 @@ export default function LoginPage() {
     <main className="min-h-screen bg-gray-100 flex items-center justify-center p-6">
       <LoginRedirect />
 
-      <div className="w-full max-w-4xl bg-white rounded-2xl shadow-sm p-10 md:p-12">
+      <div className="w-full max-w-[900px] h-[900px] bg-white rounded-2xl shadow-sm p-10 md:p-12 overflow-auto">
         <div className="flex flex-col items-center text-center">
           <div className="flex items-center gap-4">
             <div className="h-14 w-14 rounded-full bg-red-600 text-white flex items-center justify-center font-bold">BigTv</div>
