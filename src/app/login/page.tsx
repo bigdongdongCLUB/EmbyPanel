@@ -129,8 +129,9 @@ export default function LoginPage() {
         username: username.trim(),
         password,
         redirect: false,
+        callbackUrl: "/portal",
       });
-      if ((loginRes as any)?.error) {
+      if ((loginRes as any)?.error || !(loginRes as any)?.ok) {
         setMode("login");
         setLoginUsername(username.trim());
         setLoginPassword("");
@@ -138,8 +139,7 @@ export default function LoginPage() {
         return;
       }
 
-      router.push("/");
-      router.refresh();
+      window.location.href = (loginRes as any)?.url || "/portal";
     } finally {
       setRegisterLoading(false);
     }
