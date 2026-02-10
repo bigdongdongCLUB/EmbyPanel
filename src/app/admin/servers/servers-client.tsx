@@ -347,7 +347,12 @@ export function ServersClient() {
                     if (!res.ok) {
                       alert(`测试失败: ${txt}`);
                     } else {
-                      alert(`测试成功: ${txt}`);
+                      let ms: string | number = "-";
+                      try {
+                        const j = JSON.parse(txt);
+                        ms = j?.ms ?? "-";
+                      } catch {}
+                      alert(`测试成功（延迟 ${ms}ms）`);
                     }
                     await refresh();
                   }}
