@@ -155,12 +155,34 @@ export function PortalClient() {
                 <input className="mt-1 w-full border rounded px-3 py-2" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="请输入邮箱" />
               </div>
               <div>
-                <label className="text-sm">订阅到期提醒</label>
+                <div className="text-sm font-medium flex items-center gap-2">
+                  订阅到期提醒
+                  <span className="relative inline-flex items-center group cursor-help">
+                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border text-xs text-gray-500">?</span>
+                    <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 -top-11 whitespace-nowrap rounded bg-black text-white text-xs px-3 py-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      开启后，将在订阅即将到期时收到提醒通知
+                    </span>
+                  </span>
+                </div>
                 <div className="mt-2">
-                  <label className="inline-flex items-center gap-2 text-sm">
-                    <input type="checkbox" checked={expiryReminderEnabled} onChange={(e) => setExpiryReminderEnabled(e.target.checked)} />
-                    {expiryReminderEnabled ? "开启" : "关闭"}
-                  </label>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={expiryReminderEnabled}
+                    onClick={() => setExpiryReminderEnabled((v) => !v)}
+                    className={
+                      "inline-flex items-center h-9 w-28 rounded-full border px-2 transition-colors " +
+                      (expiryReminderEnabled ? "bg-blue-500 border-blue-500 text-white" : "bg-white border-gray-300 text-gray-700")
+                    }
+                  >
+                    <span className="text-sm mr-2">{expiryReminderEnabled ? "开启" : "关闭"}</span>
+                    <span
+                      className={
+                        "inline-block h-7 w-7 rounded-full bg-white shadow transition-transform " +
+                        (expiryReminderEnabled ? "translate-x-2" : "translate-x-0")
+                      }
+                    />
+                  </button>
                 </div>
               </div>
             </div>
