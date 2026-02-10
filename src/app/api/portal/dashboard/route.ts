@@ -17,9 +17,7 @@ export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const username = (session as any)?.username;
-  const role = (session as any)?.role;
   if (!username) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  if (role === "ADMIN") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const user = await prisma.user.findUnique({
     where: { username },
