@@ -173,8 +173,8 @@ export function PortalPurchaseClient() {
       {!loading && plans.length === 0 ? <div className="text-sm text-gray-500">暂无可用订阅计划</div> : null}
 
       {modalOpen ? (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-          <div className="w-full max-w-6xl max-h-[90vh] overflow-auto rounded-xl bg-white p-4 space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4">
+          <div className="w-full max-w-3xl max-h-[85vh] overflow-auto rounded-lg bg-white p-4 space-y-4">
             <div className="flex justify-end">
               <button className="text-2xl text-gray-500 hover:text-gray-700 leading-none" onClick={() => setModalOpen(false)}>×</button>
             </div>
