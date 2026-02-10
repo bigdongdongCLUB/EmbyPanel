@@ -11,10 +11,5 @@ export default async function PortalPage() {
   const role = (session as any)?.role;
   if (role === "ADMIN") redirect("/admin");
 
-  return (
-    <main className="p-6 max-w-6xl mx-auto space-y-4">
-      <h1 className="text-xl font-semibold">用户中心</h1>
-      <PortalClient />
-    </main>
-  );
+  return <PortalClient />;
 }
