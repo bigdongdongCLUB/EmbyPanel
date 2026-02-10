@@ -61,6 +61,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
         take: 1,
         select: {
           id: true,
+          planId: true,
           payCycle: true,
           startAt: true,
           endAt: true,
