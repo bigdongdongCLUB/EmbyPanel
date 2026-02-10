@@ -24,6 +24,7 @@ export function SettingsTabs() {
     <div className="flex gap-2 border-b">
       <Tab href="/admin/settings" label="基础设置" />
       <Tab href="/admin/settings/mail" label="邮件设置" />
+      <Tab href="/admin/settings/mail-templates" label="邮件模板" />
     </div>
   );
 }
