@@ -36,6 +36,8 @@ export async function GET() {
         name: p.name,
         description: p.description,
         prices: {
+          trialYuan: centsToYuan(pr?.trial?.priceCents),
+          trialDays: typeof pr?.trial?.days === "number" ? pr.trial.days : null,
           monthlyYuan: centsToYuan(pr?.monthly?.priceCents),
           quarterlyYuan: centsToYuan(pr?.quarterly?.priceCents),
           halfYearlyYuan: centsToYuan(pr?.halfYearly?.priceCents),

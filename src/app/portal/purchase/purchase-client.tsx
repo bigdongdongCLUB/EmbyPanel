@@ -74,12 +74,9 @@ export function PortalPurchaseClient() {
               <div className="text-sm text-gray-500">起，更多周期可选</div>
               {p.description ? <div className="text-sm text-gray-600 whitespace-pre-wrap">{p.description}</div> : null}
 
-              <button
-                className="w-full bg-blue-600 text-white rounded px-3 py-2"
-                onClick={() => alert(`立即购买：${p.name}（下单流程下一步接入）`)}
-              >
+              <a className="block w-full text-center bg-blue-600 text-white rounded px-3 py-2" href={`/portal/purchase/${p.id}`}>
                 🛒 立即购买
-              </button>
+              </a>
             </div>
           );
         })}
