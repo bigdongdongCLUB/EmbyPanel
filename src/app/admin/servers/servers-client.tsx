@@ -406,31 +406,14 @@ export function ServersClient() {
                       name: s.name,
                       baseUrl: s.baseUrl,
                       apiKey: "",
-                      enabled: s.enabled,
+                      enabled: true,
                     })
                   }
                 >
                   编辑
                 </button>
 
-                <button
-                  className="border rounded px-3 py-2"
-                  onClick={async () => {
-                    const nextEnabled = !s.enabled;
-                    const res = await fetch(`/api/admin/emby-servers/${s.id}`, {
-                      method: "PATCH",
-                      headers: { "content-type": "application/json" },
-                      body: JSON.stringify({ enabled: nextEnabled }),
-                    });
-                    if (!res.ok) {
-                      alert(`更新失败: ${await res.text()}`);
-                      return;
-                    }
-                    await refresh();
-                  }}
-                >
-                  {s.enabled ? "禁用" : "启用"}
-                </button>
+                {/* 服务器默认常驻启用，移除启用/禁用按钮 */}
 
                 <button
                   className="border rounded px-3 py-2 text-red-600"
@@ -567,17 +550,7 @@ export function ServersClient() {
                   onChange={(e) => setModal({ ...modal, apiKey: e.target.value })}
                 />
               </div>
-              <div className="flex items-center gap-2">
-                <input
-                  id="enabled"
-                  type="checkbox"
-                  checked={modal.enabled}
-                  onChange={(e) => setModal({ ...modal, enabled: e.target.checked })}
-                />
-                <label htmlFor="enabled" className="text-sm">
-                  启用
-                </label>
-              </div>
+              {/* 服务器始终启用：编辑弹窗不提供启用开关 */}
             </div>
 
             <div className="mt-4 flex gap-2">
@@ -587,7 +560,6 @@ export function ServersClient() {
                   const payload: any = {
                     name: modal.name,
                     baseUrl: modal.baseUrl,
-                    enabled: modal.enabled,
                   };
                   if (modal.apiKey.trim()) payload.apiKey = modal.apiKey.trim();
 
