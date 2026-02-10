@@ -354,9 +354,9 @@ export function UsersClient() {
       {error ? <pre className="text-xs text-red-600 whitespace-pre-wrap">{error}</pre> : null}
       {loading ? <div className="text-sm text-gray-500">加载中…</div> : null}
 
-      <div className="border rounded-lg overflow-x-auto overflow-y-visible">
+      <div className="overflow-x-auto overflow-y-visible bg-white">
         <table className="min-w-[1200px] w-full text-sm">
-          <thead className="text-left text-gray-600 border-b">
+          <thead className="text-left text-gray-600 border-y bg-white">
             <tr>
               <th className="py-2 px-3">
                 <input
