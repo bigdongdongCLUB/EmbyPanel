@@ -31,6 +31,7 @@ export function PortalSidebarClient() {
       <nav className="flex-1 p-3 text-sm">
         <div className="space-y-1">
           <Item href="/portal" label="仪表盘" />
+          <Item href="/portal/emby-services" label="Emby 服务" />
         </div>
       </nav>
     </aside>
