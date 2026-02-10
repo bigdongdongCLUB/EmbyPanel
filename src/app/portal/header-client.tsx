@@ -16,12 +16,9 @@ export function PortalHeaderClient({ username, role }: { username: string; role:
       </summary>
 
       <div className="absolute right-0 mt-2 w-44 bg-white border rounded-xl shadow-lg p-1 z-30">
-        <button
-          className="w-full text-left px-3 py-2 rounded hover:bg-gray-50 text-sm"
-          onClick={() => alert("个人资料（开发中）")}
-        >
+        <Link href="/portal/profile" className="block px-3 py-2 rounded hover:bg-gray-50 text-sm">
           个人资料
-        </button>
+        </Link>
 
         {role === "ADMIN" ? (
           <Link href="/admin" className="block px-3 py-2 rounded hover:bg-gray-50 text-sm">
