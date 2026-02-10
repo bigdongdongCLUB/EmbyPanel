@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 
 import { authOptions } from "@/lib/auth";
+import { PortalClient } from "./portal-client";
 
 export default async function PortalPage() {
   const session = await getServerSession(authOptions);
@@ -11,9 +12,9 @@ export default async function PortalPage() {
   if (role === "ADMIN") redirect("/admin");
 
   return (
-    <main className="p-6 max-w-3xl mx-auto space-y-2">
-      <h1 className="text-xl font-semibold">用户后台</h1>
-      <p className="text-sm text-gray-600">（开发中）</p>
+    <main className="p-6 max-w-6xl mx-auto space-y-4">
+      <h1 className="text-xl font-semibold">用户中心</h1>
+      <PortalClient />
     </main>
   );
 }
