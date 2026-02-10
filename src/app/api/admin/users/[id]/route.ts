@@ -95,6 +95,16 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     );
   }
 
+  const targetUser = await prisma.user.findUnique({ where: { id }, select: { id: true, role: true } });
+  if (!targetUser) return NextResponse.json({ error: "not_found" }, { status: 404 });
+
+  if (parsed.data.role === "USER" && targetUser.role === "ADMIN") {
+    const adminCount = await prisma.user.count({ where: { role: "ADMIN" } });
+    if (adminCount <= 1) {
+      return NextResponse.json({ error: "cannot_demote_last_admin" }, { status: 400 });
+    }
+  }
+
   const data: any = {};
   if (parsed.data.email !== undefined) data.email = parsed.data.email;
   if (parsed.data.role !== undefined) data.role = parsed.data.role;
