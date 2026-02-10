@@ -667,8 +667,14 @@ export function UsersClient() {
                 取消
               </button>
               <button
-                className="border rounded px-3 py-2 text-red-600 ml-auto"
+                className={
+                  "border rounded px-3 py-2 ml-auto " +
+                  (edit.role === "ADMIN" ? "text-gray-400 border-gray-300 bg-gray-100 cursor-not-allowed" : "text-red-600")
+                }
+                disabled={edit.role === "ADMIN"}
+                title={edit.role === "ADMIN" ? "面板管理员账户不可删除" : ""}
                 onClick={async () => {
+                  if (edit.role === "ADMIN") return;
                   if (!confirm(`确定删除用户：${edit.username} ?\n此操作会同步删除 Emby 服务器上的该用户。`)) return;
                   const res = await fetch(`/api/admin/users/${edit.id}/delete`, { method: "POST" });
                   const txt = await res.text();

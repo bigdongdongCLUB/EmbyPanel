@@ -16,12 +16,9 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   const user = await prisma.user.findUnique({ where: { id }, select: { id: true, username: true, role: true } });
   if (!user) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
-  // prevent self-lockout: keep at least one admin
+  // panel admin accounts are protected and cannot be deleted.
   if (user.role === "ADMIN") {
-    const adminCount = await prisma.user.count({ where: { role: "ADMIN" } });
-    if (adminCount <= 1) {
-      return NextResponse.json({ error: "cannot_delete_last_admin" }, { status: 400 });
-    }
+    return NextResponse.json({ error: "cannot_delete_admin" }, { status: 400 });
   }
 
   const links = await prisma.embyUserLink.findMany({
