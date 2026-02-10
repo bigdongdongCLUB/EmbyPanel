@@ -146,7 +146,7 @@ export default function LoginPage() {
       <div
         className={
           "w-full max-w-[450px] bg-white rounded-2xl shadow-sm p-3 " +
-          (mode === "login" ? "h-[380px]" : "h-[450px] overflow-hidden")
+          (mode === "login" ? "h-[300px]" : "h-[450px] overflow-hidden")
         }
       >
         <div className="flex flex-col items-center text-center">
