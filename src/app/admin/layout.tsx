@@ -18,7 +18,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
       <div className="pl-60">
         <header className="sticky top-0 z-10 h-14 bg-white border-b flex items-center justify-end px-4">
-          <AdminShellClient />
+          <AdminShellClient username={username} />
         </header>
         <main className="p-6">{children}</main>
       </div>
