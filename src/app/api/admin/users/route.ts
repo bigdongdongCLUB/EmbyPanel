@@ -86,13 +86,23 @@ export async function GET(req: Request) {
 
       const linkByServerId = new Map((u.embyLinks ?? []).map((l: any) => [l.embyServer.id, l] as const));
       const assignedServers = (sub?.servers ?? []).map((x: any) => x.embyServer);
-      const serverAllocations = assignedServers.map((sv: any) => {
-        const link = linkByServerId.get(sv.id) as any;
-        const status = !link ? "CONFLICT" : link.disabled ? "DISABLED" : "ACTIVE";
+      const assignedByServerId = new Map(assignedServers.map((sv: any) => [sv.id, sv] as const));
+
+      // 展示“所有历史已关联服务器（含禁用）” + “当前计划目标但因同名冲突未关联的服务器”
+      const allServerIds = new Set<string>([
+        ...Array.from(linkByServerId.keys()),
+        ...Array.from(assignedByServerId.keys()),
+      ]);
+
+      const serverAllocations = Array.from(allServerIds).map((sid) => {
+        const link = linkByServerId.get(sid) as any;
+        const assigned = assignedByServerId.get(sid) as any;
+        const sv = assigned ?? link?.embyServer;
+        const status = link ? (link.disabled ? "DISABLED" : "ACTIVE") : "CONFLICT";
         return {
-          embyServerId: sv.id,
-          name: sv.name,
-          baseUrl: sv.baseUrl,
+          embyServerId: sid,
+          name: sv?.name ?? "-",
+          baseUrl: sv?.baseUrl ?? "-",
           status,
           assignedAt: (link?.createdAt ?? sub?.startAt ?? u.createdAt)?.toISOString?.() ?? null,
         };
