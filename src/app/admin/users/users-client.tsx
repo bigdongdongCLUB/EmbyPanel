@@ -17,7 +17,6 @@ type UserRow = {
   planId?: string | null;
   planName: string | null;
   payCycle: string | null;
-  remark: string | null;
   servers: string[];
   endAt: string | null;
   createdAt: string;
@@ -388,7 +387,6 @@ export function UsersClient() {
               <th className="py-2 px-3">订阅状态</th>
               <th className="py-2 px-3">订阅计划</th>
               <th className="py-2 px-3">付费周期</th>
-              <th className="py-2 px-3">备注</th>
               <th className="py-2 px-3">所属服务器</th>
               <th className="py-2 px-3">到期时间</th>
               <th className="py-2 px-3">创建时间</th>
@@ -413,7 +411,6 @@ export function UsersClient() {
                 <td className="py-2 px-3">{dash(r.subscriptionStatus)}</td>
                 <td className="py-2 px-3">{dash(r.planName)}</td>
                 <td className="py-2 px-3">{dash(r.payCycle)}</td>
-                <td className="py-2 px-3">{dash(r.remark)}</td>
                 <td className="py-2 px-3">{r.servers.length ? r.servers.join(",") : "-"}</td>
                 <td className="py-2 px-3 font-mono text-xs">{formatDateYmdShanghai(r.endAt)}</td>
                 <td className="py-2 px-3 font-mono text-xs">{formatDateYmdShanghai(r.createdAt)}</td>
