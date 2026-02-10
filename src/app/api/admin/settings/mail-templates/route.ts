@@ -73,13 +73,169 @@ const DEFAULT_TEMPLATES: Record<string, { label: string; subject: string; bodyHt
   },
 };
 
+// 2026-02-11: 当前线上已保存模板固化为默认预设（即使重置设置也可保留）
+const PRESET_OVERRIDES: Record<string, { subject: string; bodyHtml: string }> = {
+  invite_user: {
+    subject: "{{siteName}} 邀请注册 - 链接{{expiresInHours}}小时内有效",
+    bodyHtml: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <h2 style="color: #1890ff; margin-top: 0;">{{inviterName}} 邀请您加入 {{siteName}}</h2>
+  <p>您好，{{username}}：</p>
+  <p>{{inviterName}} 希望您加入 {{siteName}}，点击下方按钮即可完成注册并获取专属奖励：</p>
+
+  <div style="text-align: center; margin: 30px 0;">
+    <a href="{{inviteUrl}}" style="background-color: #1890ff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">
+      接受邀请并注册
+    </a>
+  </div>
+
+  <p>请在 <strong>{{expiresAt}}</strong> 前使用此链接，该邀请将在 <strong>{{expiresInHours}}</strong> 小时后过期。</p>
+  <p>{{cardDescription}}</p>
+
+  <p style="margin-top: 24px;">如果按钮无法打开，请复制以下链接到浏览器地址栏：</p>
+  <div style="background: #f8f9fa; border-radius: 4px; padding: 12px; margin: 20px 0; word-break: break-all;">
+    {{inviteUrl}}
+  </div>
+
+  <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+  <p style="color: #666; font-size: 12px;">
+    此邀请由 {{siteName}} 系统自动发送，请勿直接回复。<br>
+    © {{currentYear}} {{siteName}}. 保留所有权利。
+  </p>
+</div>`,
+  },
+  sub_expired: {
+    subject: "{{siteName}} - 订单确认 #{{orderNumber}}",
+    bodyHtml: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <h2 style="color: #28a745;">订单确认</h2>
+  <p>尊敬的 {{username}}，</p>
+  <p>感谢您的购买！您的订单已确认处理：</p>
+  
+  <div style="background: #f8f9fa; padding: 20px; border-radius: 4px; margin: 20px 0;">
+    <h3 style="color: #333; margin-top: 0;">订单详情</h3>
+    <p><strong>订单号：</strong>{{orderNumber}}</p>
+    <p><strong>购买项目：</strong>{{subscriptionName}}</p>
+    <p><strong>金额：</strong>¥{{amount}}</p>
+    <p><strong>订单日期：</strong>{{orderDate}}</p>
+  </div>
+  
+  <p>您的服务将在付款确认后立即激活。如有任何问题，请联系客服。</p>
+  
+  <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+  <p style="color: #666; font-size: 12px;">
+    此邮件由 {{siteName}} 系统自动发送，请勿回复。<br>
+    © {{currentYear}} {{siteName}}. 保留所有权利。
+  </p>
+</div>`,
+  },
+  change_email: {
+    subject: "邮箱变更验证 - {{siteName}}",
+    bodyHtml: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <h2 style="color: #1890ff;">邮箱变更验证</h2>
+  <p>您好，{{username}}！</p>
+  <p>您正在 {{siteName}} 上更改邮箱地址。为确保您的账户安全，请使用以下验证码完成验证：</p>
+
+  <div style="background: #f5f5f5; padding: 20px; text-align: center; margin: 20px 0;">
+    <span style="font-size: 24px; font-weight: bold; color: #1890ff;">{{verificationCode}}</span>
+  </div>
+
+  <p>此验证码将在 <strong>3分钟</strong> 后过期，请尽快完成验证。</p>
+  <p><strong>新邮箱：</strong>{{email}}</p>
+  <p>如果这不是您的操作，请忽略此邮件，您的原邮箱地址不会被更改。</p>
+
+  <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+  <p style="color: #666; font-size: 12px;">
+    此邮件由 {{siteName}} 系统自动发送，请勿回复。<br>
+    © {{currentYear}} {{siteName}}. 保留所有权利。
+  </p>
+</div>`,
+  },
+  sub_expiring: {
+    subject: "{{siteName}} - 您的订阅即将到期",
+    bodyHtml: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <h2 style="color: #e67e22;">订阅即将到期提醒</h2>
+  <p>尊敬的 {{username}}，</p>
+  <p>您在 {{siteName}} 的 <strong>{{subscriptionName}}</strong> 订阅将于 <strong>{{expiryDate}}</strong> 到期。</p>
+  
+  <p>为了避免服务中断，请及时续费您的订阅：</p>
+  
+  <div style="text-align: center; margin: 30px 0;">
+    <a href="{{renewUrl}}" style="background: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">
+      立即续费
+    </a>
+  </div>
+  
+  <p>如有任何问题，请联系我们的客服团队。</p>
+  
+  <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+  <p style="color: #666; font-size: 12px;">
+    此邮件由 {{siteName}} 系统自动发送，请勿回复。<br>
+    © {{currentYear}} {{siteName}}. 保留所有权利。
+  </p>
+</div>`,
+  },
+  worker_reply: {
+    subject: "{{siteName}} - 工单回复 #{{ticketNumber}}",
+    bodyHtml: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <h2 style="color: #007bff;">工单回复通知</h2>
+  <p>尊敬的 {{username}}，</p>
+  <p>您的工单 <strong>#{{ticketNumber}} - {{ticketTitle}}</strong> 收到了新的回复：</p>
+  
+  <div style="background: #f8f9fa; padding: 20px; border-radius: 4px; margin: 20px 0; border-left: 4px solid #007bff;">
+    {{replyContent}}
+  </div>
+  
+  <p>如需继续咨询，请登录您的账户查看详情并回复。</p>
+  
+  <div style="text-align: center; margin: 30px 0;">
+    <a href="{{siteUrl}}/user/tickets" style="background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">
+      查看工单详情
+    </a>
+  </div>
+  
+  <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+  <p style="color: #666; font-size: 12px;">
+    此邮件由 {{siteName}} 系统自动发送，请勿回复。<br>
+    © {{currentYear}} {{siteName}}. 保留所有权利。
+  </p>
+</div>`,
+  },
+  reset_password: {
+    subject: "{{siteName}} - 重置密码请求",
+    bodyHtml: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <h2 style="color: #333;">重置密码</h2>
+  <p>尊敬的 {{username}}，</p>
+  <p>我们收到了您的密码重置请求。请点击下面的链接重置您的密码：</p>
+  
+  <div style="text-align: center; margin: 30px 0;">
+    <a href="{{resetUrl}}" style="background: #dc3545; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">
+      重置密码
+    </a>
+  </div>
+  
+  <p>此链接将在1小时后过期。如果您没有请求重置密码，请忽略此邮件。</p>
+  <p style="color: #666; font-size: 14px;">
+    如果按钮无法点击，请复制以下链接到浏览器地址栏：<br>
+    {{resetUrl}}
+  </p>
+  
+  <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+  <p style="color: #666; font-size: 12px;">
+    此邮件由 {{siteName}} 系统自动发送，请勿回复。<br>
+    © {{currentYear}} {{siteName}}. 保留所有权利。
+  </p>
+</div>`,
+  },
+};
+
+
 function mergeTemplates(value: any) {
   const out: Record<string, { label: string; subject: string; bodyHtml: string }> = {};
   for (const [k, d] of Object.entries(DEFAULT_TEMPLATES)) {
+    const p = PRESET_OVERRIDES[k] ?? {};
     const t = value?.[k] ?? {};
     const parsed = TemplateSchema.safeParse({
-      subject: t.subject ?? d.subject,
-      bodyHtml: t.bodyHtml ?? d.bodyHtml,
+      subject: t.subject ?? p.subject ?? d.subject,
+      bodyHtml: t.bodyHtml ?? p.bodyHtml ?? d.bodyHtml,
     });
     out[k] = {
       label: d.label,
