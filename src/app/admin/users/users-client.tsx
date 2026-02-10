@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type EmbyServerOption = { id: string; name: string; enabled: boolean };
 type PlanOption = { id: string; name: string };
@@ -78,6 +78,8 @@ export function UsersClient() {
   const selectedIds = useMemo(() => Object.keys(selected).filter((id) => selected[id]), [selected]);
 
   const [createOpen, setCreateOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement | null>(null);
 
   const [importOpen, setImportOpen] = useState(false);
   const [importLoading, setImportLoading] = useState(false);
@@ -152,6 +154,23 @@ export function UsersClient() {
       })
       .catch(() => null);
   }, []);
+
+  useEffect(() => {
+    function onDocMouseDown(e: MouseEvent) {
+      if (!moreOpen) return;
+      const target = e.target as Node;
+      if (!moreRef.current?.contains(target)) setMoreOpen(false);
+    }
+    function onEsc(e: KeyboardEvent) {
+      if (e.key === "Escape") setMoreOpen(false);
+    }
+    document.addEventListener("mousedown", onDocMouseDown);
+    document.addEventListener("keydown", onEsc);
+    return () => {
+      document.removeEventListener("mousedown", onDocMouseDown);
+      document.removeEventListener("keydown", onEsc);
+    };
+  }, [moreOpen]);
 
   async function openImportModal() {
     setImportOpen(true);
@@ -246,111 +265,117 @@ export function UsersClient() {
             + 创建用户
           </button>
 
-          <details className="relative">
-            <summary className="list-none cursor-pointer select-none border rounded px-3 py-2">更多 ▾</summary>
-            <div className="absolute right-0 mt-2 w-56 bg-white border rounded shadow p-2 text-sm space-y-1 z-10">
-              <button
-                className="w-full text-left px-2 py-2 hover:bg-gray-50 rounded"
-                onClick={(e) => {
-                  // close the "更多" dropdown
-                  (e.currentTarget as any)?.closest?.("details")?.removeAttribute?.("open");
-                  (document.activeElement as any)?.blur?.();
-                  openImportModal().catch((err) => alert(err?.message ?? String(err)));
-                }}
-              >
-                从 Emby 导入用户
-              </button>
+          <div ref={moreRef} className="relative">
+            <button className="cursor-pointer select-none border rounded px-3 py-2" onClick={() => setMoreOpen((v) => !v)}>
+              更多 ▾
+            </button>
+            {moreOpen ? (
+              <div className="absolute right-0 mt-2 w-56 bg-white border rounded shadow p-2 text-sm space-y-1 z-10">
+                <button
+                  className="w-full text-left px-2 py-2 hover:bg-gray-50 rounded"
+                  onClick={(e) => {
+                    setMoreOpen(false);
+                    (document.activeElement as any)?.blur?.();
+                    openImportModal().catch((err) => alert(err?.message ?? String(err)));
+                  }}
+                >
+                  从 Emby 导入用户
+                </button>
 
-              <button
-                className="w-full text-left px-2 py-2 hover:bg-gray-50 rounded disabled:opacity-50"
-                disabled={!selectedIds.length}
-                onClick={async () => {
-                  const planId = prompt("批量更改订阅计划：请输入 PlanId（在订阅管理页面可看到）");
-                  if (!planId) return;
-                  const payCycle = prompt("付费周期：MONTHLY/QUARTERLY/HALF_YEARLY/YEARLY/TWO_YEARLY", "YEARLY") || "YEARLY";
-                  const startAt = prompt("开始日期(YYYY-MM-DD)", new Date().toISOString().slice(0, 10)) || new Date().toISOString().slice(0, 10);
-                  const endAt = prompt("结束日期(YYYY-MM-DD)", startAt) || startAt;
+                <button
+                  className="w-full text-left px-2 py-2 hover:bg-gray-50 rounded disabled:opacity-50"
+                  disabled={!selectedIds.length}
+                  onClick={async () => {
+                    setMoreOpen(false);
+                    const planId = prompt("批量更改订阅计划：请输入 PlanId（在订阅管理页面可看到）");
+                    if (!planId) return;
+                    const payCycle = prompt("付费周期：MONTHLY/QUARTERLY/HALF_YEARLY/YEARLY/TWO_YEARLY", "YEARLY") || "YEARLY";
+                    const startAt = prompt("开始日期(YYYY-MM-DD)", new Date().toISOString().slice(0, 10)) || new Date().toISOString().slice(0, 10);
+                    const endAt = prompt("结束日期(YYYY-MM-DD)", startAt) || startAt;
 
-                  for (const id of selectedIds) {
-                    await fetch(`/api/admin/users/${id}`, {
-                      method: "PATCH",
+                    for (const id of selectedIds) {
+                      await fetch(`/api/admin/users/${id}`, {
+                        method: "PATCH",
+                        headers: { "content-type": "application/json" },
+                        body: JSON.stringify({ subscription: { planId, payCycle, startAt: new Date(startAt + "T00:00:00.000Z").toISOString(), endAt: new Date(endAt + "T00:00:00.000Z").toISOString() } }),
+                      });
+                    }
+                    alert("批量更改订阅计划已提交（逐个更新）");
+                    await refresh();
+                  }}
+                >
+                  批量更改订阅计划
+                </button>
+
+                <button
+                  className="w-full text-left px-2 py-2 hover:bg-gray-50 rounded disabled:opacity-50"
+                  disabled={!selectedIds.length}
+                  onClick={async () => {
+                    setMoreOpen(false);
+                    const addDaysStr = prompt("批量增加订阅时间：增加多少天？", "30");
+                    if (!addDaysStr) return;
+                    const addDays = Number(addDaysStr);
+                    if (!Number.isFinite(addDays) || addDays <= 0) {
+                      alert("天数不合法");
+                      return;
+                    }
+
+                    for (const id of selectedIds) {
+                      const dRes = await fetch(`/api/admin/users/${id}`, { cache: "no-store" });
+                      const dJson = await dRes.json().catch(() => null);
+                      if (!dRes.ok) continue;
+                      const sub = dJson?.user?.subscriptions?.[0];
+                      if (!sub?.endAt || !sub?.planId) continue;
+                      const end = new Date(sub.endAt);
+                      const nextEnd = new Date(end.getTime() + addDays * 24 * 60 * 60 * 1000);
+                      await fetch(`/api/admin/users/${id}`, {
+                        method: "PATCH",
+                        headers: { "content-type": "application/json" },
+                        body: JSON.stringify({ subscription: { planId: sub.planId, payCycle: sub.payCycle, startAt: sub.startAt, endAt: nextEnd.toISOString() } }),
+                      });
+                    }
+
+                    alert("批量增加订阅时间已提交（逐个更新）");
+                    await refresh();
+                  }}
+                >
+                  批量增加订阅时间
+                </button>
+
+                <button
+                  className="w-full text-left px-2 py-2 hover:bg-red-50 text-red-600 rounded disabled:opacity-50"
+                  disabled={!selectedIds.length}
+                  onClick={async () => {
+                    setMoreOpen(false);
+                    if (!confirm(`确定批量删除所选用户？\n将同步删除 Emby 服务器对应用户。\n数量：${selectedIds.length}`)) return;
+
+                    const res = await fetch("/api/admin/users/bulk-delete", {
+                      method: "POST",
                       headers: { "content-type": "application/json" },
-                      body: JSON.stringify({ subscription: { planId, payCycle, startAt: new Date(startAt + "T00:00:00.000Z").toISOString(), endAt: new Date(endAt + "T00:00:00.000Z").toISOString() } }),
+                      body: JSON.stringify({ ids: selectedIds }),
                     });
-                  }
-                  alert("批量更改订阅计划已提交（逐个更新）");
-                  await refresh();
-                }}
-              >
-                批量更改订阅计划
-              </button>
+                    const json = await res.json().catch(() => null);
+                    if (!res.ok) {
+                      alert(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
+                      return;
+                    }
 
-              <button
-                className="w-full text-left px-2 py-2 hover:bg-gray-50 rounded disabled:opacity-50"
-                disabled={!selectedIds.length}
-                onClick={async () => {
-                  const addDaysStr = prompt("批量增加订阅时间：增加多少天？", "30");
-                  if (!addDaysStr) return;
-                  const addDays = Number(addDaysStr);
-                  if (!Number.isFinite(addDays) || addDays <= 0) {
-                    alert("天数不合法");
-                    return;
-                  }
+                    const failed = (json.results ?? []).filter((r: any) => !r.ok);
+                    if (failed.length) {
+                      alert(`批量删除完成，但有失败：${failed.length} 个。\n` + failed.map((x: any) => `${x.id}: ${x.status ?? ""} ${x.error ?? ""}`).join("\n"));
+                    } else {
+                      alert("批量删除成功");
+                    }
 
-                  for (const id of selectedIds) {
-                    const dRes = await fetch(`/api/admin/users/${id}`, { cache: "no-store" });
-                    const dJson = await dRes.json().catch(() => null);
-                    if (!dRes.ok) continue;
-                    const sub = dJson?.user?.subscriptions?.[0];
-                    if (!sub?.endAt || !sub?.planId) continue;
-                    const end = new Date(sub.endAt);
-                    const nextEnd = new Date(end.getTime() + addDays * 24 * 60 * 60 * 1000);
-                    await fetch(`/api/admin/users/${id}`, {
-                      method: "PATCH",
-                      headers: { "content-type": "application/json" },
-                      body: JSON.stringify({ subscription: { planId: sub.planId, payCycle: sub.payCycle, startAt: sub.startAt, endAt: nextEnd.toISOString() } }),
-                    });
-                  }
-
-                  alert("批量增加订阅时间已提交（逐个更新）");
-                  await refresh();
-                }}
-              >
-                批量增加订阅时间
-              </button>
-
-              <button
-                className="w-full text-left px-2 py-2 hover:bg-red-50 text-red-600 rounded disabled:opacity-50"
-                disabled={!selectedIds.length}
-                onClick={async () => {
-                  if (!confirm(`确定批量删除所选用户？\n将同步删除 Emby 服务器对应用户。\n数量：${selectedIds.length}`)) return;
-
-                  const res = await fetch("/api/admin/users/bulk-delete", {
-                    method: "POST",
-                    headers: { "content-type": "application/json" },
-                    body: JSON.stringify({ ids: selectedIds }),
-                  });
-                  const json = await res.json().catch(() => null);
-                  if (!res.ok) {
-                    alert(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
-                    return;
-                  }
-
-                  const failed = (json.results ?? []).filter((r: any) => !r.ok);
-                  if (failed.length) {
-                    alert(`批量删除完成，但有失败：${failed.length} 个。\n` + failed.map((x: any) => `${x.id}: ${x.status ?? ""} ${x.error ?? ""}`).join("\n"));
-                  } else {
-                    alert("批量删除成功");
-                  }
-
-                  setSelected({});
-                  await refresh();
-                }}
-              >
-                批量删除
-              </button>
-            </div>
-          </details>
+                    setSelected({});
+                    await refresh();
+                  }}
+                >
+                  批量删除
+                </button>
+              </div>
+            ) : null}
+          </div>
 
           <div className="text-xs text-gray-500">已选 {selectedIds.length} 个</div>
         </div>
