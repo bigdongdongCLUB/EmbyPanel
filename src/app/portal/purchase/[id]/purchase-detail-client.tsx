@@ -76,14 +76,6 @@ export function PortalPurchaseDetailClient({ planId }: { planId: string }) {
               );
             })}
 
-          <div className="border rounded-xl p-4 bg-gray-50">
-            <div className="flex items-center justify-between text-2xl font-semibold">
-              <span>订单金额：</span>
-              <span className="text-blue-600">¥{selectedCycle?.priceYuan ?? 0}</span>
-            </div>
-            <div className="text-sm text-gray-600 mt-1">服务期限：{selectedCycle?.days ?? 0} 天</div>
-          </div>
-
           <div className="border rounded-xl p-4 bg-blue-50 text-gray-700">
             <div className="font-semibold text-xl mb-1">✅ 安全提示</div>
             <div>您的支付信息将通过 SSL 加密传输，我们不会存储您的支付密码。</div>
