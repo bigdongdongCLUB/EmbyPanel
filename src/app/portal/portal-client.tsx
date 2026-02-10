@@ -171,15 +171,15 @@ export function PortalClient() {
                     aria-checked={expiryReminderEnabled}
                     onClick={() => setExpiryReminderEnabled((v) => !v)}
                     className={
-                      "inline-flex items-center h-9 w-28 rounded-full border px-2 transition-colors " +
-                      (expiryReminderEnabled ? "bg-blue-500 border-blue-500 text-white" : "bg-white border-gray-300 text-gray-700")
+                      "inline-flex items-center h-10 w-32 rounded-full border px-2 transition-colors " +
+                      (expiryReminderEnabled ? "bg-blue-500 border-blue-500 text-white" : "bg-white border-blue-500 text-blue-500")
                     }
                   >
-                    <span className="text-sm mr-2">{expiryReminderEnabled ? "开启" : "关闭"}</span>
+                    <span className="text-sm leading-none mr-2 font-medium">{expiryReminderEnabled ? "开启" : "关闭"}</span>
                     <span
                       className={
-                        "inline-block h-7 w-7 rounded-full bg-white shadow transition-transform " +
-                        (expiryReminderEnabled ? "translate-x-2" : "translate-x-0")
+                        "inline-block h-8 w-8 rounded-full bg-white shadow transition-transform " +
+                        (expiryReminderEnabled ? "translate-x-4" : "translate-x-0 border border-blue-500")
                       }
                     />
                   </button>
