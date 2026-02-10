@@ -131,7 +131,7 @@ export function PortalEmbyServicesClient() {
               <div className="flex flex-col gap-2">
                 <a href={s.baseUrl} target="_blank" rel="noreferrer" className="w-full text-center bg-blue-600 text-white rounded px-3 py-2">访问服务器</a>
                 <button
-                  className="w-full text-center border border-blue-600 text-blue-600 rounded px-3 py-2 disabled:opacity-60"
+                  className="w-full text-center border border-orange-300 text-red-600 rounded px-3 py-2 bg-white hover:bg-orange-50 disabled:opacity-60"
                   disabled={!!syncingServerId}
                   onClick={async () => {
                     setSyncingServerId(s.id);
