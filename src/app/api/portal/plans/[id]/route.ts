@@ -43,8 +43,11 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   if (!plan || !plan.enabled || !plan.visible) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
   const pr: any = plan.pricingJson ?? {};
+  const trialHasPrice = typeof pr?.trial?.priceCents === "number";
+  const trialHasDays = typeof pr?.trial?.days === "number" && pr.trial.days > 0;
+
   const cycles = [
-    { key: "TRIAL", label: "试用", priceYuan: centsToYuan(pr?.trial?.priceCents), days: cycleDays("TRIAL", pr?.trial?.days), available: !!(pr?.trial?.priceCents && pr?.trial?.days) },
+    { key: "TRIAL", label: "试用", priceYuan: centsToYuan(pr?.trial?.priceCents), days: cycleDays("TRIAL", pr?.trial?.days), available: trialHasPrice && trialHasDays },
     { key: "MONTHLY", label: "月付", priceYuan: centsToYuan(pr?.monthly?.priceCents), days: 30, available: typeof pr?.monthly?.priceCents === "number" },
     { key: "QUARTERLY", label: "季付", priceYuan: centsToYuan(pr?.quarterly?.priceCents), days: 90, available: typeof pr?.quarterly?.priceCents === "number" },
     { key: "HALF_YEARLY", label: "半年付", priceYuan: centsToYuan(pr?.halfYearly?.priceCents), days: 180, available: typeof pr?.halfYearly?.priceCents === "number" },
