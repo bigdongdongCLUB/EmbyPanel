@@ -7,7 +7,7 @@ import { requireAdmin } from "@/lib/admin";
 import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
 import { embyDeleteUser } from "@/lib/emby-provision";
 
-export async function POST(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const auth = await requireAdmin();
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
@@ -21,20 +21,25 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
     return NextResponse.json({ error: "cannot_delete_admin" }, { status: 400 });
   }
 
-  const links = await prisma.embyUserLink.findMany({
-    where: { userId: id },
-    select: { embyServerId: true, embyUserId: true, embyServer: { select: { id: true, baseUrl: true, apiKey: true, apiKeyEnc: true, apiKeyIv: true, apiKeyTag: true } } },
-  });
+  const body = await req.json().catch(() => null);
+  const syncDeleteEmby = body?.syncDeleteEmby !== false;
 
   const embyResults: any[] = [];
-  for (const l of links) {
-    const apiKey = getEmbyApiKeyForServer(l.embyServer);
-    const r = await embyDeleteUser(l.embyServer.baseUrl, apiKey, l.embyUserId);
-    embyResults.push({ embyServerId: l.embyServerId, ok: r.ok, status: r.status, body: (r as any).body });
+  if (syncDeleteEmby) {
+    const links = await prisma.embyUserLink.findMany({
+      where: { userId: id },
+      select: { embyServerId: true, embyUserId: true, embyServer: { select: { id: true, baseUrl: true, apiKey: true, apiKeyEnc: true, apiKeyIv: true, apiKeyTag: true } } },
+    });
+
+    for (const l of links) {
+      const apiKey = getEmbyApiKeyForServer(l.embyServer);
+      const r = await embyDeleteUser(l.embyServer.baseUrl, apiKey, l.embyUserId);
+      embyResults.push({ embyServerId: l.embyServerId, ok: r.ok, status: r.status, body: (r as any).body });
+    }
   }
 
   // delete panel user (cascades subscriptions+links)
   await prisma.user.delete({ where: { id } });
 
-  return NextResponse.json({ ok: true, embyResults });
+  return NextResponse.json({ ok: true, syncDeleteEmby, embyResults });
 }

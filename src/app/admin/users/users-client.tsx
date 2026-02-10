@@ -96,6 +96,9 @@ export function UsersClient() {
   const [bulkAddOpen, setBulkAddOpen] = useState(false);
   const [bulkAddDays, setBulkAddDays] = useState("30");
   const [bulkAddLoading, setBulkAddLoading] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteSyncEmby, setDeleteSyncEmby] = useState(true);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const [importOpen, setImportOpen] = useState(false);
   const [importLoading, setImportLoading] = useState(false);
@@ -694,20 +697,71 @@ export function UsersClient() {
                 }
                 disabled={edit.role === "ADMIN"}
                 title={edit.role === "ADMIN" ? "面板管理员账户不可删除" : ""}
-                onClick={async () => {
+                onClick={() => {
                   if (edit.role === "ADMIN") return;
-                  if (!confirm(`确定删除用户：${edit.username} ?\n此操作会同步删除 Emby 服务器上的该用户。`)) return;
-                  const res = await fetch(`/api/admin/users/${edit.id}/delete`, { method: "POST" });
-                  const txt = await res.text();
-                  if (!res.ok) {
-                    alert(`删除失败: ${txt}`);
-                    return;
-                  }
-                  setEdit({ open: false });
-                  await refresh();
+                  setDeleteSyncEmby(true);
+                  setDeleteConfirmOpen(true);
                 }}
               >
                 删除用户
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {deleteConfirmOpen && edit.open ? (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-[60]">
+          <div className="bg-white rounded-xl w-full max-w-3xl p-8 border shadow-xl">
+            <div className="flex items-center justify-between">
+              <div className="text-4xl font-semibold">删除用户</div>
+              <button className="text-4xl text-gray-400 hover:text-gray-700" onClick={() => setDeleteConfirmOpen(false)}>
+                ×
+              </button>
+            </div>
+
+            <div className="mt-6 text-2xl font-medium">确定要删除这个用户吗？</div>
+            <div className="mt-5 text-4xl text-red-500 font-semibold">此操作将永久删除用户，不可恢复！</div>
+
+            <label className="mt-8 flex items-center gap-3 text-2xl">
+              <input
+                type="checkbox"
+                className="h-6 w-6"
+                checked={deleteSyncEmby}
+                onChange={(e) => setDeleteSyncEmby(e.target.checked)}
+              />
+              同步删除所有Emby服务器上的对应用户
+            </label>
+
+            <div className="mt-8 flex justify-end gap-4">
+              <button className="border rounded-xl px-8 py-3 text-2xl" disabled={deleteLoading} onClick={() => setDeleteConfirmOpen(false)}>
+                取消
+              </button>
+              <button
+                className="bg-red-500 text-white rounded-xl px-8 py-3 text-2xl disabled:opacity-60"
+                disabled={deleteLoading}
+                onClick={async () => {
+                  setDeleteLoading(true);
+                  try {
+                    const res = await fetch(`/api/admin/users/${edit.id}/delete`, {
+                      method: "POST",
+                      headers: { "content-type": "application/json" },
+                      body: JSON.stringify({ syncDeleteEmby: deleteSyncEmby }),
+                    });
+                    const txt = await res.text();
+                    if (!res.ok) {
+                      alert(`删除失败: ${txt}`);
+                      return;
+                    }
+                    setDeleteConfirmOpen(false);
+                    setEdit({ open: false });
+                    await refresh();
+                  } finally {
+                    setDeleteLoading(false);
+                  }
+                }}
+              >
+                确定删除
               </button>
             </div>
           </div>
