@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-function Item({ href, label, collapsed }: { href: string; label: string; collapsed?: boolean }) {
+function Item({ href, label, icon, collapsed }: { href: string; label: string; icon: string; collapsed?: boolean }) {
   const pathname = usePathname();
   const active = pathname === href || (href !== "/admin" && pathname.startsWith(href));
 
@@ -12,12 +12,13 @@ function Item({ href, label, collapsed }: { href: string; label: string; collaps
       href={href}
       title={label}
       className={
-        "block px-3 py-2.5 rounded-lg transition-colors " +
+        "px-3 py-2.5 rounded-lg transition-colors flex items-center gap-2 " +
         (active ? "bg-blue-600 text-white" : "text-white/90 hover:bg-white/10") +
-        (collapsed ? " text-center" : "")
+        (collapsed ? " justify-center" : "")
       }
     >
-      {collapsed ? label.slice(0, 1) : label}
+      <img src={icon} alt="" className="h-4 w-4 shrink-0 invert opacity-90" />
+      {!collapsed ? <span>{label}</span> : null}
     </Link>
   );
 }
@@ -44,23 +45,23 @@ export function AdminSidebarClient({
 
       <nav className="flex-1 p-2 text-sm">
         <div className="space-y-1">
-          <Item href="/admin" label="仪表盘" collapsed={collapsed} />
+          <Item href="/admin" label="仪表盘" icon="/icons/dashboard.svg" collapsed={collapsed} />
         </div>
 
         <div className="my-3 border-t border-white/10" />
 
         <div className="space-y-1">
-          <Item href="/admin/users" label="用户管理" collapsed={collapsed} />
-          <Item href="/admin/subscriptions" label="订阅管理" collapsed={collapsed} />
-          <Item href="/admin/servers" label="Emby 服务器" collapsed={collapsed} />
-          <Item href="/admin/monitoring" label="统计监控" collapsed={collapsed} />
+          <Item href="/admin/users" label="用户管理" icon="/icons/users.svg" collapsed={collapsed} />
+          <Item href="/admin/subscriptions" label="订阅管理" icon="/icons/subscriptions.svg" collapsed={collapsed} />
+          <Item href="/admin/servers" label="Emby 服务器" icon="/icons/servers.svg" collapsed={collapsed} />
+          <Item href="/admin/monitoring" label="统计监控" icon="/icons/monitoring.svg" collapsed={collapsed} />
         </div>
 
         <div className="my-3 border-t border-white/10" />
 
         <div className="space-y-1">
-          <Item href="/admin/cards" label="卡密管理" collapsed={collapsed} />
-          <Item href="/admin/settings" label="系统设置" collapsed={collapsed} />
+          <Item href="/admin/cards" label="卡密管理" icon="/icons/cards.svg" collapsed={collapsed} />
+          <Item href="/admin/settings" label="系统设置" icon="/icons/settings.svg" collapsed={collapsed} />
         </div>
 
         <div className="my-3 border-t border-white/10" />
