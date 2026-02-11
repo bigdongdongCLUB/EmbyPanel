@@ -2,8 +2,9 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 
 import { authOptions } from "@/lib/auth";
+import { PortalSidebarClient } from "./sidebar-client";
+import { PortalHeaderClient } from "./header-client";
 import { PortalProfileModalClient } from "./profile-modal-client";
-import { PortalFrameClient } from "./frame-client";
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
@@ -12,11 +13,17 @@ export default async function PortalLayout({ children }: { children: React.React
   const username = (session as any)?.username ?? "user";
 
   return (
-    <>
-      <PortalFrameClient username={username} role={role}>
-        {children}
-      </PortalFrameClient>
+    <div className="min-h-screen bg-gray-50">
+      <PortalSidebarClient />
+
+      <div className="pl-60">
+        <header className="sticky top-0 z-10 h-14 bg-white border-b flex items-center justify-between px-4">
+          <div className="text-sm text-gray-700">用户中心</div>
+          <PortalHeaderClient username={username} role={role} />
+        </header>
+        <main className="p-6">{children}</main>
+      </div>
       <PortalProfileModalClient />
-    </>
+    </div>
   );
 }
