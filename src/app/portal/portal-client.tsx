@@ -85,9 +85,11 @@ export function PortalClient() {
                 {notices.map((n, i) => (
                   <button
                     key={n.id || i}
-                    className={"h-2.5 w-2.5 rounded-full " + (i === noticeIndex ? "bg-blue-600" : "bg-gray-300")}
+                    type="button"
+                    className={"h-2.5 w-2.5 min-h-0 p-0 rounded-full shrink-0 " + (i === noticeIndex ? "bg-blue-600" : "bg-gray-300")}
                     onClick={() => setNoticeIndex(i)}
                     aria-label={`切换公告 ${i + 1}`}
+                    style={{ minHeight: 10 }}
                   />
                 ))}
               </div>
