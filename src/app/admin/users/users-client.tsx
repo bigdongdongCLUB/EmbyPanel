@@ -710,34 +710,34 @@ export function UsersClient() {
       ) : null}
 
       {deleteConfirmOpen && edit.open ? (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-[60]">
-          <div className="bg-white rounded-lg w-full max-w-xl p-4 border shadow-lg">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-2 z-[60]">
+          <div className="bg-white rounded-lg w-full max-w-md p-2 border shadow-lg">
             <div className="flex items-center justify-between">
-              <div className="text-2xl font-semibold">删除用户</div>
-              <button className="text-2xl text-gray-400 hover:text-gray-700" onClick={() => setDeleteConfirmOpen(false)}>
+              <div className="text-lg font-semibold">删除用户</div>
+              <button className="text-lg text-gray-400 hover:text-gray-700" onClick={() => setDeleteConfirmOpen(false)}>
                 ×
               </button>
             </div>
 
-            <div className="mt-4 text-lg font-medium">确定要删除这个用户吗？</div>
-            <div className="mt-3 text-2xl text-red-500 font-semibold">此操作将永久删除用户，不可恢复！</div>
+            <div className="mt-2 text-sm font-medium">确定要删除这个用户吗？</div>
+            <div className="mt-2 text-lg text-red-500 font-semibold">此操作将永久删除用户，不可恢复！</div>
 
-            <label className="mt-5 flex items-center gap-2 text-lg">
+            <label className="mt-3 flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
-                className="h-5 w-5"
+                className="h-4 w-4"
                 checked={deleteSyncEmby}
                 onChange={(e) => setDeleteSyncEmby(e.target.checked)}
               />
               同步删除所有Emby服务器上的对应用户
             </label>
 
-            <div className="mt-6 flex justify-end gap-3">
-              <button className="border rounded-lg px-5 py-2 text-lg" disabled={deleteLoading} onClick={() => setDeleteConfirmOpen(false)}>
+            <div className="mt-3 flex justify-end gap-2">
+              <button className="border rounded px-3 py-1 text-sm" disabled={deleteLoading} onClick={() => setDeleteConfirmOpen(false)}>
                 取消
               </button>
               <button
-                className="bg-red-500 text-white rounded-lg px-5 py-2 text-lg disabled:opacity-60"
+                className="bg-red-500 text-white rounded px-3 py-1 text-sm disabled:opacity-60"
                 disabled={deleteLoading}
                 onClick={async () => {
                   setDeleteLoading(true);
