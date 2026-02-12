@@ -188,7 +188,7 @@ export function CardCodesClient() {
       </div>
 
       <div className="border rounded overflow-auto">
-        <table className="freeze-action-col min-w-[1100px] w-full text-sm">
+        <table className="min-w-[1100px] w-full text-sm">
           <thead className="border-b text-left text-gray-600">
             <tr>
               <th className="px-3 py-2 w-10"><input type="checkbox" checked={allSelected} onChange={(e) => {

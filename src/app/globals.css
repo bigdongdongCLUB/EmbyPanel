@@ -41,21 +41,3 @@ body {
   padding-top: 4px;
   padding-bottom: 4px;
 }
-
-/* 表格“操作”列冻结在右侧 */
-.freeze-action-col th:last-child,
-.freeze-action-col td:last-child {
-  position: sticky;
-  right: 0;
-  z-index: 5;
-  background: #fff;
-}
-
-.freeze-action-col thead th:last-child {
-  z-index: 8;
-}
-
-.freeze-action-col td:last-child,
-.freeze-action-col th:last-child {
-  border-left: 1px solid #e5e7eb;
-}

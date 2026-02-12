@@ -132,7 +132,7 @@ function UsersTable({
 
       <div className="border rounded-lg overflow-hidden">
         <div className="max-h-[70vh] overflow-auto">
-          <table className="freeze-action-col min-w-[1250px] w-full text-sm">
+          <table className="min-w-[1250px] w-full text-sm">
             <thead className="text-left text-gray-600 sticky top-0 bg-white border-b">
               <tr>
                 <th className="py-2 px-3">用户名</th>

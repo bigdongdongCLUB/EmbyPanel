@@ -338,7 +338,7 @@ export function SubscriptionsClient() {
       {loading ? <div className="text-sm text-gray-500">加载中…</div> : null}
 
       <div className="border rounded-lg overflow-auto">
-        <table className="freeze-action-col min-w-[900px] w-full text-sm">
+        <table className="min-w-[900px] w-full text-sm">
           <thead className="text-left text-gray-600 border-b">
             <tr>
               <th className="py-2 px-3">名称</th>

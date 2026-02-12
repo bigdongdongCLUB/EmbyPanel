@@ -355,7 +355,7 @@ export function UsersClient() {
       {loading ? <div className="text-sm text-gray-500">加载中…</div> : null}
 
       <div className="overflow-x-auto overflow-y-visible bg-white">
-        <table className="freeze-action-col min-w-[1200px] w-full text-sm">
+        <table className="min-w-[1200px] w-full text-sm">
           <thead className="text-left text-gray-600 border-y bg-white">
             <tr>
               <th className="py-2 px-3">
