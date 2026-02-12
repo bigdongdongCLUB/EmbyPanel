@@ -78,7 +78,7 @@ export function PortalClient() {
         <div className="border rounded-lg">
           <div className="px-4 py-3 border-b font-medium">系统公告</div>
           <div className="p-4">
-            <div className="font-semibold">{notices[noticeIndex]?.title ?? "系统公告"}</div>
+            <div className="font-semibold text-center">{notices[noticeIndex]?.title ?? "系统公告"}</div>
             <div className="text-sm text-gray-700 mt-2 whitespace-pre-wrap min-h-[72px]">{notices[noticeIndex]?.content ?? "暂无公告"}</div>
             {notices.length > 1 ? (
               <div className="mt-3 flex items-center justify-center gap-1.5">
