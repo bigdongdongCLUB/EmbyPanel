@@ -37,6 +37,23 @@ export async function GET() {
   const sub = user.subscriptions?.[0] ?? null;
   const endAt = sub?.endAt ?? null;
 
+  const row = await prisma.appSetting.findUnique({ where: { key: "announcements_list" } });
+  const raw = Array.isArray(row?.valueJson) ? (row!.valueJson as any[]) : [];
+  const now = Date.now();
+  const announcements = raw
+    .filter((x) => !!x?.enabled)
+    .filter((x) => !x?.startAt || new Date(x.startAt).getTime() <= now)
+    .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
+    .map((x) => ({ id: String(x.id || ""), title: String(x.title || ""), content: String(x.content || "") }));
+
+  if (!announcements.length) {
+    announcements.push({
+      id: "default",
+      title: "系统公告",
+      content: "欢迎使用用户中心。购买订阅或使用卡密兑换后，可在此查看最新订阅状态与剩余时间。",
+    });
+  }
+
   return NextResponse.json({
     ok: true,
     dashboard: {
@@ -45,9 +62,6 @@ export async function GET() {
       subscriptionPlan: sub?.plan?.name ?? "无订阅",
       remainingDays: daysLeft(endAt),
     },
-    announcement: {
-      title: "系统公告",
-      content: "欢迎使用用户中心。购买订阅或使用卡密兑换后，可在此查看最新订阅状态与剩余时间。",
-    },
+    announcements,
   });
 }

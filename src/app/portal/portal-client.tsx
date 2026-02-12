@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type Data = {
   dashboard: {
@@ -9,7 +9,7 @@ type Data = {
     subscriptionPlan: string;
     remainingDays: number;
   };
-  announcement: { title: string; content: string };
+  announcements: Array<{ id: string; title: string; content: string }>;
 };
 
 function fmtDateYmd(v?: string | null) {
@@ -23,6 +23,9 @@ export function PortalClient() {
   const [error, setError] = useState<string | null>(null);
   const [redeemCode, setRedeemCode] = useState("");
   const [redeeming, setRedeeming] = useState(false);
+  const [noticeIndex, setNoticeIndex] = useState(0);
+
+  const notices = useMemo(() => data?.announcements ?? [], [data]);
 
   async function refresh() {
     setLoading(true);
@@ -43,6 +46,22 @@ export function PortalClient() {
     refresh();
   }, []);
 
+  useEffect(() => {
+    if (!notices.length) {
+      setNoticeIndex(0);
+      return;
+    }
+    setNoticeIndex((i) => (i >= notices.length ? 0 : i));
+  }, [notices.length]);
+
+  useEffect(() => {
+    if (notices.length <= 1) return;
+    const t = window.setInterval(() => {
+      setNoticeIndex((i) => (i + 1) % notices.length);
+    }, 5000);
+    return () => window.clearInterval(t);
+  }, [notices.length]);
+
   return (
     <div className="space-y-4">
       {error ? <div className="text-sm text-red-600">{error}</div> : null}
@@ -59,8 +78,20 @@ export function PortalClient() {
         <div className="border rounded-lg">
           <div className="px-4 py-3 border-b font-medium">系统公告</div>
           <div className="p-4">
-            <div className="font-semibold">{data?.announcement.title ?? "系统公告"}</div>
-            <div className="text-sm text-gray-700 mt-2 whitespace-pre-wrap">{data?.announcement.content ?? "暂无公告"}</div>
+            <div className="font-semibold">{notices[noticeIndex]?.title ?? "系统公告"}</div>
+            <div className="text-sm text-gray-700 mt-2 whitespace-pre-wrap min-h-[72px]">{notices[noticeIndex]?.content ?? "暂无公告"}</div>
+            {notices.length > 1 ? (
+              <div className="mt-3 flex items-center justify-center gap-1.5">
+                {notices.map((n, i) => (
+                  <button
+                    key={n.id || i}
+                    className={"h-2.5 w-2.5 rounded-full " + (i === noticeIndex ? "bg-blue-600" : "bg-gray-300")}
+                    onClick={() => setNoticeIndex(i)}
+                    aria-label={`切换公告 ${i + 1}`}
+                  />
+                ))}
+              </div>
+            ) : null}
           </div>
         </div>
 
