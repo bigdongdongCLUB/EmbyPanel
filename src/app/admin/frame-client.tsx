@@ -35,7 +35,7 @@ export function AdminFrameClient({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="panel-compact min-h-screen bg-gray-50">
       <AdminSidebarClient username={username} siteName={siteName} siteLogoDataUrl={siteLogoDataUrl} collapsed={collapsed} />
 
       <div className={collapsed ? "pl-16" : "pl-60"}>

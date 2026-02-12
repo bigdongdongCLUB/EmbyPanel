@@ -25,7 +25,7 @@ export function PortalFrameClient({ username, role, children }: { username: stri
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="panel-compact min-h-screen bg-gray-50">
       <PortalSidebarClient collapsed={collapsed} />
 
       <div className={collapsed ? "pl-16" : "pl-60"}>

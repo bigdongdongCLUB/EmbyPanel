@@ -24,3 +24,20 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* 面板控件统一缩小（管理后台 + 用户后台） */
+.panel-compact input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.panel-compact select,
+.panel-compact button,
+.panel-compact textarea {
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.panel-compact input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.panel-compact select,
+.panel-compact button {
+  min-height: 28px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
