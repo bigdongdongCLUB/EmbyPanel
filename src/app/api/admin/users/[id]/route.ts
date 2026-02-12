@@ -236,6 +236,30 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     }
   }
 
+  // 3.5) 若订阅被调整为有效（手动调整/续费后），立即解除对应服务器上的禁用状态
+  const subBecameValid = !!(subscription && new Date(subscription.endAt) > new Date());
+  if (subBecameValid && nextServers.length) {
+    const targetServerIds = new Set(nextServers.map((x) => x.embyServerId));
+    const links = await prisma.embyUserLink.findMany({
+      where: { userId: id, embyServerId: { in: Array.from(targetServerIds) } },
+      select: { id: true, embyServerId: true, embyUserId: true },
+    });
+    if (links.length) {
+      const servers = await prisma.embyServer.findMany({
+        where: { id: { in: links.map((x) => x.embyServerId) } },
+        select: { id: true, baseUrl: true, apiKey: true, apiKeyEnc: true, apiKeyIv: true, apiKeyTag: true },
+      });
+      const serverById = new Map(servers.map((s) => [s.id, s] as const));
+      for (const l of links) {
+        const s = serverById.get(l.embyServerId);
+        if (!s) continue;
+        const apiKey = getEmbyApiKeyForServer(s);
+        await embySetUserDisabled(s.baseUrl, apiKey, l.embyUserId, false);
+        await prisma.embyUserLink.updateMany({ where: { id: l.id }, data: { disabled: false } });
+      }
+    }
+  }
+
   // 4) Provision to newly assigned servers (by plan)
   const nameConflicts: Array<{ embyServerId: string; serverName: string; username: string }> = [];
   const shouldProvisionAssignedServers = !!(subscription && subscription.planId && planChanged);
