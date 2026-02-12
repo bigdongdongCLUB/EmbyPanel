@@ -39,10 +39,7 @@ export async function GET() {
 
   const row = await prisma.appSetting.findUnique({ where: { key: "announcements_list" } });
   const raw = Array.isArray(row?.valueJson) ? (row!.valueJson as any[]) : [];
-  const now = Date.now();
   const announcements = raw
-    .filter((x) => !!x?.enabled)
-    .filter((x) => !x?.startAt || new Date(x.startAt).getTime() <= now)
     .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
     .map((x) => ({ id: String(x.id || ""), title: String(x.title || ""), content: String(x.content || "") }));
 

@@ -11,8 +11,6 @@ const ItemSchema = z.object({
   id: z.string(),
   title: z.string(),
   content: z.string(),
-  enabled: z.boolean(),
-  startAt: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -20,16 +18,12 @@ const ItemSchema = z.object({
 const CreateSchema = z.object({
   title: z.string().min(1).max(200),
   content: z.string().min(1).max(20000),
-  enabled: z.boolean().default(true),
-  startAt: z.string().datetime().nullable().optional(),
 });
 
 const UpdateSchema = z.object({
   id: z.string().min(1),
   title: z.string().min(1).max(200).optional(),
   content: z.string().min(1).max(20000).optional(),
-  enabled: z.boolean().optional(),
-  startAt: z.string().datetime().nullable().optional(),
 });
 
 function nowIso() {
@@ -64,14 +58,7 @@ export async function GET() {
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
   const list = await getList();
 
-  const now = Date.now();
-  return NextResponse.json({
-    ok: true,
-    rows: list.map((x) => {
-      const active = x.enabled && (!x.startAt || new Date(x.startAt).getTime() <= now);
-      return { ...x, status: active ? "ACTIVE" : "INACTIVE" };
-    }),
-  });
+  return NextResponse.json({ ok: true, rows: list });
 }
 
 export async function POST(req: Request) {
@@ -87,8 +74,6 @@ export async function POST(req: Request) {
     id: crypto.randomUUID(),
     title: p.data.title,
     content: p.data.content,
-    enabled: p.data.enabled,
-    startAt: p.data.startAt ?? null,
     createdAt: now,
     updatedAt: now,
   };
@@ -113,8 +98,6 @@ export async function PATCH(req: Request) {
     ...prev,
     ...(p.data.title !== undefined ? { title: p.data.title } : {}),
     ...(p.data.content !== undefined ? { content: p.data.content } : {}),
-    ...(p.data.enabled !== undefined ? { enabled: p.data.enabled } : {}),
-    ...(p.data.startAt !== undefined ? { startAt: p.data.startAt } : {}),
     updatedAt: nowIso(),
   };
   await saveList(list);

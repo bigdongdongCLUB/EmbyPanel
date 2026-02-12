@@ -2,19 +2,52 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+function ImeInput({ value, onChange, ...props }: any) {
+  const [composing, setComposing] = useState(false);
+  return (
+    <input
+      {...props}
+      value={value}
+      onCompositionStart={() => setComposing(true)}
+      onCompositionEnd={(e) => {
+        setComposing(false);
+        onChange(e.currentTarget.value);
+      }}
+      onChange={(e) => {
+        if (!composing) onChange(e.target.value);
+      }}
+    />
+  );
+}
+
+function ImeTextarea({ value, onChange, ...props }: any) {
+  const [composing, setComposing] = useState(false);
+  return (
+    <textarea
+      {...props}
+      value={value}
+      onCompositionStart={() => setComposing(true)}
+      onCompositionEnd={(e) => {
+        setComposing(false);
+        onChange(e.currentTarget.value);
+      }}
+      onChange={(e) => {
+        if (!composing) onChange(e.target.value);
+      }}
+    />
+  );
+}
+
 type Row = {
   id: string;
   title: string;
   content: string;
-  enabled: boolean;
-  startAt: string | null;
   createdAt: string;
   updatedAt: string;
-  status: "ACTIVE" | "INACTIVE";
 };
 
 function fmt(v?: string | null) {
-  if (!v) return "长期有效";
+  if (!v) return "--";
   return new Date(v).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false });
 }
 
@@ -26,10 +59,8 @@ export function AnnouncementsClient() {
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [enabled, setEnabled] = useState(true);
-  const [startAt, setStartAt] = useState("");
 
-  const canSave = useMemo(() => title.trim() && content.trim(), [title, content]);
+  const canSave = useMemo(() => !!title.trim() && !!content.trim(), [title, content]);
 
   async function refresh() {
     setLoading(true);
@@ -53,8 +84,6 @@ export function AnnouncementsClient() {
     setEditId(null);
     setTitle("");
     setContent("");
-    setEnabled(true);
-    setStartAt("");
     setOpen(true);
   }
 
@@ -62,8 +91,6 @@ export function AnnouncementsClient() {
     setEditId(r.id);
     setTitle(r.title);
     setContent(r.content);
-    setEnabled(!!r.enabled);
-    setStartAt(r.startAt ? r.startAt.slice(0, 16) : "");
     setOpen(true);
   }
 
@@ -78,14 +105,11 @@ export function AnnouncementsClient() {
       </div>
 
       <div className="border rounded overflow-auto bg-white">
-        <table className="min-w-[900px] w-full text-sm">
+        <table className="min-w-[720px] w-full text-sm">
           <thead className="border-b text-left text-gray-600">
             <tr>
               <th className="px-3 py-2">标题</th>
-              <th className="px-3 py-2">状态</th>
-              <th className="px-3 py-2">生效时间</th>
               <th className="px-3 py-2">创建时间</th>
-              <th className="px-3 py-2">开关</th>
               <th className="px-3 py-2">操作</th>
             </tr>
           </thead>
@@ -93,24 +117,7 @@ export function AnnouncementsClient() {
             {rows.map((r) => (
               <tr key={r.id} className="border-b last:border-b-0">
                 <td className="px-3 py-2">{r.title}</td>
-                <td className="px-3 py-2">{r.status === "ACTIVE" ? <span className="text-green-600">生效中</span> : <span className="text-gray-500">未生效</span>}</td>
-                <td className="px-3 py-2">{fmt(r.startAt)}</td>
                 <td className="px-3 py-2">{fmt(r.createdAt)}</td>
-                <td className="px-3 py-2">
-                  <button
-                    className={"rounded-full px-2 py-1 text-xs " + (r.enabled ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-600")}
-                    onClick={async () => {
-                      await fetch("/api/admin/announcements", {
-                        method: "PATCH",
-                        headers: { "content-type": "application/json" },
-                        body: JSON.stringify({ id: r.id, enabled: !r.enabled }),
-                      });
-                      await refresh();
-                    }}
-                  >
-                    {r.enabled ? "开启" : "关闭"}
-                  </button>
-                </td>
                 <td className="px-3 py-2">
                   <div className="flex items-center gap-3 text-xs">
                     <button className="text-gray-700" onClick={() => openEdit(r)}>编辑</button>
@@ -130,7 +137,7 @@ export function AnnouncementsClient() {
             ))}
             {!loading && !rows.length ? (
               <tr>
-                <td className="px-3 py-6 text-gray-500" colSpan={6}>暂无公告</td>
+                <td className="px-3 py-6 text-gray-500" colSpan={3}>暂无公告</td>
               </tr>
             ) : null}
           </tbody>
@@ -144,24 +151,12 @@ export function AnnouncementsClient() {
 
             <div>
               <label className="text-sm">公告标题</label>
-              <input className="mt-1 w-full border rounded px-3 py-2" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="请输入公告标题" />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="text-sm">发布状态</span>
-              <button className={"rounded-full px-2 py-1 text-xs " + (enabled ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-600")} onClick={() => setEnabled((v) => !v)}>
-                {enabled ? "立即发布" : "草稿"}
-              </button>
-            </div>
-
-            <div>
-              <label className="text-sm">生效时间（可空，空=长期有效）</label>
-              <input className="mt-1 w-full border rounded px-3 py-2" type="datetime-local" value={startAt} onChange={(e) => setStartAt(e.target.value)} />
+              <ImeInput className="mt-1 w-full border rounded px-3 py-2" value={title} onChange={setTitle} placeholder="请输入公告标题" />
             </div>
 
             <div>
               <label className="text-sm">公告内容</label>
-              <textarea className="mt-1 w-full border rounded px-3 py-2 min-h-[220px]" value={content} onChange={(e) => setContent(e.target.value)} placeholder="请输入公告内容" />
+              <ImeTextarea className="mt-1 w-full border rounded px-3 py-2 min-h-[220px]" value={content} onChange={setContent} placeholder="请输入公告内容" />
             </div>
 
             <div className="flex gap-2">
@@ -172,8 +167,6 @@ export function AnnouncementsClient() {
                   const payload = {
                     title: title.trim(),
                     content,
-                    enabled,
-                    startAt: startAt ? new Date(startAt).toISOString() : null,
                   };
                   const res = await fetch("/api/admin/announcements", {
                     method: editId ? "PATCH" : "POST",
