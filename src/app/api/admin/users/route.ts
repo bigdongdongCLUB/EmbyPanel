@@ -7,6 +7,8 @@ import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin";
 import { hashPassword } from "@/lib/password";
 import { encryptSyncPassword } from "@/lib/user-secrets";
+import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
+import { embySetUserDisabled } from "@/lib/emby-provision";
 
 export async function GET(req: Request) {
   const auth = await requireAdmin();
@@ -56,7 +58,7 @@ export async function GET(req: Request) {
           embyUserId: true,
           disabled: true,
           createdAt: true,
-          embyServer: { select: { id: true, name: true, baseUrl: true } },
+          embyServer: { select: { id: true, name: true, baseUrl: true, apiKey: true, apiKeyEnc: true, apiKeyIv: true, apiKeyTag: true } },
         },
       },
       subscriptions: {
@@ -76,6 +78,23 @@ export async function GET(req: Request) {
       },
     },
   });
+
+  // 修复：订阅已过期用户应在对应 Emby 服务器保持禁用
+  for (const u of users as any[]) {
+    const sub = u.subscriptions?.[0] as any;
+    const isExpired = !!sub && sub.endAt <= now;
+    if (!isExpired) continue;
+
+    const links = (u.embyLinks ?? []).filter((l: any) => !l.disabled);
+    for (const l of links) {
+      try {
+        const apiKey = getEmbyApiKeyForServer(l.embyServer);
+        await embySetUserDisabled(l.embyServer.baseUrl, apiKey, l.embyUserId, true);
+      } catch {}
+      await prisma.embyUserLink.updateMany({ where: { id: l.id }, data: { disabled: true } });
+      l.disabled = true;
+    }
+  }
 
   const mapped = users
     .map((u) => {
