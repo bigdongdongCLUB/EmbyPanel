@@ -88,17 +88,21 @@ async function main() {
     async (job) => {
       const started = Date.now();
       const health = await callInternal("/api/admin/jobs/emby-health-check");
+      const expiryDisable = await callInternal("/api/admin/jobs/subscription-expiry-disable");
       const result = await callInternal("/api/admin/jobs/anomaly-scan");
       const ms = Date.now() - started;
       console.log(`[worker] periodic jobs ok in ${ms}ms`, {
         jobId: job.id,
         healthOk: health?.okCount,
         healthFail: health?.failCount,
+        expiryUsers: expiryDisable?.usersScanned,
+        expiryLinksDisabled: expiryDisable?.linksDisabled,
+        expiryWarnings: expiryDisable?.apiWarnings,
         createdEvents: result?.createdEvents,
         scannedSessions: result?.scannedSessions,
         warnings: result?.warnings,
       });
-      return { health, anomaly: result };
+      return { health, expiryDisable, anomaly: result };
     },
     {
       connection,
