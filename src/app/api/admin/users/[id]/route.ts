@@ -131,8 +131,9 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   const prevActive = await prisma.subscription.findFirst({
     where: { userId: id, status: "ACTIVE" },
     orderBy: { endAt: "desc" },
-    select: { id: true, servers: { select: { embyServerId: true } } },
+    select: { id: true, planId: true, servers: { select: { embyServerId: true } } },
   });
+  const prevPlanId = prevActive?.planId ?? null;
   const prevServerIds = new Set((prevActive?.servers ?? []).map((x) => x.embyServerId));
 
   await prisma.$transaction(async (tx) => {
@@ -163,14 +164,21 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   // Provision/sync to Emby after commit (best-effort)
   // Decide next servers by plan.
   let nextServers: Array<{ embyServerId: string; templateEmbyUserId: string }> = [];
+  const planChanged = subscription !== undefined && subscription !== null && (subscription.planId ?? null) !== prevPlanId;
+
   if (subscription && subscription.planId) {
-    try {
-      const mod = await import("@/lib/plan-assign");
-      const picked = await mod.pickServerForPlan(subscription.planId);
-      nextServers = picked.servers;
-    } catch (e) {
-      // best-effort: if pick fails, keep nextServers empty (will result in only cancel/disable)
-      nextServers = [];
+    if (!planChanged) {
+      // 仅改订阅时间时：沿用旧服务器映射，不重新挑服/不重复写入Emby用户
+      nextServers = Array.from(prevServerIds).map((embyServerId) => ({ embyServerId, templateEmbyUserId: "" }));
+    } else {
+      try {
+        const mod = await import("@/lib/plan-assign");
+        const picked = await mod.pickServerForPlan(subscription.planId);
+        nextServers = picked.servers;
+      } catch (e) {
+        // best-effort: if pick fails, keep nextServers empty (will result in only cancel/disable)
+        nextServers = [];
+      }
     }
   }
 
@@ -230,6 +238,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
   // 4) Provision to newly assigned servers (by plan)
   const nameConflicts: Array<{ embyServerId: string; serverName: string; username: string }> = [];
+  const shouldProvisionAssignedServers = !!(subscription && subscription.planId && planChanged);
   if (subscription && subscription.planId && nextServers.length) {
     const [user, servers, serverConfigs] = await Promise.all([
       prisma.user.findUnique({
@@ -275,56 +284,58 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         });
       }
 
-      // provision
-      const { embyApplyTemplatePolicy } = await import("@/lib/emby-provision");
+      if (shouldProvisionAssignedServers) {
+        // provision
+        const { embyApplyTemplatePolicy } = await import("@/lib/emby-provision");
 
-      for (const s of servers) {
-        const apiKey = getEmbyApiKeyForServer(s);
+        for (const s of servers) {
+          const apiKey = getEmbyApiKeyForServer(s);
 
-        // find emby user by name
-        const usersRes = await embyFetchUsers(s.baseUrl, apiKey);
-        let embyUserId: string | null = null;
-        let existed = false;
-        if (usersRes.ok) {
-          const found = usersRes.users.find((u: any) => String(u?.Name ?? "").toLowerCase() === user.username.toLowerCase());
-          if (found?.Id) {
-            // 新逻辑：遇到同名用户不自动接管，标记冲突并跳过该服务器分配
-            nameConflicts.push({ embyServerId: s.id, serverName: s.name, username: user.username });
-            existed = true;
-          }
-        }
-
-        if (!existed) {
-          const created = await embyCreateUser(s.baseUrl, apiKey, user.username);
-          if (created.ok) embyUserId = created.userId;
-        }
-
-        if (embyUserId) {
-          // 仅在“修改密码”时同步到现有 Emby 账号；
-          // 对新建的 Emby 账号，仍需设置一次密码以确保可登录。
-          if (newPlainPassword) {
-            await embySetUserPassword(s.baseUrl, apiKey, embyUserId, newPlainPassword);
-          } else if (fallbackPw) {
-            await embySetUserPassword(s.baseUrl, apiKey, embyUserId, fallbackPw);
-          }
-
-          const templateId = templateByServerId.get(s.id);
-          if (templateId) {
-            const applied = await embyApplyTemplatePolicy(s.baseUrl, apiKey, embyUserId, templateId);
-            if (!applied.ok) {
-              // best-effort, but keep a warning for debugging
-              console.warn("template_policy_apply_failed", { userId: id, embyServerId: s.id, templateId, detail: applied });
+          // find emby user by name
+          const usersRes = await embyFetchUsers(s.baseUrl, apiKey);
+          let embyUserId: string | null = null;
+          let existed = false;
+          if (usersRes.ok) {
+            const found = usersRes.users.find((u: any) => String(u?.Name ?? "").toLowerCase() === user.username.toLowerCase());
+            if (found?.Id) {
+              // 新逻辑：遇到同名用户不自动接管，标记冲突并跳过该服务器分配
+              nameConflicts.push({ embyServerId: s.id, serverName: s.name, username: user.username });
+              existed = true;
             }
           }
 
-          // ensure enabled on assignment
-          await embySetUserDisabled(s.baseUrl, apiKey, embyUserId, false);
+          if (!existed) {
+            const created = await embyCreateUser(s.baseUrl, apiKey, user.username);
+            if (created.ok) embyUserId = created.userId;
+          }
 
-          await prisma.embyUserLink.upsert({
-            where: { userId_embyServerId: { userId: user.id, embyServerId: s.id } },
-            update: { embyUserId: embyUserId, disabled: false },
-            create: { userId: user.id, embyServerId: s.id, embyUserId: embyUserId, disabled: false },
-          });
+          if (embyUserId) {
+            // 仅在“修改密码”时同步到现有 Emby 账号；
+            // 对新建的 Emby 账号，仍需设置一次密码以确保可登录。
+            if (newPlainPassword) {
+              await embySetUserPassword(s.baseUrl, apiKey, embyUserId, newPlainPassword);
+            } else if (fallbackPw) {
+              await embySetUserPassword(s.baseUrl, apiKey, embyUserId, fallbackPw);
+            }
+
+            const templateId = templateByServerId.get(s.id);
+            if (templateId) {
+              const applied = await embyApplyTemplatePolicy(s.baseUrl, apiKey, embyUserId, templateId);
+              if (!applied.ok) {
+                // best-effort, but keep a warning for debugging
+                console.warn("template_policy_apply_failed", { userId: id, embyServerId: s.id, templateId, detail: applied });
+              }
+            }
+
+            // ensure enabled on assignment
+            await embySetUserDisabled(s.baseUrl, apiKey, embyUserId, false);
+
+            await prisma.embyUserLink.upsert({
+              where: { userId_embyServerId: { userId: user.id, embyServerId: s.id } },
+              update: { embyUserId: embyUserId, disabled: false },
+              create: { userId: user.id, embyServerId: s.id, embyUserId: embyUserId, disabled: false },
+            });
+          }
         }
       }
     }
