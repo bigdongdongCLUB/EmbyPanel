@@ -42,7 +42,7 @@ export function PortalHeaderClient({ username, role }: { username: string; role:
       {open ? (
         <div className="absolute right-0 mt-2 w-44 bg-white border rounded-xl shadow-lg p-1 z-30">
           <button
-            className="w-full text-left px-3 py-2 rounded hover:bg-gray-50 text-sm"
+            className="w-full text-left px-3 py-2 rounded hover:bg-gray-50 text-sm font-normal leading-5"
             onClick={() => {
               window.dispatchEvent(new Event("portal:open-profile"));
               setOpen(false);
@@ -52,13 +52,13 @@ export function PortalHeaderClient({ username, role }: { username: string; role:
           </button>
 
           {role === "ADMIN" ? (
-            <Link href="/admin" className="block px-3 py-2 rounded hover:bg-gray-50 text-sm" onClick={() => setOpen(false)}>
+            <Link href="/admin" className="block px-3 py-2 rounded hover:bg-gray-50 text-sm font-normal leading-5" onClick={() => setOpen(false)}>
               管理后台
             </Link>
           ) : null}
 
           <button
-            className="w-full text-left px-3 py-2 rounded hover:bg-gray-50 text-sm text-red-600"
+            className="w-full text-left px-3 py-2 rounded hover:bg-gray-50 text-sm font-normal leading-5 text-red-600"
             onClick={() => {
               setOpen(false);
               signOut({ callbackUrl: "/login" });
