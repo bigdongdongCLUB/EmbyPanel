@@ -139,23 +139,23 @@ export function CardCodesClient() {
 
       {error ? <div className="text-sm text-red-600">{error}</div> : null}
 
-      <div className="flex flex-wrap gap-2">
-        <input className="border rounded px-3 py-2" placeholder="搜索卡密/备注" value={q} onChange={(e) => setQ(e.target.value)} />
-        <select className="border rounded px-3 py-2" value={type} onChange={(e) => setType(e.target.value)}>
+      <div className="flex flex-wrap items-center gap-2">
+        <input className="w-full md:w-72 h-7 border rounded px-3 text-xs" placeholder="搜索卡密/备注" value={q} onChange={(e) => setQ(e.target.value)} />
+        <select className="h-7 border rounded px-3 text-xs" value={type} onChange={(e) => setType(e.target.value)}>
           <option value="">全部类型</option>
           <option value="BALANCE">余额卡密</option>
           <option value="SUBSCRIPTION">订阅卡密</option>
         </select>
-        <select className="border rounded px-3 py-2" value={status} onChange={(e) => setStatus(e.target.value)}>
+        <select className="h-7 border rounded px-3 text-xs" value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="">全部状态</option>
           <option value="UNUSED">未使用</option>
           <option value="USED">已使用</option>
           <option value="DISABLED">已禁用</option>
         </select>
-        <button className="border rounded px-3 py-2" onClick={refresh} disabled={loading}>刷新</button>
-        <button className="bg-blue-600 text-white rounded px-3 py-2 ml-auto" onClick={() => setOpen(true)}>创建卡密</button>
+        <button className="h-7 border rounded px-3 text-xs" onClick={refresh} disabled={loading}>刷新</button>
+        <button className="h-7 bg-blue-600 text-white rounded px-3 text-xs ml-auto" onClick={() => setOpen(true)}>创建卡密</button>
         <details className="relative">
-          <summary className="list-none border rounded px-3 py-2 cursor-pointer select-none">更多</summary>
+          <summary className="list-none h-7 border rounded px-3 text-xs cursor-pointer select-none flex items-center">更多</summary>
           <div className="absolute right-0 mt-2 w-44 bg-white border rounded shadow z-20 p-1 text-sm">
             <button
               className="w-full text-left px-2 py-1.5 hover:bg-gray-50 disabled:opacity-50"
