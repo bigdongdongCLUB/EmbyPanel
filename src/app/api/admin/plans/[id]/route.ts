@@ -31,7 +31,7 @@ const PatchSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   description: z.string().max(20000).optional().or(z.literal("")),
   enabled: z.boolean().optional(),
-  visible: z.boolean().optional(),
+  // visible removed from admin UI; always true
   serverAssignStrategy: z.enum(["ALL", "LOAD_BALANCE"]).optional(),
   pricing: PricingSchema,
   servers: z.array(PlanServerConfigInput).optional(),
@@ -104,7 +104,7 @@ export async function PATCH(req: Request, { params }: any) {
         name: p.name,
         description: p.description !== undefined ? (p.description ? p.description : null) : undefined,
         enabled: p.enabled,
-        visible: p.visible,
+        visible: true,
         serverAssignStrategy: p.serverAssignStrategy,
         pricingJson: p.pricing !== undefined ? ((p.pricing as any) ?? null) : undefined,
       },

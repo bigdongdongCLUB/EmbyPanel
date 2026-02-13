@@ -31,7 +31,7 @@ const CreateSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(20000).optional().or(z.literal("")),
   enabled: z.boolean().optional(),
-  visible: z.boolean().optional(),
+  // visible removed from admin UI; always true
   serverAssignStrategy: z.enum(["ALL", "LOAD_BALANCE"]).optional(),
   pricing: PricingSchema,
   servers: z.array(PlanServerConfigInput).optional(),
@@ -99,7 +99,7 @@ export async function POST(req: Request) {
       name: p.name,
       description: p.description ? p.description : null,
       enabled: p.enabled ?? true,
-      visible: p.visible ?? true,
+      visible: true,
       serverAssignStrategy: p.serverAssignStrategy ?? "LOAD_BALANCE",
       pricingJson: (p.pricing as any) ?? null,
       serverConfigs: p.servers?.length

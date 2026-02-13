@@ -9,7 +9,6 @@ type PlanRow = {
   name: string;
   description: string | null;
   enabled: boolean;
-  visible: boolean;
   serverAssignStrategy: "ALL" | "LOAD_BALANCE";
   pricingJson: any;
   serverConfigs: Array<{
@@ -32,7 +31,6 @@ type EditState =
       name: string;
       description: string;
       enabled: boolean;
-      visible: boolean;
       serverAssignStrategy: "ALL" | "LOAD_BALANCE";
       // pricing (yuan string)
       trialPrice: string;
@@ -125,7 +123,6 @@ export function SubscriptionsClient() {
       name: "",
       description: "",
       enabled: true,
-      visible: true,
       serverAssignStrategy: "LOAD_BALANCE",
       trialPrice: "",
       trialDays: "",
@@ -150,7 +147,6 @@ export function SubscriptionsClient() {
       name: p.name,
       description: p.description ?? "",
       enabled: p.enabled,
-      visible: p.visible,
       serverAssignStrategy: p.serverAssignStrategy,
       trialPrice: centsToYuanInt(pricing?.trial?.priceCents),
       trialDays: pricing?.trial?.days ? String(pricing.trial.days) : "",
@@ -253,7 +249,6 @@ export function SubscriptionsClient() {
         name: cur.name.trim(),
         description: cur.description,
         enabled: cur.enabled,
-        visible: cur.visible,
         serverAssignStrategy: cur.serverAssignStrategy,
       };
       if (shouldSendPricing) payload.pricing = pricing;
@@ -342,8 +337,7 @@ export function SubscriptionsClient() {
           <thead className="text-left text-gray-600 border-b">
             <tr>
               <th className="py-2 px-3">名称</th>
-              <th className="py-2 px-3">可用</th>
-              <th className="py-2 px-3">显示</th>
+              <th className="py-2 px-3">售卖</th>
               <th className="py-2 px-3">服务器数</th>
               <th className="py-2 px-3">订阅数（有效）</th>
               <th className="py-2 px-3">策略</th>
@@ -354,8 +348,7 @@ export function SubscriptionsClient() {
             {plans.map((p) => (
               <tr key={p.id} className="border-b">
                 <td className="py-2 px-3 font-medium">{p.name}</td>
-                <td className="py-2 px-3">{p.enabled ? "可用" : "禁用"}</td>
-                <td className="py-2 px-3">{p.visible ? "显示" : "隐藏"}</td>
+                <td className="py-2 px-3">{p.enabled ? "售卖" : "停卖"}</td>
                 <td className="py-2 px-3">{p.serverConfigs?.length ?? 0}</td>
                 <td className="py-2 px-3">{p.subscriptionCount ?? "-"}</td>
                 <td className="py-2 px-3">{p.serverAssignStrategy === "ALL" ? "全部分配" : "负载均衡"}</td>
@@ -373,7 +366,7 @@ export function SubscriptionsClient() {
             ))}
             {!plans.length && !loading ? (
               <tr>
-                <td className="py-6 px-3 text-gray-500" colSpan={7}>
+                <td className="py-6 px-3 text-gray-500" colSpan={6}>
                   暂无订阅计划
                 </td>
               </tr>
@@ -443,7 +436,7 @@ export function SubscriptionsClient() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3">
                 <label className="flex items-center gap-2 text-sm">
                   <input
                     type="checkbox"
@@ -455,20 +448,7 @@ export function SubscriptionsClient() {
                       })
                     }
                   />
-                  可用状态（允许新订单）
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={edit.visible}
-                    onChange={(e) =>
-                      setEditSafe((prev) => {
-                        if (!prev.open) return prev;
-                        return { ...prev, visible: e.target.checked };
-                      })
-                    }
-                  />
-                  显示状态（前端展示）
+                  售卖
                 </label>
               </div>
             </section>
