@@ -97,9 +97,9 @@ export function PortalProfileModalClient() {
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
-          <button className="border rounded px-4 py-2" onClick={() => setOpen(false)}>取消</button>
+          <button className="border bg-white rounded px-4 py-2" onClick={() => setOpen(false)}>取消</button>
           <button
-            className="bg-blue-600 text-white rounded px-4 py-2"
+            className="bg-gray-700 text-white rounded px-4 py-2"
             onClick={async () => {
               const payload: any = {
                 email: email.trim() || null,

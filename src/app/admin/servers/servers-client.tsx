@@ -302,7 +302,7 @@ export function ServersClient() {
         </div>
         <div className="mt-4 flex gap-3">
           <button
-            className="bg-black text-white rounded px-3 py-2 disabled:opacity-50"
+            className="bg-gray-700 text-white rounded px-3 py-2 disabled:opacity-50"
             disabled={!canSubmit}
             onClick={async () => {
               setError(null);
@@ -565,7 +565,7 @@ export function ServersClient() {
 
             <div className="mt-4 flex gap-2">
               <button
-                className="bg-black text-white rounded px-3 py-2"
+                className="bg-gray-700 text-white rounded px-3 py-2"
                 onClick={async () => {
                   const payload: any = {
                     name: modal.name,
@@ -588,7 +588,7 @@ export function ServersClient() {
               >
                 保存
               </button>
-              <button className="border rounded px-3 py-2" onClick={() => setModal({ open: false })}>
+              <button className="border bg-white rounded px-3 py-2" onClick={() => setModal({ open: false })}>
                 取消
               </button>
             </div>

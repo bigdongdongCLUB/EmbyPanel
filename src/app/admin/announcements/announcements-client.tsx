@@ -161,7 +161,7 @@ export function AnnouncementsClient() {
 
             <div className="flex gap-2">
               <button
-                className="bg-blue-600 text-white rounded px-3 py-2 disabled:opacity-60"
+                className="bg-gray-700 text-white rounded px-3 py-2 disabled:opacity-60"
                 disabled={!canSave}
                 onClick={async () => {
                   const payload = {
@@ -184,7 +184,7 @@ export function AnnouncementsClient() {
               >
                 {editId ? "保存" : "发布公告"}
               </button>
-              <button className="border rounded px-3 py-2" onClick={() => setOpen(false)}>
+              <button className="border bg-white rounded px-3 py-2" onClick={() => setOpen(false)}>
                 取消
               </button>
             </div>

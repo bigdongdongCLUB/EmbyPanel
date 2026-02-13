@@ -648,7 +648,7 @@ export function UsersClient() {
 
             <div className="mt-5 flex gap-2">
               <button
-                className="bg-black text-white rounded px-3 py-2 disabled:opacity-50"
+                className="bg-gray-700 text-white rounded px-3 py-2 disabled:opacity-50"
                 disabled={edit.loading}
                 onClick={async () => {
                   const balanceNum = Number(edit.balance);
@@ -703,12 +703,12 @@ export function UsersClient() {
               >
                 更新用户
               </button>
-              <button className="border rounded px-3 py-2" onClick={() => setEdit({ open: false })}>
+              <button className="border bg-white rounded px-3 py-2" onClick={() => setEdit({ open: false })}>
                 取消
               </button>
               <button
                 className={
-                  "border rounded px-3 py-2 ml-auto " +
+                  "border bg-white rounded px-3 py-2 ml-auto " +
                   (edit.role === "ADMIN" ? "text-gray-400 border-gray-300 bg-gray-100 cursor-not-allowed" : "text-red-600")
                 }
                 disabled={edit.role === "ADMIN"}
@@ -750,11 +750,11 @@ export function UsersClient() {
             </label>
 
             <div className="mt-3 flex justify-end gap-2">
-              <button className="border rounded px-3 py-1 text-sm" disabled={deleteLoading} onClick={() => setDeleteConfirmOpen(false)}>
+              <button className="border bg-white rounded px-3 py-1 text-sm" disabled={deleteLoading} onClick={() => setDeleteConfirmOpen(false)}>
                 取消
               </button>
               <button
-                className="bg-red-500 text-white rounded px-3 py-1 text-sm disabled:opacity-60"
+                className="bg-gray-700 text-white rounded px-3 py-1 text-sm disabled:opacity-60"
                 disabled={deleteLoading}
                 onClick={async () => {
                   setDeleteLoading(true);
@@ -820,7 +820,7 @@ export function UsersClient() {
 
             <div className="mt-5 flex gap-2">
               <button
-                className="bg-black text-white rounded px-3 py-2 disabled:opacity-50"
+                className="bg-gray-700 text-white rounded px-3 py-2 disabled:opacity-50"
                 disabled={bulkAddLoading}
                 onClick={async () => {
                   const addDays = Number(bulkAddDays);
@@ -854,7 +854,7 @@ export function UsersClient() {
               >
                 开始处理
               </button>
-              <button className="border rounded px-3 py-2" disabled={bulkAddLoading} onClick={() => setBulkAddOpen(false)}>
+              <button className="border bg-white rounded px-3 py-2" disabled={bulkAddLoading} onClick={() => setBulkAddOpen(false)}>
                 取消
               </button>
             </div>
@@ -1032,11 +1032,11 @@ export function UsersClient() {
             </div>
 
             <div className="flex gap-2 justify-end">
-              <button className="border rounded px-3 py-2" onClick={() => setImportOpen(false)}>
+              <button className="border bg-white rounded px-3 py-2" onClick={() => setImportOpen(false)}>
                 取消
               </button>
               <button
-                className="bg-black text-white rounded px-3 py-2 disabled:opacity-50"
+                className="bg-gray-700 text-white rounded px-3 py-2 disabled:opacity-50"
                 disabled={
                   !importServerId ||
                   importDefaultPassword.trim().length < 6 ||
@@ -1146,7 +1146,7 @@ export function UsersClient() {
 
             <div className="mt-4 flex gap-2">
               <button
-                className="bg-black text-white rounded px-3 py-2 disabled:opacity-50"
+                className="bg-gray-700 text-white rounded px-3 py-2 disabled:opacity-50"
                 disabled={!canCreate}
                 onClick={async () => {
                   const balanceNum = Number(newBalance);
@@ -1181,7 +1181,7 @@ export function UsersClient() {
               >
                 创建
               </button>
-              <button className="border rounded px-3 py-2" onClick={() => setCreateOpen(false)}>
+              <button className="border bg-white rounded px-3 py-2" onClick={() => setCreateOpen(false)}>
                 取消
               </button>
             </div>

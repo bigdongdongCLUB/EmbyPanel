@@ -673,7 +673,7 @@ export function SubscriptionsClient() {
 
             <div className="flex gap-3 justify-end pt-2">
               <button
-                className="border rounded px-3 py-2"
+                className="border bg-white rounded px-3 py-2"
                 onClick={() => {
                   editRef.current = { open: false };
                   setEdit({ open: false });
@@ -681,7 +681,7 @@ export function SubscriptionsClient() {
               >
                 取消
               </button>
-              <button className="bg-black text-white rounded px-3 py-2 disabled:opacity-50" disabled={!canSave || edit.loading} onClick={save}>
+              <button className="bg-gray-700 text-white rounded px-3 py-2 disabled:opacity-50" disabled={!canSave || edit.loading} onClick={save}>
                 {edit.loading ? "保存中…" : "保存"}
               </button>
             </div>
