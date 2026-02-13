@@ -67,6 +67,12 @@ function formatDateYmd(v?: string | null) {
   return `${y}-${m}-${day}`;
 }
 
+function parseLatencyMs(msg?: string | null) {
+  if (!msg) return null;
+  const m = msg.match(/(\d+)\s*ms/i);
+  return m ? Number(m[1]) : null;
+}
+
 function UsersTable({
   serverId,
   users,
@@ -345,7 +351,11 @@ export function ServersClient() {
                 <div className="font-medium">{s.name}</div>
                 <div className="text-sm text-gray-600">{s.baseUrl}</div>
                 <div className="text-xs text-gray-500 mt-1">
-                  health: {s.lastHealthOk === null ? "-" : s.lastHealthOk ? "OK" : "FAIL"} {s.lastHealthMsg ? `· ${s.lastHealthMsg}` : ""}
+                  {s.lastHealthOk === null
+                    ? "健康检测：-"
+                    : s.lastHealthOk
+                      ? `✅ ${parseLatencyMs(s.lastHealthMsg) !== null ? `${parseLatencyMs(s.lastHealthMsg)}ms` : "延迟未知"}`
+                      : `❌ ${s.lastHealthMsg || "检测失败"}`}
                 </div>
               </div>
               <div className="flex gap-2">
