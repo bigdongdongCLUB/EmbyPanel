@@ -400,9 +400,21 @@ export function UsersClient() {
                 <td className="py-2 px-3 font-mono">{r.username}</td>
                 <td className="py-2 px-3">{dash(r.email)}</td>
                 <td className="py-2 px-3">{r.role === "ADMIN" ? "是" : "否"}</td>
-                <td className="py-2 px-3">{r.enabled ? "启用" : "禁用"}</td>
+                <td className="py-2 px-3">
+                  {r.enabled ? (
+                    <span className="inline-flex items-center rounded border border-green-200 bg-green-50 text-green-700 px-2 py-0.5 text-xs font-medium">启用</span>
+                  ) : (
+                    <span className="inline-flex items-center rounded border border-gray-300 bg-gray-50 text-gray-600 px-2 py-0.5 text-xs font-medium">禁用</span>
+                  )}
+                </td>
                 <td className="py-2 px-3">{dash(r.balance)}</td>
-                <td className="py-2 px-3">{dash(r.subscriptionStatus)}</td>
+                <td className="py-2 px-3">
+                  {r.subscriptionStatus && (r.subscriptionStatus === "有效" || r.subscriptionStatus === "ACTIVE") ? (
+                    <span className="inline-flex items-center rounded border border-green-200 bg-green-50 text-green-700 px-2 py-0.5 text-xs font-medium">有效</span>
+                  ) : (
+                    <span className="inline-flex items-center rounded border border-gray-300 bg-gray-50 text-gray-600 px-2 py-0.5 text-xs font-medium">{dash(r.subscriptionStatus)}</span>
+                  )}
+                </td>
                 <td className="py-2 px-3">{dash(r.planName)}</td>
                 <td className="py-2 px-3">
                   {r.servers?.length ? (
