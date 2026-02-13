@@ -516,7 +516,7 @@ export function UsersClient() {
 
       {edit.open ? (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg w-full max-w-xl p-4">
+          <div className="bg-white rounded-lg w-full max-w-[320px] p-4">
             <div className="flex items-center justify-between">
               <div className="font-semibold">编辑用户</div>
               <button className="text-sm underline" onClick={() => setEdit({ open: false })}>
