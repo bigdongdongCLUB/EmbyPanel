@@ -14,7 +14,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   const row = await prisma.appSetting.findUnique({ where: { key: "site_basic" } });
   const value = (row?.valueJson as any) ?? {};
-  const siteName = value.siteName || "BestEmby";
+  const siteName = value.siteName || "EmbyPanel";
   const siteLogoDataUrl = value.siteLogoDataUrl ?? null;
 
   return (

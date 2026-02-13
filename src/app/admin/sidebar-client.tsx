@@ -38,8 +38,8 @@ export function AdminSidebarClient({
     <aside className={(collapsed ? "w-16" : "w-60") + " fixed inset-y-0 left-0 bg-[#0b1220] text-white flex flex-col z-30"}>
       <div className="h-16 flex items-center justify-center px-2 border-b border-white/10">
         <Link href="/admin" className="flex items-center gap-2 min-w-0">
-          {siteLogoDataUrl ? <img src={siteLogoDataUrl} alt="logo" className="h-8 w-8 rounded-full object-cover shrink-0" /> : null}
-          {!collapsed ? <span className="font-semibold text-2xl tracking-wide leading-none text-center truncate">{siteName}</span> : null}
+          <img src={siteLogoDataUrl || "/logo.png"} alt="logo" className="h-8 w-8 rounded-full object-cover shrink-0" />
+          {!collapsed ? <span className="font-semibold text-2xl tracking-wide leading-none text-center truncate">{siteName || "EmbyPanel"}</span> : null}
         </Link>
       </div>
 

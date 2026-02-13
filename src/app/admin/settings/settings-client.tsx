@@ -15,7 +15,7 @@ export function SettingsClient() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState<FormState>({ siteName: "BestEmby", siteDescription: "See the BestEmby", siteLogoDataUrl: null });
+  const [form, setForm] = useState<FormState>({ siteName: "EmbyPanel", siteDescription: "See the BestEmby", siteLogoDataUrl: null });
 
   async function refresh() {
     setLoading(true);

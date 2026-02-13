@@ -15,7 +15,7 @@ const Schema = z.object({
 });
 
 const DEFAULTS = {
-  siteName: "BestEmby",
+  siteName: "EmbyPanel",
   siteDescription: "See the BestEmby",
   siteLogoDataUrl: null as string | null,
 };

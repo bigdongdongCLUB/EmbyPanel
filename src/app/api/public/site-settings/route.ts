@@ -13,7 +13,7 @@ export async function GET() {
   return NextResponse.json({
     ok: true,
     data: {
-      siteName: value.siteName || "BestEmby",
+      siteName: value.siteName || "EmbyPanel",
       siteDescription: value.siteDescription || "See the BestEmby",
       siteLogoDataUrl: value.siteLogoDataUrl ?? null,
     },

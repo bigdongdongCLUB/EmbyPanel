@@ -14,7 +14,7 @@ export default async function PortalLayout({ children }: { children: React.React
 
   const siteRow = await prisma.appSetting.findUnique({ where: { key: "site_basic" } });
   const site = (siteRow?.valueJson as any) ?? {};
-  const siteName = site.siteName || "BestEmby";
+  const siteName = site.siteName || "EmbyPanel";
   const siteLogoDataUrl = site.siteLogoDataUrl ?? null;
 
   return (
