@@ -376,7 +376,6 @@ export function UsersClient() {
               </th>
               <th className="py-2 px-3">用户</th>
               <th className="py-2 px-3">邮箱</th>
-              <th className="py-2 px-3">管理员(面板)</th>
               <th className="py-2 px-3">状态</th>
               <th className="py-2 px-3">余额</th>
               <th className="py-2 px-3">订阅状态</th>
@@ -397,9 +396,13 @@ export function UsersClient() {
                     onChange={(e) => setSelected((m) => ({ ...m, [r.id]: e.target.checked }))}
                   />
                 </td>
-                <td className="py-2 px-3 font-mono">{r.username}</td>
+                <td className="py-2 px-3 font-mono">
+                  <span className="inline-flex items-center gap-1">
+                    {r.role === "ADMIN" ? <span title="管理员">👑</span> : null}
+                    <span>{r.username}</span>
+                  </span>
+                </td>
                 <td className="py-2 px-3">{dash(r.email)}</td>
-                <td className="py-2 px-3">{r.role === "ADMIN" ? "是" : "否"}</td>
                 <td className="py-2 px-3">
                   {r.enabled ? (
                     <span className="inline-flex items-center rounded border border-green-200 bg-green-50 text-green-700 px-2 py-0.5 text-xs font-medium">启用</span>
@@ -519,7 +522,7 @@ export function UsersClient() {
             ))}
             {!loading && rows.length === 0 ? (
               <tr>
-                <td className="py-6 px-3 text-gray-500" colSpan={12}>
+                <td className="py-6 px-3 text-gray-500" colSpan={11}>
                   无数据
                 </td>
               </tr>
