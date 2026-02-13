@@ -204,7 +204,7 @@ export default function LoginPage() {
         </div>
 
         {mode === "login" ? (
-          <form className="mt-3 max-w-3xl mx-auto space-y-2" onSubmit={doLogin}>
+          <form className="mt-3 max-w-3xl mx-auto px-10 space-y-2" onSubmit={doLogin}>
             <div className="border rounded-xl px-3 py-1.5 flex items-center gap-2">
               <span className="text-gray-400 text-sm">👤</span>
               <input
@@ -258,7 +258,7 @@ export default function LoginPage() {
             </div>
           </form>
         ) : (
-          <form className="mt-3 max-w-3xl mx-auto space-y-1.5" onSubmit={doRegister}>
+          <form className="mt-3 max-w-3xl mx-auto px-10 space-y-1.5" onSubmit={doRegister}>
             <div className={`border rounded-xl px-3 py-1.5 flex items-center gap-2 ${usernameErrors.length ? "border-red-300" : ""}`}>
               <span className="text-gray-400 text-sm">👤</span>
               <input className="w-full text-sm outline-none" placeholder="用户名" value={username} onChange={(e) => setUsername(e.target.value)} />
