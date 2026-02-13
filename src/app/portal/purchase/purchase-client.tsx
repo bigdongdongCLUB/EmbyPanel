@@ -225,7 +225,7 @@ export function PortalPurchaseClient() {
                     </div>
 
                     <button
-                      className="w-full bg-blue-600 text-white rounded-xl px-4 py-3 text-2xl font-semibold disabled:opacity-50"
+                      className="w-full bg-gray-700 text-white rounded-xl px-4 py-3 text-2xl font-semibold disabled:opacity-50"
                       disabled={!currentCycle || !currentCycle.available}
                       onClick={async () => {
                         const res = await fetch("/api/portal/orders", {
@@ -250,7 +250,7 @@ export function PortalPurchaseClient() {
                       创建订单 ¥{currentCycle?.priceYuan ?? 0}
                     </button>
 
-                    <button className="w-full border rounded-xl px-4 py-3 text-xl" onClick={() => setModalOpen(false)}>
+                    <button className="w-full border bg-white rounded-xl px-4 py-3 text-xl" onClick={() => setModalOpen(false)}>
                       取消
                     </button>
                   </div>
@@ -288,7 +288,7 @@ export function PortalPurchaseClient() {
 
                     <div className="border rounded-xl bg-white p-5 space-y-3">
                       <button
-                        className="w-full bg-blue-600 text-white rounded-xl px-4 py-3 text-2xl font-semibold disabled:opacity-50"
+                        className="w-full bg-gray-700 text-white rounded-xl px-4 py-3 text-2xl font-semibold disabled:opacity-50"
                         disabled={order.order.status !== "PENDING" || order.balanceYuan < orderAmountYuan}
                         onClick={async () => {
                           const res = await fetch(`/api/portal/orders/${order.order.id}/pay`, { method: "POST" });
