@@ -31,6 +31,13 @@ export default function LoginPage() {
   const [confirmPwdVisible, setConfirmPwdVisible] = useState(false);
   const [registerError, setRegisterError] = useState<string | null>(null);
   const [registerLoading, setRegisterLoading] = useState(false);
+  const [emailCode, setEmailCode] = useState("");
+  const [sendingCode, setSendingCode] = useState(false);
+
+  const [openRegistration, setOpenRegistration] = useState(true);
+  const [requireEmailVerification, setRequireEmailVerification] = useState(false);
+  const [inviteOnly, setInviteOnly] = useState(false);
+  const [strongPassword, setStrongPassword] = useState(false);
 
   const [siteName, setSiteName] = useState("BestEmby");
   const [siteDescription, setSiteDescription] = useState("See the BestEmby");
@@ -45,30 +52,52 @@ export default function LoginPage() {
 
   const passwordErrors = useMemo(() => {
     const list: string[] = [];
-    if (password && password.length < 8) list.push("密码必须至少8个字符");
-    if (password && !/[A-Za-z]/.test(password)) list.push("密码必须包含至少一个字母和一个数字");
-    if (password && !/[0-9]/.test(password)) list.push("密码必须包含至少一个字母和一个数字");
+    if (strongPassword) {
+      if (password && (password.length < 10 || password.length > 32)) list.push("密码必须为10-32个字符");
+      if (password && !/[a-z]/.test(password)) list.push("密码必须包含小写字母");
+      if (password && !/[A-Z]/.test(password)) list.push("密码必须包含大写字母");
+      if (password && !/[0-9]/.test(password)) list.push("密码必须包含数字");
+      if (password && !/[^A-Za-z0-9]/.test(password)) list.push("密码必须包含特殊字符");
+    } else {
+      if (password && password.length < 8) list.push("密码必须至少8个字符");
+      if (password && !/[A-Za-z]/.test(password)) list.push("密码必须包含至少一个字母和一个数字");
+      if (password && !/[0-9]/.test(password)) list.push("密码必须包含至少一个字母和一个数字");
+    }
     return Array.from(new Set(list));
-  }, [password]);
+  }, [password, strongPassword]);
 
   const confirmError = confirmPassword && password !== confirmPassword ? "两次输入的密码不一致" : null;
 
   const canRegister =
+    openRegistration &&
     !!username &&
     !usernameErrors.length &&
     !!password &&
     !passwordErrors.length &&
     !!confirmPassword &&
-    !confirmError;
+    !confirmError &&
+    (!inviteOnly || !!inviteCode.trim()) &&
+    (!requireEmailVerification || !!emailCode.trim());
 
   useEffect(() => {
     fetch("/api/public/site-settings", { cache: "no-store" })
       .then((r) => r.json())
       .then((j) => {
         if (!j?.data) return;
-        setSiteName(j.data.siteName || "BestEmby");
+        setSiteName(j.data.siteName || "EmbyPanel");
         setSiteDescription(j.data.siteDescription || "See the BestEmby");
         setSiteLogoDataUrl(j.data.siteLogoDataUrl ?? null);
+      })
+      .catch(() => null);
+
+    fetch("/api/public/security-settings", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j) => {
+        const d = j?.data || {};
+        setOpenRegistration(d.openRegistration !== false);
+        setRequireEmailVerification(!!d.requireEmailVerification);
+        setInviteOnly(!!d.inviteOnly);
+        setStrongPassword(!!d.strongPassword);
       })
       .catch(() => null);
   }, []);
@@ -115,12 +144,19 @@ export default function LoginPage() {
           password,
           name: username.trim(),
           inviteCode: inviteCode.trim() || undefined,
+          emailCode: emailCode.trim() || undefined,
         }),
       });
       const json = await res.json().catch(() => null);
       if (!res.ok) {
         if (json?.error === "username_taken") setRegisterError("用户名已存在");
         else if (json?.error === "email_taken") setRegisterError("邮箱已被使用");
+        else if (json?.error === "registration_closed") setRegisterError("当前已关闭注册");
+        else if (json?.error === "invite_required") setRegisterError("当前仅限邀请码注册");
+        else if (json?.error === "reserved_username") setRegisterError("该用户名为系统保留，无法注册");
+        else if (json?.error === "weak_password") setRegisterError("密码复杂度不符合要求");
+        else if (json?.error === "email_code_required") setRegisterError("请先输入邮箱验证码");
+        else if (json?.error === "email_code_invalid") setRegisterError("邮箱验证码无效或已过期");
         else setRegisterError("注册失败，请检查输入后重试");
         return;
       }
@@ -208,9 +244,17 @@ export default function LoginPage() {
             <div className="text-center text-blue-500 text-sm pt-0.5">忘记密码?</div>
             <div className="text-center text-sm">
               还没有账户？
-              <button type="button" className="text-blue-500 ml-2" onClick={() => setMode("register")}>
+              <button
+                type="button"
+                className={(openRegistration ? "text-blue-500" : "text-gray-400 cursor-not-allowed") + " ml-2"}
+                onClick={() => {
+                  if (!openRegistration) return;
+                  setMode("register");
+                }}
+              >
                 注册
               </button>
+              {!openRegistration ? <span className="ml-2 text-gray-400 text-xs">（已关闭）</span> : null}
             </div>
           </form>
         ) : (
@@ -244,7 +288,7 @@ export default function LoginPage() {
             {passwordErrors.map((x) => (
               <div key={x} className="text-red-500 text-[11px]">{x}</div>
             ))}
-            <div className="text-gray-500 text-[11px]">ⓘ 8-24个字符, 包含至少一个字母和一个数字</div>
+            <div className="text-gray-500 text-[11px]">ⓘ {strongPassword ? "10-32个字符，且包含大小写字母、数字和特殊字符" : "8-24个字符, 包含至少一个字母和一个数字"}</div>
 
             <div className={`border rounded-xl px-3 py-1.5 flex items-center gap-2 ${confirmError ? "border-red-300" : ""}`}>
               <span className="text-gray-400 text-sm">🔒</span>
@@ -262,13 +306,54 @@ export default function LoginPage() {
             {confirmError ? <div className="text-red-500 text-[11px]">{confirmError}</div> : null}
 
             <div className="border rounded-xl px-3 py-1.5 flex items-center gap-2">
-              <input className="w-full text-sm outline-none" placeholder="邀请码（选填）" value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} />
+              <input
+                className="w-full text-sm outline-none"
+                placeholder={inviteOnly ? "邀请码（必填）" : "邀请码（选填）"}
+                value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value)}
+              />
             </div>
+
+            {requireEmailVerification ? (
+              <div className="border rounded-xl px-3 py-1.5 flex items-center gap-2">
+                <input className="w-full text-sm outline-none" placeholder="邮箱验证码" value={emailCode} onChange={(e) => setEmailCode(e.target.value)} />
+                <button
+                  type="button"
+                  className="text-xs text-blue-600 whitespace-nowrap disabled:text-gray-400"
+                  disabled={sendingCode || !email.trim()}
+                  onClick={async () => {
+                    if (!email.trim()) {
+                      setRegisterError("请先填写邮箱");
+                      return;
+                    }
+                    setSendingCode(true);
+                    setRegisterError(null);
+                    try {
+                      const res = await fetch("/api/auth/register/send-code", {
+                        method: "POST",
+                        headers: { "content-type": "application/json" },
+                        body: JSON.stringify({ email: email.trim() }),
+                      });
+                      const json = await res.json().catch(() => null);
+                      if (!res.ok) {
+                        setRegisterError(json?.error === "mail_not_configured" ? "邮件未配置，无法发送验证码" : "发送验证码失败");
+                        return;
+                      }
+                      alert("验证码已发送，请查收邮箱");
+                    } finally {
+                      setSendingCode(false);
+                    }
+                  }}
+                >
+                  {sendingCode ? "发送中" : "发送验证码"}
+                </button>
+              </div>
+            ) : null}
 
             {registerError ? <div className="text-red-500 text-[11px]">{registerError}</div> : null}
 
             <button className="w-full bg-blue-600 text-white rounded-xl py-2 text-base font-semibold disabled:opacity-60" disabled={!canRegister || registerLoading}>
-              {registerLoading ? "注册中..." : "注 册"}
+              {!openRegistration ? "注册已关闭" : registerLoading ? "注册中..." : "注 册"}
             </button>
 
             <div className="text-center text-sm pt-0.5">

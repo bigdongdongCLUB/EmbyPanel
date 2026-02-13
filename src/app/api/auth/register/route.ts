@@ -16,6 +16,7 @@ const schema = z.object({
   password: z.string().min(8),
   name: z.string().min(1).optional(),
   inviteCode: z.string().min(3).max(32).optional(),
+  emailCode: z.string().min(4).max(8).optional(),
 });
 
 export async function POST(req: Request) {
@@ -27,6 +28,57 @@ export async function POST(req: Request) {
 
   const username = parsed.data.username.trim();
   const email = parsed.data.email?.toLowerCase().trim();
+
+  const securityRow = await prisma.appSetting.findUnique({ where: { key: "security_basic" } });
+  const security = (securityRow?.valueJson as any) ?? {};
+
+  if (security.openRegistration === false) {
+    return NextResponse.json({ error: "registration_closed" }, { status: 403 });
+  }
+
+  if (security.inviteOnly && !parsed.data.inviteCode?.trim()) {
+    return NextResponse.json({ error: "invite_required" }, { status: 400 });
+  }
+
+  const reserved = String(security.reservedUsernames || "")
+    .split(",")
+    .map((x) => x.trim().toLowerCase())
+    .filter(Boolean);
+  if (reserved.includes(username.toLowerCase())) {
+    return NextResponse.json({ error: "reserved_username" }, { status: 400 });
+  }
+
+  if (security.strongPassword) {
+    const pw = parsed.data.password || "";
+    const ok =
+      pw.length >= 10 &&
+      pw.length <= 32 &&
+      /[a-z]/.test(pw) &&
+      /[A-Z]/.test(pw) &&
+      /[0-9]/.test(pw) &&
+      /[^A-Za-z0-9]/.test(pw);
+    if (!ok) return NextResponse.json({ error: "weak_password" }, { status: 400 });
+  }
+
+  if (security.requireEmailVerification) {
+    if (!email) return NextResponse.json({ error: "email_required_for_verification" }, { status: 400 });
+    const code = (parsed.data.emailCode || "").trim();
+    if (!code) return NextResponse.json({ error: "email_code_required" }, { status: 400 });
+
+    const codeRow = await prisma.appSetting.findUnique({ where: { key: "register_email_codes" } });
+    const map = ((codeRow?.valueJson as any) ?? {}) as Record<string, { code: string; expiresAt: number }>;
+    const item = map[email];
+    if (!item || item.code !== code || Number(item.expiresAt || 0) < Date.now()) {
+      return NextResponse.json({ error: "email_code_invalid" }, { status: 400 });
+    }
+
+    delete map[email];
+    await prisma.appSetting.upsert({
+      where: { key: "register_email_codes" },
+      create: { key: "register_email_codes", valueJson: map },
+      update: { valueJson: map },
+    });
+  }
 
   const existingUsername = await prisma.user.findUnique({ where: { username } });
   if (existingUsername) {

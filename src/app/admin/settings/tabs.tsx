@@ -25,6 +25,7 @@ export function SettingsTabs() {
       <Tab href="/admin/settings" label="基础设置" />
       <Tab href="/admin/settings/mail" label="邮件设置" />
       <Tab href="/admin/settings/mail-templates" label="邮件模板" />
+      <Tab href="/admin/settings/security" label="安全设置" />
       <Tab href="/admin/settings/invite-rebate" label="邀请返利" />
     </div>
   );
