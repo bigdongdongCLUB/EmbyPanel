@@ -33,7 +33,7 @@ export function RealtimeMonitorClient() {
 
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(10);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -68,22 +68,13 @@ export function RealtimeMonitorClient() {
 
   useEffect(() => {
     loadServers().catch((e) => setError(e?.message ?? "load_servers_failed"));
-    try {
-      const saved = Number(window.localStorage.getItem("realtime_page_size") || "20");
-      if ([10, 20, 50, 100].includes(saved)) setPageSize(saved);
-    } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    try {
-      window.localStorage.setItem("realtime_page_size", String(pageSize));
-    } catch {}
-  }, [pageSize]);
-
-  useEffect(() => {
     setQ("");
     setPage(1);
+    setPageSize(10);
     refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serverId]);
@@ -230,7 +221,7 @@ export function RealtimeMonitorClient() {
         </div>
 
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm border-t pt-3">
-          <div className="text-gray-600">{total > 0 ? `第 ${safePage} / ${totalPages} 页 · 每页 ${pageSize} 条 · 本页 ${pageRows.length} 条` : ""}</div>
+          <div className="text-gray-600">{total > 0 ? `第 ${safePage} / ${totalPages} 页 · 本页 ${pageRows.length} 条` : ""}</div>
           <div className="flex items-center gap-2">
             <button className="border rounded px-2 py-1 disabled:opacity-50" disabled={safePage <= 1} onClick={() => setPage(safePage - 1)}>
               上一页
