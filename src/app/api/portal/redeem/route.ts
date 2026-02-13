@@ -12,6 +12,63 @@ import { embyFetchUsers } from "@/lib/emby";
 import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
 import { embyApplyTemplatePolicy, embyCreateUser, embySetUserDisabled, embySetUserPassword } from "@/lib/emby-provision";
 
+const INVITE_REBATE_KEY = "invite_rebate";
+const INVITE_REL_KEY = "invite_relations";
+const INVITE_FIRST_PAID_KEY = "invite_rebate_first_paid";
+
+async function applyInviteCommission(tx: any, buyerUserId: string, amountCents: number) {
+  if (!amountCents || amountCents <= 0) return;
+
+  const [rebateRow, relRow] = await Promise.all([
+    tx.appSetting.findUnique({ where: { key: INVITE_REBATE_KEY } }),
+    tx.appSetting.findUnique({ where: { key: INVITE_REL_KEY } }),
+  ]);
+
+  const rebate = (rebateRow?.valueJson as any) ?? {};
+  if (!rebate?.enabled) return;
+
+  const relMap = ((relRow?.valueJson as any) ?? {}) as Record<string, { inviterUserId: string }>;
+  const inviterUserId = relMap[buyerUserId]?.inviterUserId;
+  if (!inviterUserId || inviterUserId === buyerUserId) return;
+
+  const rate1 = Number(rebate?.rate1 ?? 0);
+  if (!Number.isFinite(rate1) || rate1 <= 0) return;
+
+  const mode = rebate?.mode === "FIRST_ONLY" ? "FIRST_ONLY" : "LOOP";
+  if (mode === "FIRST_ONLY") {
+    const firstPaidRow = await tx.appSetting.findUnique({ where: { key: INVITE_FIRST_PAID_KEY } });
+    const paidMap = ((firstPaidRow?.valueJson as any) ?? {}) as Record<string, boolean>;
+    if (paidMap[buyerUserId]) return;
+
+    paidMap[buyerUserId] = true;
+    await tx.appSetting.upsert({
+      where: { key: INVITE_FIRST_PAID_KEY },
+      create: { key: INVITE_FIRST_PAID_KEY, valueJson: paidMap },
+      update: { valueJson: paidMap },
+    });
+  }
+
+  const commissionCents = Math.floor((amountCents * rate1) / 100);
+  if (commissionCents <= 0) return;
+
+  await tx.user.update({ where: { id: inviterUserId }, data: { balanceCents: { increment: commissionCents } } });
+}
+
+function getPlanPriceCents(pricingJson: any, payCycle?: string | null): number {
+  const keyMap: Record<string, string> = {
+    TRIAL: "trial",
+    MONTHLY: "monthly",
+    QUARTERLY: "quarterly",
+    HALF_YEARLY: "halfYearly",
+    YEARLY: "yearly",
+    TWO_YEARLY: "twoYearly",
+  };
+  const key = keyMap[String(payCycle || "MONTHLY")] || "monthly";
+  const raw = pricingJson?.[key]?.priceCents;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+}
+
 const BodySchema = z.object({ code: z.string().trim().min(6).max(64) });
 
 function cycleDays(payCycle?: string | null) {
@@ -81,6 +138,12 @@ export async function POST(req: Request) {
       if (card.type === "SUBSCRIPTION") {
         const days = Number(card.subscriptionDays ?? 0) > 0 ? Number(card.subscriptionDays) : cycleDays(card.payCycle);
         const now = new Date();
+
+        let planPriceCents = 0;
+        if (card.planId) {
+          const plan = await tx.plan.findUnique({ where: { id: card.planId }, select: { pricingJson: true } });
+          planPriceCents = getPlanPriceCents((plan as any)?.pricingJson, card.payCycle);
+        }
         const active = await tx.subscription.findFirst({
           where: { userId: user.id, status: "ACTIVE" },
           orderBy: { endAt: "desc" },
@@ -100,6 +163,7 @@ export async function POST(req: Request) {
             },
             select: { id: true },
           });
+          await applyInviteCommission(tx, user.id, planPriceCents);
           return { kind: "SUBSCRIPTION", daysAdded: days, endAt, planId: card.planId ?? null, subscriptionId: created.id };
         }
 
@@ -115,6 +179,7 @@ export async function POST(req: Request) {
             status: "ACTIVE",
           },
         });
+        await applyInviteCommission(tx, user.id, planPriceCents);
         return { kind: "SUBSCRIPTION", daysAdded: days, endAt: newEnd, planId: card.planId ?? null, subscriptionId: active.id };
       }
 

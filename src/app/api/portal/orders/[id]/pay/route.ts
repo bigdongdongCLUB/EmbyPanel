@@ -11,6 +11,48 @@ import { embyFetchUsers } from "@/lib/emby";
 import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
 import { embyApplyTemplatePolicy, embyCreateUser, embySetUserDisabled, embySetUserPassword } from "@/lib/emby-provision";
 
+const INVITE_REBATE_KEY = "invite_rebate";
+const INVITE_REL_KEY = "invite_relations";
+const INVITE_FIRST_PAID_KEY = "invite_rebate_first_paid";
+
+async function applyInviteCommission(tx: any, buyerUserId: string, amountCents: number) {
+  if (!amountCents || amountCents <= 0) return;
+
+  const [rebateRow, relRow] = await Promise.all([
+    tx.appSetting.findUnique({ where: { key: INVITE_REBATE_KEY } }),
+    tx.appSetting.findUnique({ where: { key: INVITE_REL_KEY } }),
+  ]);
+
+  const rebate = (rebateRow?.valueJson as any) ?? {};
+  if (!rebate?.enabled) return;
+
+  const relMap = ((relRow?.valueJson as any) ?? {}) as Record<string, { inviterUserId: string }>;
+  const inviterUserId = relMap[buyerUserId]?.inviterUserId;
+  if (!inviterUserId || inviterUserId === buyerUserId) return;
+
+  const rate1 = Number(rebate?.rate1 ?? 0);
+  if (!Number.isFinite(rate1) || rate1 <= 0) return;
+
+  const mode = rebate?.mode === "FIRST_ONLY" ? "FIRST_ONLY" : "LOOP";
+  if (mode === "FIRST_ONLY") {
+    const firstPaidRow = await tx.appSetting.findUnique({ where: { key: INVITE_FIRST_PAID_KEY } });
+    const paidMap = ((firstPaidRow?.valueJson as any) ?? {}) as Record<string, boolean>;
+    if (paidMap[buyerUserId]) return;
+
+    paidMap[buyerUserId] = true;
+    await tx.appSetting.upsert({
+      where: { key: INVITE_FIRST_PAID_KEY },
+      create: { key: INVITE_FIRST_PAID_KEY, valueJson: paidMap },
+      update: { valueJson: paidMap },
+    });
+  }
+
+  const commissionCents = Math.floor((amountCents * rate1) / 100);
+  if (commissionCents <= 0) return;
+
+  await tx.user.update({ where: { id: inviterUserId }, data: { balanceCents: { increment: commissionCents } } });
+}
+
 export async function POST(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -74,6 +116,8 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
       }
 
       await tx.serviceOrder.update({ where: { id: order.id }, data: { status: "PAID", paidAt: now } });
+
+      await applyInviteCommission(tx, user.id, order.amountCents ?? 0);
 
       return { id: order.id, planId: order.planId, activeSubId };
     });
