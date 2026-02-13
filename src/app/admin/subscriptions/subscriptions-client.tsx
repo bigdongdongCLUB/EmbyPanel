@@ -183,25 +183,37 @@ export function SubscriptionsClient() {
 
     const hasAnyPrice = [edit.monthlyPrice, edit.quarterlyPrice, edit.halfYearlyPrice, edit.yearlyPrice, edit.twoYearlyPrice].some((v) => v.trim().length > 0);
 
-    // 试用必须同时填：价格 + 天数 才启用
+    // 试用规则：
+    // - 天数=0 表示关闭试用（可单独设置，不要求价格）
+    // - 其他情况仍需“价格+天数”同时填写才启用
     const trialPriceFilled = edit.trialPrice.trim().length > 0;
-    const trialDaysFilled = edit.trialDays.trim().length > 0;
+    const trialDaysRaw = edit.trialDays.trim();
+    const trialDaysFilled = trialDaysRaw.length > 0;
+    const trialDaysIsNumber = !trialDaysFilled || /^[0-9]+$/.test(trialDaysRaw);
+    if (!trialDaysIsNumber) return false;
+    const trialDaysNum = trialDaysFilled ? Number(trialDaysRaw) : null;
+    const trialDisableByZero = trialDaysFilled && Number.isFinite(trialDaysNum) && trialDaysNum === 0;
+
     const trialEnabled = trialPriceFilled || trialDaysFilled;
-    if (trialEnabled && !(trialPriceFilled && trialDaysFilled)) return false;
+    if (!trialDisableByZero && trialEnabled && !(trialPriceFilled && trialDaysFilled)) return false;
 
     // Paid prices: required on create; optional on edit.
     if (isCreate && !hasAnyPrice) return false;
 
-    for (const f of [edit.monthlyPrice, edit.quarterlyPrice, edit.halfYearlyPrice, edit.yearlyPrice, edit.twoYearlyPrice, edit.trialPrice]) {
+    // 若天数=0（关闭试用），试用价格允许忽略；否则校验试用价格格式
+    const priceFields = trialDisableByZero
+      ? [edit.monthlyPrice, edit.quarterlyPrice, edit.halfYearlyPrice, edit.yearlyPrice, edit.twoYearlyPrice]
+      : [edit.monthlyPrice, edit.quarterlyPrice, edit.halfYearlyPrice, edit.yearlyPrice, edit.twoYearlyPrice, edit.trialPrice];
+
+    for (const f of priceFields) {
       const c = yuanIntToCents(f);
       if (c === null) continue;
       if (Number.isNaN(c)) return false;
     }
 
     if (trialDaysFilled) {
-      if (!/^[0-9]+$/.test(edit.trialDays.trim())) return false;
-      const d = Number(edit.trialDays.trim());
-      if (!Number.isFinite(d) || d <= 0) return false;
+      const d = Number(trialDaysRaw);
+      if (!Number.isFinite(d) || d < 0) return false;
     }
 
     return true;
@@ -219,13 +231,20 @@ export function SubscriptionsClient() {
     try {
       const pricing: any = {};
 
-      const trialC = yuanIntToCents(cur.trialPrice);
-      const trialD = cur.trialDays.trim() ? Number(cur.trialDays.trim()) : null;
-      const trialEnabled = cur.trialPrice.trim() || cur.trialDays.trim();
-      if (trialEnabled) {
-        if (trialC === null || Number.isNaN(trialC)) throw new Error("trial_price_invalid");
-        if (trialD === null || !Number.isFinite(trialD) || trialD <= 0) throw new Error("trial_days_invalid");
-        pricing.trial = { priceCents: trialC, days: trialD };
+      const trialDaysRaw = cur.trialDays.trim();
+      const trialD = trialDaysRaw ? Number(trialDaysRaw) : null;
+      const trialDisableByZero = trialDaysRaw.length > 0 && Number.isFinite(trialD) && trialD === 0;
+      const trialEnabledInput = cur.trialPrice.trim() || trialDaysRaw;
+
+      if (trialEnabledInput) {
+        if (trialDaysRaw.length > 0 && !/^[0-9]+$/.test(trialDaysRaw)) throw new Error("trial_days_invalid");
+
+        if (!trialDisableByZero) {
+          const trialC = yuanIntToCents(cur.trialPrice);
+          if (trialC === null || Number.isNaN(trialC)) throw new Error("trial_price_invalid");
+          if (trialD === null || !Number.isFinite(trialD) || trialD <= 0) throw new Error("trial_days_invalid");
+          pricing.trial = { priceCents: trialC, days: trialD };
+        }
       }
 
       const setPrice = (key: string, v: string) => {
