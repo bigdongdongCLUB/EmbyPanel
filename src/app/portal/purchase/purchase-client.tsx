@@ -153,9 +153,11 @@ export function PortalPurchaseClient() {
         {plans.map((p) => {
           const main = pickMainPrice(p);
           return (
-            <div key={p.id} className="relative border rounded-xl p-3 space-y-2.5 bg-white shadow-sm max-w-[320px]">
-              {p.prices.trialYuan !== null ? <div className="absolute right-2.5 top-2.5 text-xs text-red-500">可试用</div> : null}
-              <div className="text-2xl font-semibold pr-12">{p.name}</div>
+            <div key={p.id} className="border rounded-xl p-3 space-y-2.5 bg-white shadow-sm max-w-[320px]">
+              <div className="flex items-start justify-between gap-2">
+                <div className="text-2xl font-semibold leading-tight">{p.name}</div>
+                {p.prices.trialYuan !== null ? <div className="text-xs text-red-500 shrink-0 pt-0.5">可试用</div> : null}
+              </div>
 
               <div className="flex items-end gap-2">
                 <span className="text-4xl font-bold">¥{main.price}</span>
