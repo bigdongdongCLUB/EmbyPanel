@@ -32,6 +32,17 @@ body {
   line-height: 1.2;
 }
 
+/* 面板统一边框色：黑描边改为淡灰 */
+.panel-compact .border,
+.panel-compact .border-t,
+.panel-compact .border-r,
+.panel-compact .border-b,
+.panel-compact .border-l,
+.panel-compact .border-x,
+.panel-compact .border-y {
+  border-color: rgb(229 231 235) !important; /* border-gray-200 */
+}
+
 .panel-compact input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
 .panel-compact select,
 .panel-compact button {
