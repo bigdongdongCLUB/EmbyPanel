@@ -411,6 +411,8 @@ export function UsersClient() {
                 <td className="py-2 px-3">
                   {r.subscriptionStatus && (r.subscriptionStatus === "有效" || r.subscriptionStatus === "ACTIVE") ? (
                     <span className="inline-flex items-center rounded border border-green-200 bg-green-50 text-green-700 px-2 py-0.5 text-xs font-medium">有效</span>
+                  ) : r.subscriptionStatus && (r.subscriptionStatus === "已过期" || r.subscriptionStatus === "EXPIRED") ? (
+                    <span className="inline-flex items-center rounded border border-red-200 bg-red-50 text-red-600 px-2 py-0.5 text-xs font-medium">已过期</span>
                   ) : (
                     <span className="inline-flex items-center rounded border border-gray-300 bg-gray-50 text-gray-600 px-2 py-0.5 text-xs font-medium">{dash(r.subscriptionStatus)}</span>
                   )}
