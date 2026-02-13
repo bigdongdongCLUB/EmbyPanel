@@ -3,6 +3,7 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  color-scheme: light;
 }
 
 @theme inline {
@@ -12,12 +13,9 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* 说明：管理/用户面板当前采用固定浅色主题。
+   iOS Safari 在深色模式下会触发 prefers-color-scheme: dark，
+   导致浅色卡片上文字变浅看不清。这里先禁用自动深色反转。 */
 
 body {
   background: var(--background);
