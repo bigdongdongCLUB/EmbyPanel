@@ -89,18 +89,6 @@ export function MailTemplatesClient() {
       <div className="border rounded-lg bg-white p-6 space-y-5">
         <div className="flex items-center justify-between">
           <div className="text-lg font-semibold">邮件模板管理</div>
-          <div className="flex gap-2">
-            <select className="border rounded px-3 py-2 text-sm" value={activeKey} onChange={(e) => setActiveKey(e.target.value)}>
-              {ORDER.map((k) => (
-                <option key={k} value={k}>
-                  {LABELS[k]}
-                </option>
-              ))}
-            </select>
-            <button className="border rounded px-3 py-2 text-sm" onClick={refresh}>
-              刷新
-            </button>
-          </div>
         </div>
 
         <div className="flex gap-5 border-b overflow-auto whitespace-nowrap text-sm">
