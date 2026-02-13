@@ -36,7 +36,7 @@ export function AdminSidebarClient({
 }) {
   return (
     <aside className={(collapsed ? "w-16" : "w-60") + " fixed inset-y-0 left-0 bg-[#0b1220] text-white flex flex-col z-30"}>
-      <div className="h-16 flex items-center justify-center px-2 border-b border-white/5">
+      <div className="h-16 flex items-center justify-center px-2 border-b border-gray-300/20">
         <Link href="/admin" className="flex items-center gap-2 min-w-0">
           <img src={siteLogoDataUrl || "/logo.png"} alt="logo" className="h-8 w-8 rounded-full object-cover shrink-0" />
           {!collapsed ? <span className="font-semibold text-2xl tracking-wide leading-none text-center truncate">{siteName || "EmbyPanel"}</span> : null}
@@ -48,7 +48,7 @@ export function AdminSidebarClient({
           <Item href="/admin" label="仪表盘" icon="/icons/dashboard.svg" collapsed={collapsed} />
         </div>
 
-        <div className="my-3 border-t border-white/5" />
+        <div className="my-3 border-t border-gray-300/20" />
 
         <div className="space-y-1">
           <Item href="/admin/users" label="用户管理" icon="/icons/users.svg" collapsed={collapsed} />
@@ -57,7 +57,7 @@ export function AdminSidebarClient({
           <Item href="/admin/monitoring" label="统计监控" icon="/icons/monitoring.svg" collapsed={collapsed} />
         </div>
 
-        <div className="my-3 border-t border-white/5" />
+        <div className="my-3 border-t border-gray-300/20" />
 
         <div className="space-y-1">
           <Item href="/admin/cards" label="卡密管理" icon="/icons/cards.svg" collapsed={collapsed} />
@@ -66,10 +66,10 @@ export function AdminSidebarClient({
           <Item href="/admin/settings" label="系统设置" icon="/icons/settings.svg" collapsed={collapsed} />
         </div>
 
-        <div className="my-3 border-t border-white/5" />
+        <div className="my-3 border-t border-gray-300/20" />
       </nav>
 
-      <div className="p-3 border-t border-white/5 text-xs text-white/65 text-center">{collapsed ? (username || "U").slice(0, 1) : username}</div>
+      <div className="p-3 border-t border-gray-300/20 text-xs text-white/65 text-center">{collapsed ? (username || "U").slice(0, 1) : username}</div>
     </aside>
   );
 }
