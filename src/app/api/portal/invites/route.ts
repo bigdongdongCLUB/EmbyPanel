@@ -30,6 +30,20 @@ function fmtYmd(v?: Date | string | null) {
   return d.toISOString().slice(0, 10);
 }
 
+function getPlanPriceCents(pricingJson: any, payCycle?: string | null): number {
+  const keyMap: Record<string, string> = {
+    TRIAL: "trial",
+    MONTHLY: "monthly",
+    QUARTERLY: "quarterly",
+    HALF_YEARLY: "halfYearly",
+    YEARLY: "yearly",
+    TWO_YEARLY: "twoYearly",
+  };
+  const key = keyMap[String(payCycle || "MONTHLY")] || "monthly";
+  const n = Number(pricingJson?.[key]?.priceCents ?? 0);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+}
+
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -63,7 +77,7 @@ export async function GET() {
     return NextResponse.json({ ok: true, inviteCode, rows: [] });
   }
 
-  const [invitedUsers, paidOrders] = await Promise.all([
+  const [invitedUsers, paidOrders, subscriptions] = await Promise.all([
     prisma.user.findMany({
       where: { id: { in: invitedUserIds } },
       select: { id: true, username: true, createdAt: true },
@@ -77,7 +91,17 @@ export async function GET() {
         amountCents: true,
         createdAt: true,
         paidAt: true,
-        plan: { select: { name: true } },
+        plan: { select: { name: true, pricingJson: true } },
+      },
+    }),
+    prisma.subscription.findMany({
+      where: { userId: { in: invitedUserIds } },
+      orderBy: [{ createdAt: "asc" }],
+      select: {
+        userId: true,
+        payCycle: true,
+        createdAt: true,
+        plan: { select: { name: true, pricingJson: true } },
       },
     }),
   ]);
@@ -89,19 +113,40 @@ export async function GET() {
     latestPaidByUser.set(o.userId, o);
   }
 
+  const firstSubByUser = new Map<string, (typeof subscriptions)[number]>();
+  const latestSubByUser = new Map<string, (typeof subscriptions)[number]>();
+  for (const s of subscriptions) {
+    if (!firstSubByUser.has(s.userId)) firstSubByUser.set(s.userId, s);
+    latestSubByUser.set(s.userId, s);
+  }
+
   const rows = invitedUsers
     .map((u) => {
       const firstOrder = firstPaidByUser.get(u.id);
       const latestOrder = latestPaidByUser.get(u.id);
-      const o = rebateMode === "FIRST_ONLY" ? firstOrder : latestOrder;
-      const rebateAmountYuan = o && rebateEnabled ? (((o.amountCents ?? 0) / 100) * (Number.isFinite(rate1) ? rate1 : 0)) / 100 : 0;
+      const firstSub = firstSubByUser.get(u.id);
+      const latestSub = latestSubByUser.get(u.id);
+
+      const orderRef = rebateMode === "FIRST_ONLY" ? firstOrder : latestOrder;
+      const subRef = rebateMode === "FIRST_ONLY" ? firstSub : latestSub;
+
+      const planName = orderRef?.plan?.name ?? subRef?.plan?.name ?? "-";
+      const payCycle = orderRef?.payCycle ?? subRef?.payCycle ?? null;
+
+      const amountCents =
+        Number(orderRef?.amountCents ?? 0) > 0
+          ? Number(orderRef?.amountCents ?? 0)
+          : getPlanPriceCents(subRef?.plan?.pricingJson, payCycle);
+
+      const rebateAmountYuan = rebateEnabled ? ((amountCents / 100) * (Number.isFinite(rate1) ? rate1 : 0)) / 100 : 0;
+
       return {
         invitedUsername: u.username,
         registerDate: fmtYmd(u.createdAt),
-        planName: o?.plan?.name ?? "-",
-        payCycle: payCycleText(o?.payCycle),
-        paidAt: fmtYmd(o?.paidAt ?? o?.createdAt ?? null),
-        rebateAmount: o ? rebateAmountYuan.toFixed(2) : "0.00",
+        planName,
+        payCycle: payCycleText(payCycle),
+        paidAt: fmtYmd(orderRef?.paidAt ?? orderRef?.createdAt ?? subRef?.createdAt ?? null),
+        rebateAmount: amountCents > 0 ? rebateAmountYuan.toFixed(2) : "0.00",
       };
     })
     .sort((a, b) => b.registerDate.localeCompare(a.registerDate));
