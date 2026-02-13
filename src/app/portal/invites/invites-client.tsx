@@ -43,16 +43,56 @@ export function InvitesClient() {
       <div className="border rounded-lg bg-white p-4">
         <div className="text-sm text-gray-600 mb-2">分享您的邀请码给朋友，邀请他们加入</div>
         <div className="flex items-center gap-2">
-          <div className="flex-1 border rounded px-3 py-2 bg-gray-50 font-mono text-blue-600 text-lg">{inviteCode || "-"}</div>
+          <div
+            className="flex-1 border rounded px-3 py-2 bg-gray-50 font-mono text-blue-600 text-lg cursor-text"
+            onClick={() => {
+              const text = inviteCode || "";
+              if (!text) return;
+              try {
+                const range = document.createRange();
+                const sel = window.getSelection();
+                range.selectNodeContents(document.getElementById("invite-code-text")!);
+                sel?.removeAllRanges();
+                sel?.addRange(range);
+              } catch {}
+            }}
+          >
+            <span id="invite-code-text">{inviteCode || "-"}</span>
+          </div>
           <button
             className="bg-blue-600 text-white rounded px-3 py-2 text-sm"
             onClick={async () => {
-              try {
-                await navigator.clipboard.writeText(inviteCode);
-                alert("邀请码已复制");
-              } catch {
-                alert("复制失败，请手动复制");
+              const text = inviteCode || "";
+              if (!text) {
+                alert("邀请码为空");
+                return;
               }
+
+              let copied = false;
+              try {
+                if (navigator.clipboard?.writeText) {
+                  await navigator.clipboard.writeText(text);
+                  copied = true;
+                }
+              } catch {}
+
+              if (!copied) {
+                try {
+                  const ta = document.createElement("textarea");
+                  ta.value = text;
+                  ta.style.position = "fixed";
+                  ta.style.opacity = "0";
+                  document.body.appendChild(ta);
+                  ta.focus();
+                  ta.select();
+                  copied = document.execCommand("copy");
+                  document.body.removeChild(ta);
+                } catch {
+                  copied = false;
+                }
+              }
+
+              alert(copied ? "邀请码已复制" : "复制失败，请手动复制");
             }}
           >
             复制邀请码
