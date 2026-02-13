@@ -180,10 +180,6 @@ export function PortalPurchaseClient() {
       {modalOpen ? (
         <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4">
           <div className="w-full max-w-3xl max-h-[85vh] overflow-auto rounded-lg bg-white p-4 space-y-4">
-            <div className="flex justify-end">
-              <button className="text-2xl text-gray-500 hover:text-gray-700 leading-none" onClick={() => setModalOpen(false)}>×</button>
-            </div>
-
             {step === "plan" ? (
               <div className="space-y-4">
                 <h2 className="text-xl font-semibold">购买信息</h2>
@@ -253,6 +249,10 @@ export function PortalPurchaseClient() {
                     >
                       创建订单 ¥{currentCycle?.priceYuan ?? 0}
                     </button>
+
+                    <button className="w-full border rounded-xl px-4 py-3 text-xl" onClick={() => setModalOpen(false)}>
+                      取消
+                    </button>
                   </div>
                 </div>
               </div>
@@ -318,6 +318,10 @@ export function PortalPurchaseClient() {
                         }}
                       >
                         取消订单
+                      </button>
+
+                      <button className="w-full border rounded-xl px-4 py-3 text-xl" onClick={() => setModalOpen(false)}>
+                        取消
                       </button>
                     </div>
                   </>
