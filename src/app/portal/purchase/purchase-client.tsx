@@ -144,28 +144,28 @@ export function PortalPurchaseClient() {
       {error ? <div className="text-sm text-red-600">{error}</div> : null}
       {loading ? <div className="text-sm text-gray-500">加载中…</div> : null}
 
-      <div className="text-center py-2">
-        <div className="text-2xl font-semibold">选择适合你的服务计划</div>
-        <div className="text-xs text-gray-500 mt-1">选择计划后，您可以查看详细的服务列表和支付方式。</div>
+      <div className="text-center py-2.5">
+        <div className="text-[28px] font-semibold">选择适合你的服务计划</div>
+        <div className="text-sm text-gray-500 mt-1">选择计划后，您可以查看详细的服务列表和支付方式。</div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {plans.map((p) => {
           const main = pickMainPrice(p);
           return (
-            <div key={p.id} className="relative border rounded-xl p-2.5 space-y-2 bg-white shadow-sm max-w-[280px]">
-              {p.prices.trialYuan !== null ? <div className="absolute right-2 top-2 text-[11px] text-red-500">可试用</div> : null}
-              <div className="text-xl font-semibold pr-12">{p.name}</div>
+            <div key={p.id} className="relative border rounded-xl p-3 space-y-2.5 bg-white shadow-sm max-w-[320px]">
+              {p.prices.trialYuan !== null ? <div className="absolute right-2.5 top-2.5 text-xs text-red-500">可试用</div> : null}
+              <div className="text-2xl font-semibold pr-12">{p.name}</div>
 
-              <div className="flex items-end gap-1.5">
-                <span className="text-3xl font-bold">¥{main.price}</span>
-                <span className="text-xs text-gray-500 pb-0.5">/{main.cycle}</span>
+              <div className="flex items-end gap-2">
+                <span className="text-4xl font-bold">¥{main.price}</span>
+                <span className="text-sm text-gray-500 pb-0.5">/{main.cycle}</span>
               </div>
 
-              <div className="text-xs text-gray-500">起，更多周期可选</div>
-              {p.description ? <div className="text-xs text-gray-600 whitespace-pre-wrap">{p.description}</div> : null}
+              <div className="text-sm text-gray-500">起，更多周期可选</div>
+              {p.description ? <div className="text-sm text-gray-600 whitespace-pre-wrap">{p.description}</div> : null}
 
-              <button className="w-full text-center bg-blue-600 text-white rounded px-2 py-1.5 text-xs" onClick={() => openPlanModal(p.id)}>
+              <button className="w-full text-center bg-blue-600 text-white rounded px-2.5 py-2 text-sm" onClick={() => openPlanModal(p.id)}>
                 🛒 立即购买
               </button>
             </div>
