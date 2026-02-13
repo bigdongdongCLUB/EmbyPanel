@@ -4,17 +4,27 @@ import { useEffect, useMemo, useState } from "react";
 
 function ImeInput({ value, onChange, ...props }: any) {
   const [composing, setComposing] = useState(false);
+  const [localValue, setLocalValue] = useState(value ?? "");
+
+  useEffect(() => {
+    setLocalValue(value ?? "");
+  }, [value]);
+
   return (
     <input
       {...props}
-      value={value}
+      value={localValue}
       onCompositionStart={() => setComposing(true)}
       onCompositionEnd={(e) => {
+        const v = e.currentTarget.value;
         setComposing(false);
-        onChange(e.currentTarget.value);
+        setLocalValue(v);
+        onChange(v);
       }}
       onChange={(e) => {
-        if (!composing) onChange(e.target.value);
+        const v = e.target.value;
+        setLocalValue(v);
+        if (!composing) onChange(v);
       }}
     />
   );
@@ -22,17 +32,27 @@ function ImeInput({ value, onChange, ...props }: any) {
 
 function ImeTextarea({ value, onChange, ...props }: any) {
   const [composing, setComposing] = useState(false);
+  const [localValue, setLocalValue] = useState(value ?? "");
+
+  useEffect(() => {
+    setLocalValue(value ?? "");
+  }, [value]);
+
   return (
     <textarea
       {...props}
-      value={value}
+      value={localValue}
       onCompositionStart={() => setComposing(true)}
       onCompositionEnd={(e) => {
+        const v = e.currentTarget.value;
         setComposing(false);
-        onChange(e.currentTarget.value);
+        setLocalValue(v);
+        onChange(v);
       }}
       onChange={(e) => {
-        if (!composing) onChange(e.target.value);
+        const v = e.target.value;
+        setLocalValue(v);
+        if (!composing) onChange(v);
       }}
     />
   );
@@ -151,12 +171,12 @@ export function AnnouncementsClient() {
 
             <div>
               <label className="text-sm">公告标题</label>
-              <ImeInput className="mt-1 w-full border rounded px-3 py-2" value={title} onChange={setTitle} placeholder="请输入公告标题" />
+              <ImeInput key={`title-${editId ?? 'new'}`} className="mt-1 w-full border rounded px-3 py-2" value={title} onChange={setTitle} placeholder="请输入公告标题" />
             </div>
 
             <div>
               <label className="text-sm">公告内容</label>
-              <ImeTextarea className="mt-1 w-full border rounded px-3 py-2 min-h-[220px]" value={content} onChange={setContent} placeholder="请输入公告内容" />
+              <ImeTextarea key={`content-${editId ?? 'new'}`} className="mt-1 w-full border rounded px-3 py-2 min-h-[220px]" value={content} onChange={setContent} placeholder="请输入公告内容" />
             </div>
 
             <div className="flex gap-2">
