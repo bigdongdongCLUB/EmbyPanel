@@ -71,7 +71,10 @@ export async function GET() {
   const rebate = (rebateRow?.valueJson as any) ?? {};
   const rebateEnabled = !!rebate.enabled;
   const rebateMode = rebate.mode === "FIRST_ONLY" ? "FIRST_ONLY" : "LOOP";
+  const rebateLevel = Math.min(3, Math.max(1, Number(rebate.level ?? 3)));
   const rate1 = Number(rebate.rate1 ?? 0);
+  const rate2 = Number(rebate.rate2 ?? 0);
+  const rate3 = Number(rebate.rate3 ?? 0);
   const enabledAtMs = (() => {
     const v = rebate.enabledAt || rebateRow?.updatedAt;
     const t = v ? new Date(v).getTime() : NaN;
@@ -79,7 +82,12 @@ export async function GET() {
   })();
 
   if (!invitedUserIds.length) {
-    return NextResponse.json({ ok: true, inviteCode, rows: [] });
+    return NextResponse.json({
+      ok: true,
+      inviteCode,
+      rebatePolicy: { enabled: rebateEnabled, mode: rebateMode, level: rebateLevel, rate1, rate2, rate3 },
+      rows: [],
+    });
   }
 
   const [invitedUsers, paidOrders, subscriptions] = await Promise.all([
@@ -163,5 +171,10 @@ export async function GET() {
     })
     .sort((a, b) => b.registerDate.localeCompare(a.registerDate));
 
-  return NextResponse.json({ ok: true, inviteCode, rows });
+  return NextResponse.json({
+    ok: true,
+    inviteCode,
+    rebatePolicy: { enabled: rebateEnabled, mode: rebateMode, level: rebateLevel, rate1, rate2, rate3 },
+    rows,
+  });
 }

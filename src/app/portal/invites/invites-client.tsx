@@ -11,10 +11,20 @@ type Row = {
   rebateAmount: string;
 };
 
+type RebatePolicy = {
+  enabled: boolean;
+  mode: "LOOP" | "FIRST_ONLY";
+  level: number;
+  rate1: number;
+  rate2: number;
+  rate3: number;
+};
+
 export function InvitesClient() {
   const [loading, setLoading] = useState(true);
   const [inviteCode, setInviteCode] = useState("");
   const [rows, setRows] = useState<Row[]>([]);
+  const [rebatePolicy, setRebatePolicy] = useState<RebatePolicy | null>(null);
 
   async function refresh() {
     setLoading(true);
@@ -24,6 +34,7 @@ export function InvitesClient() {
       if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
       setInviteCode(json.inviteCode || "");
       setRows(json.rows || []);
+      setRebatePolicy(json.rebatePolicy || null);
     } catch (e: any) {
       alert(e?.message || "load_failed");
     } finally {
@@ -115,6 +126,24 @@ export function InvitesClient() {
             重新生成
           </button>
         </div>
+      </div>
+
+      <div className="rounded border border-amber-200 bg-amber-50 p-4 text-sm">
+        <div className="font-medium mb-2">返利计算示例</div>
+        <div>
+          返利模式：{rebatePolicy?.mode === "FIRST_ONLY" ? "仅首次返利" : "循环返利"}；
+          {rebatePolicy?.enabled ? "已开启" : "未开启"}
+        </div>
+        <div className="mt-1">假设被邀请用户购买 ¥300 订阅：</div>
+        <ul className="list-disc pl-5 mt-1 space-y-1">
+          <li>一级邀请人：¥300 × {rebatePolicy?.rate1 ?? 0}% = ¥{(((rebatePolicy?.rate1 ?? 0) * 300) / 100).toFixed(2)}</li>
+          {(rebatePolicy?.level ?? 1) >= 2 ? (
+            <li>二级邀请人：¥300 × {rebatePolicy?.rate2 ?? 0}% = ¥{(((rebatePolicy?.rate2 ?? 0) * 300) / 100).toFixed(2)}</li>
+          ) : null}
+          {(rebatePolicy?.level ?? 1) >= 3 ? (
+            <li>三级邀请人：¥300 × {rebatePolicy?.rate3 ?? 0}% = ¥{(((rebatePolicy?.rate3 ?? 0) * 300) / 100).toFixed(2)}</li>
+          ) : null}
+        </ul>
       </div>
 
       <div className="border rounded-lg bg-white overflow-auto">
