@@ -15,6 +15,7 @@ const Schema = z.object({
   rate1: z.coerce.number().min(0).max(100).default(10),
   rate2: z.coerce.number().min(0).max(100).default(5),
   rate3: z.coerce.number().min(0).max(100).default(2),
+  enabledAt: z.string().datetime().optional(),
 });
 
 const DEFAULTS = {
@@ -40,6 +41,7 @@ export async function GET() {
     rate1: raw.rate1 ?? DEFAULTS.rate1,
     rate2: raw.rate2 ?? DEFAULTS.rate2,
     rate3: raw.rate3 ?? DEFAULTS.rate3,
+    enabledAt: raw.enabledAt,
   });
 
   const data = parsed.success ? parsed.data : DEFAULTS;
@@ -56,10 +58,16 @@ export async function PATCH(req: Request) {
 
   const p = parsed.data;
 
+  const current = await prisma.appSetting.findUnique({ where: { key: KEY } });
+  const cur = (current?.valueJson as any) ?? {};
+  const enabledAt = p.enabled
+    ? (cur.enabledAt || (cur.enabled ? undefined : new Date().toISOString()) || p.enabledAt || new Date().toISOString())
+    : cur.enabledAt;
+
   await prisma.appSetting.upsert({
     where: { key: KEY },
-    create: { key: KEY, valueJson: p },
-    update: { valueJson: p },
+    create: { key: KEY, valueJson: { ...p, enabledAt: enabledAt ?? null } },
+    update: { valueJson: { ...p, enabledAt: enabledAt ?? null } },
   });
 
   return NextResponse.json({ ok: true });

@@ -72,6 +72,11 @@ export async function GET() {
   const rebateEnabled = !!rebate.enabled;
   const rebateMode = rebate.mode === "FIRST_ONLY" ? "FIRST_ONLY" : "LOOP";
   const rate1 = Number(rebate.rate1 ?? 0);
+  const enabledAtMs = (() => {
+    const v = rebate.enabledAt || rebateRow?.updatedAt;
+    const t = v ? new Date(v).getTime() : NaN;
+    return Number.isFinite(t) ? t : null;
+  })();
 
   if (!invitedUserIds.length) {
     return NextResponse.json({ ok: true, inviteCode, rows: [] });
@@ -138,7 +143,14 @@ export async function GET() {
           ? Number(orderRef?.amountCents ?? 0)
           : getPlanPriceCents(subRef?.plan?.pricingJson, payCycle);
 
-      const rebateAmountYuan = rebateEnabled ? ((amountCents / 100) * (Number.isFinite(rate1) ? rate1 : 0)) / 100 : 0;
+      const invitedAtMs = (() => {
+        const v = relMap[u.id]?.createdAt;
+        const t = v ? new Date(v).getTime() : NaN;
+        return Number.isFinite(t) ? t : null;
+      })();
+      const eligibleByTime = enabledAtMs ? !!(invitedAtMs && invitedAtMs >= enabledAtMs) : true;
+
+      const rebateAmountYuan = rebateEnabled && eligibleByTime ? ((amountCents / 100) * (Number.isFinite(rate1) ? rate1 : 0)) / 100 : 0;
 
       return {
         invitedUsername: u.username,
