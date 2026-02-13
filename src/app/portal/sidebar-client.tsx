@@ -35,6 +35,7 @@ export function PortalSidebarClient({ collapsed }: { collapsed?: boolean }) {
         <div className="space-y-1">
           <Item href="/portal" label="仪表盘" icon="/icons/dashboard.svg" collapsed={collapsed} />
           <Item href="/portal/purchase" label="购买服务" icon="/icons/purchase.svg" collapsed={collapsed} />
+          <Item href="/portal/invites" label="我的邀请" icon="/icons/users.svg" collapsed={collapsed} />
           <Item href="/portal/emby-services" label="Emby 服务" icon="/icons/emby-services.svg" collapsed={collapsed} />
         </div>
       </nav>
