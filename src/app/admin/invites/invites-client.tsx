@@ -49,25 +49,25 @@ export function InvitesAdminClient() {
       {loading ? <div className="text-sm text-gray-500">加载中…</div> : null}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="border rounded-lg bg-white p-4">
+        <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-4">
           <div className="text-sm text-gray-500">30日被邀请用户数</div>
-          <div className="text-2xl font-semibold mt-1">{summary?.invitedUsers30d ?? 0}</div>
+          <div className="text-2xl font-semibold mt-1 text-gray-900">{summary?.invitedUsers30d ?? 0}</div>
         </div>
-        <div className="border rounded-lg bg-white p-4">
+        <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-4">
           <div className="text-sm text-gray-500">30日总返利金额</div>
-          <div className="text-2xl font-semibold mt-1">¥{summary?.totalRebate30dYuan ?? "0.00"}</div>
+          <div className="text-2xl font-semibold mt-1 text-gray-900">¥{summary?.totalRebate30dYuan ?? "0.00"}</div>
         </div>
-        <div className="border rounded-lg bg-white p-4">
+        <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-4">
           <div className="text-sm text-gray-500">TOP邀请人</div>
-          <div className="text-2xl font-semibold mt-1">{summary?.topInviter?.username ?? "-"}</div>
+          <div className="text-2xl font-semibold mt-1 text-gray-900">{summary?.topInviter?.username ?? "-"}</div>
           <div className="text-sm text-gray-500 mt-1">返利 ¥{summary?.topInviter?.amountYuan ?? "0.00"}</div>
         </div>
       </div>
 
-      <div className="border rounded-lg bg-white overflow-auto">
-        <div className="px-4 py-3 border-b font-medium">返利记录</div>
+      <div className="rounded-xl border border-gray-200 bg-white overflow-auto">
+        <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 font-medium">返利记录</div>
         <table className="min-w-[980px] w-full text-sm">
-          <thead className="border-b text-left text-gray-600">
+          <thead className="border-b border-gray-200 bg-gray-50/80 text-left text-gray-600">
             <tr>
               <th className="px-3 py-2">邀请人</th>
               <th className="px-3 py-2">被邀请人</th>
@@ -80,7 +80,7 @@ export function InvitesAdminClient() {
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.id} className="border-b last:border-b-0">
+              <tr key={r.id} className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50/60">
                 <td className="px-3 py-2">{r.inviter}</td>
                 <td className="px-3 py-2">{r.invited}</td>
                 <td className="px-3 py-2">{r.level}</td>
