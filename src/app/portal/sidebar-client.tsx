@@ -22,12 +22,13 @@ function Item({ href, label, icon, collapsed }: { href: string; label: string; i
   );
 }
 
-export function PortalSidebarClient({ collapsed }: { collapsed?: boolean }) {
+export function PortalSidebarClient({ collapsed, siteName, siteLogoDataUrl }: { collapsed?: boolean; siteName: string; siteLogoDataUrl: string | null }) {
   return (
     <aside className={(collapsed ? "w-16" : "w-60") + " fixed inset-y-0 left-0 bg-[#0b1220] text-white flex flex-col z-30"}>
-      <div className="h-16 flex items-center justify-center px-3 border-b border-white/10">
-        <Link href="/portal" className="font-semibold text-3xl tracking-wide leading-none text-center">
-          {collapsed ? "B" : "BestEmby"}
+      <div className="h-16 flex items-center justify-center px-2 border-b border-white/10">
+        <Link href="/portal" className="flex items-center gap-2 min-w-0">
+          {siteLogoDataUrl ? <img src={siteLogoDataUrl} alt="logo" className="h-8 w-8 rounded-full object-cover shrink-0" /> : null}
+          {!collapsed ? <span className="font-semibold text-2xl tracking-wide leading-none text-center truncate">{siteName}</span> : null}
         </Link>
       </div>
 
@@ -35,7 +36,7 @@ export function PortalSidebarClient({ collapsed }: { collapsed?: boolean }) {
         <div className="space-y-1">
           <Item href="/portal" label="仪表盘" icon="/icons/dashboard.svg" collapsed={collapsed} />
           <Item href="/portal/purchase" label="购买服务" icon="/icons/purchase.svg" collapsed={collapsed} />
-          <Item href="/portal/invites" label="我的邀请" icon="/icons/users.svg" collapsed={collapsed} />
+          <Item href="/portal/invites" label="我的邀请" icon="/icons/invites.svg" collapsed={collapsed} />
           <Item href="/portal/emby-services" label="Emby 服务" icon="/icons/emby-services.svg" collapsed={collapsed} />
         </div>
       </nav>

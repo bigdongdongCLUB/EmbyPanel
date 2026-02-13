@@ -6,7 +6,7 @@ import { PortalHeaderClient } from "./header-client";
 
 const KEY = "embypanel_portal_sidebar_collapsed";
 
-export function PortalFrameClient({ username, role, children }: { username: string; role: string; children: React.ReactNode }) {
+export function PortalFrameClient({ username, role, siteName, siteLogoDataUrl, children }: { username: string; role: string; siteName: string; siteLogoDataUrl: string | null; children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(true);
 
   useEffect(() => {
@@ -26,7 +26,7 @@ export function PortalFrameClient({ username, role, children }: { username: stri
 
   return (
     <div className="panel-compact min-h-screen bg-gray-50">
-      <PortalSidebarClient collapsed={collapsed} />
+      <PortalSidebarClient collapsed={collapsed} siteName={siteName} siteLogoDataUrl={siteLogoDataUrl} />
 
       <div className={collapsed ? "pl-16" : "pl-60"}>
         <header className="sticky top-0 z-20 h-14 bg-white border-b flex items-center justify-between px-3 md:px-4">

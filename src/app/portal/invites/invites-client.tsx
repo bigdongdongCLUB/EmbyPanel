@@ -8,6 +8,7 @@ type Row = {
   planName: string;
   payCycle: string;
   paidAt: string;
+  rebateAmount: string;
 };
 
 export function InvitesClient() {
@@ -84,6 +85,7 @@ export function InvitesClient() {
               <th className="px-3 py-2">注册时间</th>
               <th className="px-3 py-2">订阅计划</th>
               <th className="px-3 py-2">付费周期</th>
+              <th className="px-3 py-2">返利金额</th>
             </tr>
           </thead>
           <tbody>
@@ -93,11 +95,12 @@ export function InvitesClient() {
                 <td className="px-3 py-2">{r.registerDate}</td>
                 <td className="px-3 py-2">{r.planName}</td>
                 <td className="px-3 py-2">{r.payCycle}</td>
+                <td className="px-3 py-2">¥{r.rebateAmount}</td>
               </tr>
             ))}
             {!rows.length ? (
               <tr>
-                <td className="px-3 py-6 text-gray-500" colSpan={4}>暂无邀请购买记录</td>
+                <td className="px-3 py-6 text-gray-500" colSpan={5}>暂无邀请购买记录</td>
               </tr>
             ) : null}
           </tbody>

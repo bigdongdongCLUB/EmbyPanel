@@ -39,9 +39,10 @@ export async function GET() {
   const me = await prisma.user.findUnique({ where: { username }, select: { id: true, username: true } });
   if (!me) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
-  const [codeRow, relRow] = await Promise.all([
+  const [codeRow, relRow, rebateRow] = await Promise.all([
     prisma.appSetting.findUnique({ where: { key: CODE_MAP_KEY } }),
     prisma.appSetting.findUnique({ where: { key: REL_KEY } }),
+    prisma.appSetting.findUnique({ where: { key: "invite_rebate" } }),
   ]);
 
   const codeMap = ((codeRow?.valueJson as any) ?? {}) as Record<string, string>;
@@ -52,6 +53,11 @@ export async function GET() {
   const invitedUserIds = Object.entries(relMap)
     .filter(([, r]) => r?.inviterUserId === me.id)
     .map(([uid]) => uid);
+
+  const rebate = (rebateRow?.valueJson as any) ?? {};
+  const rebateEnabled = !!rebate.enabled;
+  const rebateMode = rebate.mode === "FIRST_ONLY" ? "FIRST_ONLY" : "LOOP";
+  const rate1 = Number(rebate.rate1 ?? 0);
 
   if (!invitedUserIds.length) {
     return NextResponse.json({ ok: true, inviteCode, rows: [] });
@@ -64,10 +70,11 @@ export async function GET() {
     }),
     prisma.serviceOrder.findMany({
       where: { userId: { in: invitedUserIds }, status: "PAID" },
-      orderBy: [{ paidAt: "desc" }, { createdAt: "desc" }],
+      orderBy: [{ paidAt: "asc" }, { createdAt: "asc" }],
       select: {
         userId: true,
         payCycle: true,
+        amountCents: true,
         createdAt: true,
         paidAt: true,
         plan: { select: { name: true } },
@@ -76,19 +83,25 @@ export async function GET() {
   ]);
 
   const firstPaidByUser = new Map<string, (typeof paidOrders)[number]>();
+  const latestPaidByUser = new Map<string, (typeof paidOrders)[number]>();
   for (const o of paidOrders) {
     if (!firstPaidByUser.has(o.userId)) firstPaidByUser.set(o.userId, o);
+    latestPaidByUser.set(o.userId, o);
   }
 
   const rows = invitedUsers
     .map((u) => {
-      const o = firstPaidByUser.get(u.id);
+      const firstOrder = firstPaidByUser.get(u.id);
+      const latestOrder = latestPaidByUser.get(u.id);
+      const o = rebateMode === "FIRST_ONLY" ? firstOrder : latestOrder;
+      const rebateAmountYuan = o && rebateEnabled ? (((o.amountCents ?? 0) / 100) * (Number.isFinite(rate1) ? rate1 : 0)) / 100 : 0;
       return {
         invitedUsername: u.username,
         registerDate: fmtYmd(u.createdAt),
         planName: o?.plan?.name ?? "-",
         payCycle: payCycleText(o?.payCycle),
         paidAt: fmtYmd(o?.paidAt ?? o?.createdAt ?? null),
+        rebateAmount: o ? rebateAmountYuan.toFixed(2) : "0.00",
       };
     })
     .sort((a, b) => b.registerDate.localeCompare(a.registerDate));
