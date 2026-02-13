@@ -62,6 +62,7 @@ export function AdminSidebarClient({
         <div className="space-y-1">
           <Item href="/admin/cards" label="卡密管理" icon="/icons/cards.svg" collapsed={collapsed} />
           <Item href="/admin/announcements" label="公告管理" icon="/icons/announcements.svg" collapsed={collapsed} />
+          <Item href="/admin/invites" label="邀请管理" icon="/icons/invite-manage.svg" collapsed={collapsed} />
           <Item href="/admin/settings" label="系统设置" icon="/icons/settings.svg" collapsed={collapsed} />
         </div>
 

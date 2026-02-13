@@ -52,6 +52,28 @@ async function applyInviteCommission(tx: any, buyerUserId: string, amountCents: 
   if (commissionCents <= 0) return;
 
   await tx.user.update({ where: { id: inviterUserId }, data: { balanceCents: { increment: commissionCents } } });
+
+  const recKey = "invite_rebate_records";
+  const recRow = await tx.appSetting.findUnique({ where: { key: recKey } });
+  const records = Array.isArray(recRow?.valueJson) ? ([...(recRow!.valueJson as any[])] as any[]) : [];
+  records.push({
+    id: crypto.randomUUID(),
+    inviterUserId,
+    invitedUserId: buyerUserId,
+    level: 1,
+    rate: rate1,
+    orderAmountCents: amountCents,
+    rebateAmountCents: commissionCents,
+    createdAt: new Date().toISOString(),
+    source: "CARD_REDEEM",
+  });
+  if (records.length > 5000) records.splice(0, records.length - 5000);
+
+  await tx.appSetting.upsert({
+    where: { key: recKey },
+    create: { key: recKey, valueJson: records },
+    update: { valueJson: records },
+  });
 }
 
 function getPlanPriceCents(pricingJson: any, payCycle?: string | null): number {
