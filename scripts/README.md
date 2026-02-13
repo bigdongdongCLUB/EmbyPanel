@@ -7,6 +7,7 @@ This folder contains background worker entrypoints.
 Runs a BullMQ repeatable job every 10 minutes and triggers:
 - Emby health check endpoint
 - subscription-expiry-disable endpoint
+- subscription-expiry-reminder endpoint
 - anomaly scan endpoint
 
 Env:

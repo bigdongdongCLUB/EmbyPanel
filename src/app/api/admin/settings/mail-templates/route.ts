@@ -7,16 +7,21 @@ import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
 
 const KEY = "mail_templates";
+const NOTICE_KEY = "subscription_notice";
 
 const TemplateSchema = z.object({
   subject: z.string().min(1).max(500),
   bodyHtml: z.string().min(1).max(100_000),
 });
 
-const SaveSchema = z.object({
+const SaveTemplateSchema = z.object({
   key: z.string().min(1),
   subject: z.string().min(1).max(500),
   bodyHtml: z.string().min(1).max(100_000),
+});
+
+const SaveNoticeSchema = z.object({
+  noticeDays: z.coerce.number().int().min(1).max(30),
 });
 
 const DEFAULT_TEMPLATES: Record<string, { label: string; subject: string; bodyHtml: string }> = {
@@ -274,10 +279,15 @@ export async function GET() {
   const auth = await requireAdmin();
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
-  const row = await prisma.appSetting.findUnique({ where: { key: KEY } });
+  const [row, noticeRow] = await Promise.all([
+    prisma.appSetting.findUnique({ where: { key: KEY } }),
+    prisma.appSetting.findUnique({ where: { key: NOTICE_KEY } }),
+  ]);
   const templates = mergeTemplates((row?.valueJson as any) ?? {});
+  const noticeDaysRaw = Number((noticeRow?.valueJson as any)?.noticeDays ?? 3);
+  const noticeDays = Number.isFinite(noticeDaysRaw) ? Math.min(30, Math.max(1, Math.floor(noticeDaysRaw))) : 3;
 
-  return NextResponse.json({ ok: true, data: { templates } });
+  return NextResponse.json({ ok: true, data: { templates, noticeDays } });
 }
 
 export async function PATCH(req: Request) {
@@ -285,7 +295,18 @@ export async function PATCH(req: Request) {
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   const json = await req.json().catch(() => null);
-  const parsed = SaveSchema.safeParse(json);
+
+  const noticeParsed = SaveNoticeSchema.safeParse(json);
+  if (noticeParsed.success) {
+    await prisma.appSetting.upsert({
+      where: { key: NOTICE_KEY },
+      create: { key: NOTICE_KEY, valueJson: { noticeDays: noticeParsed.data.noticeDays } },
+      update: { valueJson: { noticeDays: noticeParsed.data.noticeDays } },
+    });
+    return NextResponse.json({ ok: true });
+  }
+
+  const parsed = SaveTemplateSchema.safeParse(json);
   if (!parsed.success) return NextResponse.json({ error: "invalid_payload", issues: parsed.error.issues }, { status: 400 });
 
   const { key, subject, bodyHtml } = parsed.data;

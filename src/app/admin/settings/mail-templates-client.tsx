@@ -37,6 +37,7 @@ export function MailTemplatesClient() {
   const [activeKey, setActiveKey] = useState<string>("register_verify");
   const [subject, setSubject] = useState("");
   const [bodyHtml, setBodyHtml] = useState("");
+  const [noticeDays, setNoticeDays] = useState("3");
 
   async function refresh() {
     setLoading(true);
@@ -47,6 +48,7 @@ export function MailTemplatesClient() {
       if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
       const t = (json?.data?.templates ?? {}) as Record<string, Template>;
       setTemplates(t);
+      setNoticeDays(String(json?.data?.noticeDays ?? 3));
       const k = t[activeKey] ? activeKey : "register_verify";
       setActiveKey(k);
       setSubject(t[k]?.subject ?? "");
@@ -189,6 +191,45 @@ export function MailTemplatesClient() {
             ))}
           </div>
           <div className="text-xs text-gray-500 mt-2">注意：变量将在发送邮件时自动替换为实际值</div>
+        </div>
+
+        <div className="border rounded-lg p-4 space-y-3">
+          <div className="font-medium">订阅通知设置</div>
+          <div>
+            <label className="text-sm">订阅到期提醒天数</label>
+            <input
+              className="mt-1 w-full border rounded px-3 py-2"
+              value={noticeDays}
+              onChange={(e) => setNoticeDays(e.target.value.replace(/[^0-9]/g, ""))}
+              placeholder="例如 3"
+            />
+          </div>
+          <div>
+            <button
+              className="bg-blue-600 text-white rounded px-4 py-2"
+              onClick={async () => {
+                const d = Number(noticeDays || "0");
+                if (!Number.isFinite(d) || d < 1 || d > 30) {
+                  alert("提醒天数需在 1~30 之间");
+                  return;
+                }
+                const res = await fetch("/api/admin/settings/mail-templates", {
+                  method: "PATCH",
+                  headers: { "content-type": "application/json" },
+                  body: JSON.stringify({ noticeDays: d }),
+                });
+                const json = await res.json().catch(() => null);
+                if (!res.ok) {
+                  alert(json?.error || `HTTP ${res.status}`);
+                  return;
+                }
+                alert("保存设置成功");
+                await refresh();
+              }}
+            >
+              保存设置
+            </button>
+          </div>
         </div>
       </div>
     </div>
