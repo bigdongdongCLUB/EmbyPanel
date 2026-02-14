@@ -67,8 +67,6 @@ export function MonitoringAnomaliesClient() {
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [autoRefresh, setAutoRefresh] = useState(true);
-  const intervalSec = 120;
 
   const [loading, setLoading] = useState(false);
   const [runningScan, setRunningScan] = useState(false);
@@ -133,12 +131,6 @@ export function MonitoringAnomaliesClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serverId, rangeDays, q, page, pageSize]);
 
-  useEffect(() => {
-    if (!autoRefresh) return;
-    const t = setInterval(() => refresh(), intervalSec * 1000);
-    return () => clearInterval(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoRefresh, serverId, rangeDays, q, page, pageSize]);
 
   return (
     <div className="space-y-4">
@@ -179,10 +171,6 @@ export function MonitoringAnomaliesClient() {
           {runningScan ? "检测中..." : "立即检测"}
         </button>
 
-        <label className="flex items-center gap-2 text-sm text-gray-700 ml-2">
-          自动刷新（{intervalSec}秒）
-          <input type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} />
-        </label>
 
         {loading ? <div className="text-sm text-gray-500">加载中…</div> : null}
       </div>
