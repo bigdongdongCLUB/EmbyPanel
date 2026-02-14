@@ -264,7 +264,10 @@ export function UsersClient() {
       const json = await res.json().catch(() => null);
       if (!res.ok) throw new Error(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
 
-      const list = (json.users ?? []).map((u: any) => ({ id: String(u.id), name: String(u.name) }));
+      const list = (json.users ?? [])
+        .map((u: any) => ({ id: String(u.id), name: String(u.name), isAdmin: !!u?.policy?.isAdministrator }))
+        .filter((u: any) => !u.isAdmin && String(u.name || "").trim().toLowerCase() !== "atemplate")
+        .map((u: any) => ({ id: u.id, name: u.name }));
       setImportEmbyUsers(list);
       setImportEmbyUsersLoaded(true);
       setImportSelectedEmbyUsers({});
@@ -1062,7 +1065,7 @@ export function UsersClient() {
               <div className="bg-yellow-50 border border-yellow-200 rounded p-3 text-sm text-yellow-900 space-y-1">
                 <div className="font-medium">导入提示</div>
                 <ul className="list-disc pl-5 text-xs text-yellow-900">
-                  <li>将导入 Emby 服务器上的所有非管理员用户（如选择特定用户，则只导入指定用户名）。</li>
+                  <li>将导入 Emby 服务器上的所有非管理员用户及模板用户（如选择特定用户，则只导入指定用户名）。</li>
                   <li>如果用户已存在于面板，将跳过创建；但会尝试补齐 EmbyUserLink。</li>
                   <li>不会重置 Emby 服务器中用户的密码；仅面板侧使用默认密码。</li>
                 </ul>

@@ -44,7 +44,8 @@ export async function POST(req: Request) {
     .split(",")
     .map((x) => x.trim().toLowerCase())
     .filter(Boolean);
-  if (reserved.includes(username.toLowerCase())) {
+  const reservedBuiltIn = new Set(["atemplate", ...reserved]);
+  if (reservedBuiltIn.has(username.toLowerCase())) {
     return NextResponse.json({ error: "reserved_username" }, { status: 400 });
   }
 

@@ -10,6 +10,8 @@ import { embyFetchUsers } from "@/lib/emby";
 import { hashPassword } from "@/lib/password";
 import { encryptSyncPassword } from "@/lib/user-secrets";
 
+const TEMPLATE_USERNAME = "atemplate";
+
 const Schema = z.object({
   embyServerId: z.string().min(1),
   defaultPassword: z.string().min(6).max(200),
@@ -55,7 +57,9 @@ export async function POST(req: Request) {
       ? new Set(usernames.map((s) => s.trim().toLowerCase()).filter(Boolean))
       : null;
 
-  const embyUsers = allowNameSet ? embyUsersAll.filter((u) => allowNameSet.has(String(u?.Name ?? "").trim().toLowerCase())) : embyUsersAll;
+  const embyUsers = (allowNameSet ? embyUsersAll.filter((u) => allowNameSet.has(String(u?.Name ?? "").trim().toLowerCase())) : embyUsersAll).filter(
+    (u) => String(u?.Name ?? "").trim().toLowerCase() !== TEMPLATE_USERNAME,
+  );
 
   const existingUsernames = new Set(
     (
