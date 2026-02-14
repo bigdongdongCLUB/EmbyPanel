@@ -60,7 +60,7 @@ export function AppToastHost() {
 
   return (
     <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100]">
-      <div className={`min-w-[280px] max-w-[80vw] bg-white border rounded-2xl shadow-xl px-4 py-3 flex items-center gap-3 ${toneCls}`}>
+      <div className={`min-w-[280px] max-w-[80vw] bg-white border rounded-2xl shadow-xl px-5 py-3 flex items-center gap-3 ${toneCls}`}>
         <span className={`inline-flex h-7 w-7 min-h-7 min-w-7 shrink-0 aspect-square items-center justify-center rounded-full text-white text-sm leading-none ${iconCls}`}>{icon}</span>
         <span className="text-base font-medium break-words">{toast.text}</span>
       </div>
