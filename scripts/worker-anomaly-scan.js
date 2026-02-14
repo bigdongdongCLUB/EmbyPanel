@@ -10,7 +10,7 @@
     - WEB_INTERNAL_URL (default: http://localhost:3000)
 */
 
-const { Queue, Worker, QueueScheduler } = require("bullmq");
+const { Queue, Worker } = require("bullmq");
 const IORedis = require("ioredis");
 
 // Node 22 has global fetch; keep for clarity.
@@ -35,7 +35,7 @@ const connection = new IORedis(REDIS_URL, {
   maxRetriesPerRequest: null,
 });
 
-const queueName = "embypanel:anomaly-scan";
+const queueName = "embypanel-anomaly-scan";
 
 async function ensureRepeatable(queue) {
   // Stable jobId so it is idempotent.
@@ -76,9 +76,6 @@ async function callInternal(path) {
 
 async function main() {
   const queue = new Queue(queueName, { connection });
-  // Required for repeatable/delayed jobs.
-  const scheduler = new QueueScheduler(queueName, { connection });
-  await scheduler.waitUntilReady();
 
   await ensureRepeatable(queue);
   console.log(`[worker] repeatable job ensured: ${queueName} every 10min -> ${WEB_INTERNAL_URL}`);
