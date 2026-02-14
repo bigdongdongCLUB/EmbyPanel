@@ -147,7 +147,7 @@ export function InvitesClient() {
         </div>
       ) : (
         <div className="rounded border border-red-200 bg-red-50 p-4 text-sm text-red-600 font-medium">
-          系统暂时无启用返利系统，您的邀请无法获得返利
+          系统暂时未启用返利系统，您的邀请无法获得返利
         </div>
       )}
 
