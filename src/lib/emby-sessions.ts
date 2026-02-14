@@ -39,3 +39,21 @@ export async function embyFetchSessions(baseUrl: string, apiKey: string) {
   const json = JSON.parse(text);
   return { ok: true as const, status: res.status, sessions: json as EmbySession[] };
 }
+
+export async function embyStopSessionPlayback(baseUrl: string, apiKey: string, sessionId: string) {
+  const sid = String(sessionId || "").trim();
+  if (!sid) return { ok: false as const, status: 400, body: "missing_session_id" };
+
+  const u = new URL(normalizeBaseUrl(baseUrl) + `/Sessions/${encodeURIComponent(sid)}/Playing/Stop`);
+  u.searchParams.set("api_key", apiKey);
+
+  const res = await fetch(u.toString(), {
+    method: "POST",
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  });
+
+  const text = await res.text().catch(() => "");
+  if (!res.ok) return { ok: false as const, status: res.status, body: text };
+  return { ok: true as const, status: res.status, body: text };
+}

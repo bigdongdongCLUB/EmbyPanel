@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
 import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
-import { embyFetchSessions } from "@/lib/emby-sessions";
+import { embyFetchSessions, embyStopSessionPlayback } from "@/lib/emby-sessions";
 import { embySetUserDisabled } from "@/lib/emby-provision";
 
 const PENALTY_STATE_KEY = "anomaly_penalty_state";
@@ -226,6 +226,20 @@ export async function POST(req: Request) {
           let disabledOk = false;
           let disableError: string | null = null;
 
+          // 先立刻停止该用户所有正在播放的会话，再执行禁用
+          const sessionIds = sessions.map((s: any) => String(s?.Id ?? "").trim()).filter(Boolean);
+          let stoppedSessions = 0;
+          const stopErrors: string[] = [];
+          for (const sid of sessionIds) {
+            try {
+              const sr = await embyStopSessionPlayback(server.baseUrl, apiKey, sid);
+              if (sr.ok) stoppedSessions += 1;
+              else stopErrors.push(`${sid}: ${sr.body || `HTTP ${sr.status}`}`);
+            } catch (e: any) {
+              stopErrors.push(`${sid}: ${String(e?.message ?? e)}`);
+            }
+          }
+
           try {
             const r = await embySetUserDisabled(server.baseUrl, apiKey, embyUserId, true);
             disabledOk = !!r?.ok;
@@ -249,7 +263,9 @@ export async function POST(req: Request) {
               disabledAt: now.toISOString(),
               unlockAt: unlockAt.toISOString(),
               status: "PENDING",
-              reason: `连续两次10分钟检测命中异常并发播放，封禁${penaltyConfig.durationMinutes}分钟`,
+              stoppedSessions,
+              stopErrors: stopErrors.length ? stopErrors.slice(0, 5) : undefined,
+              reason: `连续两次10分钟检测命中异常并发播放，已先停止播放并封禁${penaltyConfig.durationMinutes}分钟`,
             });
           } else {
             warnings += 1;
@@ -263,8 +279,10 @@ export async function POST(req: Request) {
               disabledAt: now.toISOString(),
               unlockAt: unlockAt.toISOString(),
               status: "FAILED_DISABLE",
+              stoppedSessions,
+              stopErrors: stopErrors.length ? stopErrors.slice(0, 5) : undefined,
               error: disableError || "disable_failed",
-              reason: `连续两次10分钟检测命中异常并发播放，封禁${penaltyConfig.durationMinutes}分钟`,
+              reason: `连续两次10分钟检测命中异常并发播放，已先停止播放，封禁失败`,
             });
           }
         }
