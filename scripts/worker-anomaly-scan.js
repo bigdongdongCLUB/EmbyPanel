@@ -49,6 +49,17 @@ async function ensureRepeatable(queue) {
       removeOnFail: 1000,
     }
   );
+
+  await queue.add(
+    "unban",
+    { kind: "anomaly-unban" },
+    {
+      jobId: "repeat:unban",
+      repeat: { every: 60 * 1000 },
+      removeOnComplete: true,
+      removeOnFail: 1000,
+    }
+  );
 }
 
 async function callInternal(path) {
@@ -83,6 +94,14 @@ async function main() {
   const worker = new Worker(
     queueName,
     async (job) => {
+      if (job.name === "unban") {
+        const unban = await callInternal("/api/admin/jobs/anomaly-unban");
+        if ((unban?.dueCount || 0) > 0) {
+          console.log("[worker] anomaly-unban", { jobId: job.id, due: unban?.dueCount, unbanned: unban?.unbanned, skipped: unban?.skipped, failed: unban?.failed });
+        }
+        return { unban };
+      }
+
       const started = Date.now();
       const health = await callInternal("/api/admin/jobs/emby-health-check");
       const expiryDisable = await callInternal("/api/admin/jobs/subscription-expiry-disable");
@@ -102,6 +121,7 @@ async function main() {
         createdEvents: result?.createdEvents,
         scannedSessions: result?.scannedSessions,
         warnings: result?.warnings,
+        penaltiesApplied: result?.penaltiesApplied,
       });
       return { health, expiryDisable, expiryReminder, anomaly: result };
     },
