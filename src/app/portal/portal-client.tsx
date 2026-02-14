@@ -62,6 +62,8 @@ export function PortalClient() {
     return () => window.clearInterval(t);
   }, [notices.length]);
 
+  const isExpired = !!data?.dashboard.subscriptionEndAt && new Date(data.dashboard.subscriptionEndAt).getTime() < Date.now();
+
   return (
     <div className="space-y-4">
       {error ? <div className="text-sm text-red-600">{error}</div> : null}
@@ -69,7 +71,7 @@ export function PortalClient() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2">
         <div className="border rounded-lg p-2"><div className="text-xs text-gray-500">账户余额</div><div className="text-xl font-semibold mt-1">{(data?.dashboard.balanceYuan ?? 0).toFixed(2)} <span className="text-xs font-normal">元</span></div></div>
-        <div className="border rounded-lg p-2"><div className="text-xs text-gray-500">订阅到期日</div><div className="text-xl font-semibold mt-1">{fmtDateYmd(data?.dashboard.subscriptionEndAt)}</div></div>
+        <div className="border rounded-lg p-2"><div className="text-xs text-gray-500">订阅到期日</div><div className="text-xl font-semibold mt-1">{fmtDateYmd(data?.dashboard.subscriptionEndAt)}</div>{isExpired ? <div className="mt-1 inline-flex items-center rounded border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-medium text-red-600">已过期</div> : null}</div>
         <div className="border rounded-lg p-2"><div className="text-xs text-gray-500">订阅计划</div><div className="text-xl font-semibold mt-1">{data?.dashboard.subscriptionPlan ?? "无订阅"}</div></div>
         <div className="border rounded-lg p-2"><div className="text-xs text-gray-500">剩余时间</div><div className="text-xl font-semibold mt-1">{data?.dashboard.remainingDays ?? 0} <span className="text-xs font-normal">天</span></div></div>
       </div>
