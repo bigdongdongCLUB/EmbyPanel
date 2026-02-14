@@ -80,8 +80,9 @@ body {
 .panel-compact input[type="date"]::-webkit-calendar-picker-indicator {
   opacity: 0;
   position: absolute;
-  right: 0;
-  width: 100%;
+  top: 0;
+  right: 6px;
+  width: 20px;
   height: 100%;
   cursor: pointer;
 }
