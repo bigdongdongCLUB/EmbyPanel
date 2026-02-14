@@ -107,23 +107,19 @@ export function MonitoringPenaltiesClient() {
                 <th className="py-2 px-3">用户</th>
                 <th className="py-2 px-3">服务器</th>
                 <th className="py-2 px-3">处罚开始</th>
-                <th className="py-2 px-3">剩余时间</th>
+                <th className="py-2 px-3">处罚结束</th>
                 <th className="py-2 px-3">解禁状态</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => {
-                const now = Date.now();
-                const unlockAt = Date.parse(r.unlockAt || "");
-                const leftMs = Number.isFinite(unlockAt) ? unlockAt - now : 0;
-                const leftText = r.status === "PENDING" ? (leftMs > 0 ? `${Math.ceil(leftMs / 60000)} 分钟` : "到期处理中") : "-";
                 const statusText = r.status === "UNBANNED" ? "已解禁" : r.status === "PENDING" ? "封禁中" : r.status === "SKIPPED_NOT_ELIGIBLE" ? "到期跳过" : r.status === "FAILED_UNBAN" ? "解禁失败" : r.status === "FAILED_DISABLE" ? "封禁失败" : r.status;
                 return (
                   <tr key={r.id} className="border-b last:border-b-0">
                     <td className="py-2 px-3">{r.username || "-"}</td>
                     <td className="py-2 px-3">{r.serverName || "-"}</td>
                     <td className="py-2 px-3 text-xs text-gray-700">{formatDateTimeShanghai(r.disabledAt)}</td>
-                    <td className="py-2 px-3">{leftText}</td>
+                    <td className="py-2 px-3 text-xs text-gray-700">{formatDateTimeShanghai(r.unlockAt)}</td>
                     <td className="py-2 px-3">{statusText}</td>
                   </tr>
                 );
