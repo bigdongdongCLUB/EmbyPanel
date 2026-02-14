@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 
 type EmbyServerOption = { id: string; name: string; enabled: boolean };
 type PlanOption = { id: string; name: string };
@@ -86,161 +85,6 @@ function ymdFromUtcDate(d: Date) {
   const m = String(d.getUTCMonth() + 1).padStart(2, "0");
   const day = String(d.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
-}
-
-function DateInputWithPanel({ value, onChange, ariaLabel }: { value: string; onChange: (v: string) => void; ariaLabel: string }) {
-  const rootRef = useRef<HTMLDivElement | null>(null);
-  const panelRef = useRef<HTMLDivElement | null>(null);
-  const today = new Date();
-  const initial = parseYmd(value) ?? new Date(Date.UTC(today.getFullYear(), today.getMonth(), 1));
-  const [open, setOpen] = useState(false);
-  const [viewYear, setViewYear] = useState(initial.getUTCFullYear());
-  const [viewMonth, setViewMonth] = useState(initial.getUTCMonth());
-  const [panelPos, setPanelPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
-
-  useEffect(() => {
-    if (!open) return;
-    const selected = parseYmd(value);
-    if (selected) {
-      setViewYear(selected.getUTCFullYear());
-      setViewMonth(selected.getUTCMonth());
-    }
-  }, [open, value]);
-
-  useEffect(() => {
-    if (!open) return;
-    const updatePos = () => {
-      const el = rootRef.current;
-      if (!el) return;
-      const r = el.getBoundingClientRect();
-      const panelWidth = Math.min(280, window.innerWidth - 16);
-      const left = Math.max(8, Math.min(r.left, window.innerWidth - panelWidth - 8));
-      setPanelPos({ top: r.bottom + 6, left });
-    };
-
-    const onDocDown = (e: MouseEvent | TouchEvent) => {
-      const t = e.target as Node;
-      if (rootRef.current?.contains(t)) return;
-      if (panelRef.current?.contains(t)) return;
-      setOpen(false);
-    };
-
-    updatePos();
-    window.addEventListener("resize", updatePos);
-    window.addEventListener("scroll", updatePos, true);
-    document.addEventListener("mousedown", onDocDown);
-    document.addEventListener("touchstart", onDocDown, { passive: true });
-    return () => {
-      window.removeEventListener("resize", updatePos);
-      window.removeEventListener("scroll", updatePos, true);
-      document.removeEventListener("mousedown", onDocDown);
-      document.removeEventListener("touchstart", onDocDown);
-    };
-  }, [open]);
-
-  const firstDay = new Date(Date.UTC(viewYear, viewMonth, 1));
-  const offset = firstDay.getUTCDay();
-  const daysInMonth = new Date(Date.UTC(viewYear, viewMonth + 1, 0)).getUTCDate();
-  const selectedYmd = value;
-
-  const cells: Array<{ ymd: string; day: number; inCurrent: boolean }> = [];
-  const prevMonthDays = new Date(Date.UTC(viewYear, viewMonth, 0)).getUTCDate();
-  for (let i = offset - 1; i >= 0; i--) {
-    const d = prevMonthDays - i;
-    const dt = new Date(Date.UTC(viewYear, viewMonth - 1, d));
-    cells.push({ ymd: ymdFromUtcDate(dt), day: d, inCurrent: false });
-  }
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dt = new Date(Date.UTC(viewYear, viewMonth, d));
-    cells.push({ ymd: ymdFromUtcDate(dt), day: d, inCurrent: true });
-  }
-  while (cells.length < 42) {
-    const d = cells.length - (offset + daysInMonth) + 1;
-    const dt = new Date(Date.UTC(viewYear, viewMonth + 1, d));
-    cells.push({ ymd: ymdFromUtcDate(dt), day: d, inCurrent: false });
-  }
-
-  const monthText = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}`;
-  const panelWidth = typeof window === "undefined" ? 280 : Math.min(280, window.innerWidth - 16);
-
-  return (
-    <div ref={rootRef} className="relative mt-1">
-      <input
-        className="w-full border rounded px-3 py-2 pr-10"
-        type="text"
-        placeholder="YYYY-MM-DD"
-        value={value}
-        onChange={(e) => onChange(e.target.value.trim())}
-      />
-      <button
-        type="button"
-        className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-        onClick={() => setOpen((v) => !v)}
-        aria-label={ariaLabel}
-      >
-        <img src="/icons/calendar.svg" alt="" className="h-4 w-4" />
-      </button>
-
-      {open && typeof document !== "undefined"
-        ? createPortal(
-            <div
-              ref={panelRef}
-              className="rounded-lg border bg-white p-2 shadow-xl"
-              style={{ position: "fixed", top: panelPos.top, left: panelPos.left, width: panelWidth, zIndex: 80 }}
-            >
-              <div className="mb-2 flex items-center justify-between">
-                <button
-                  type="button"
-                  className="rounded border px-2 py-1 text-xs"
-                  onClick={() => {
-                    const d = new Date(Date.UTC(viewYear, viewMonth - 1, 1));
-                    setViewYear(d.getUTCFullYear());
-                    setViewMonth(d.getUTCMonth());
-                  }}
-                >
-                  上月
-                </button>
-                <div className="text-sm font-medium">{monthText}</div>
-                <button
-                  type="button"
-                  className="rounded border px-2 py-1 text-xs"
-                  onClick={() => {
-                    const d = new Date(Date.UTC(viewYear, viewMonth + 1, 1));
-                    setViewYear(d.getUTCFullYear());
-                    setViewMonth(d.getUTCMonth());
-                  }}
-                >
-                  下月
-                </button>
-              </div>
-              <div className="grid grid-cols-7 gap-1 text-center text-xs text-gray-500 mb-1">
-                <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
-              </div>
-              <div className="grid grid-cols-7 gap-1">
-                {cells.map((c) => (
-                  <button
-                    key={c.ymd}
-                    type="button"
-                    className={
-                      "h-8 rounded text-sm " +
-                      (c.inCurrent ? "text-gray-800" : "text-gray-300") +
-                      (selectedYmd === c.ymd ? " bg-blue-600 text-white" : " hover:bg-gray-100")
-                    }
-                    onClick={() => {
-                      onChange(c.ymd);
-                      setOpen(false);
-                    }}
-                  >
-                    {c.day}
-                  </button>
-                ))}
-              </div>
-            </div>,
-            document.body,
-          )
-        : null}
-    </div>
-  );
 }
 
 function serverBadgeText(r: UserRow) {
@@ -809,12 +653,24 @@ export function UsersClient() {
 
                 <div>
                   <label className="text-sm">订阅开始日期</label>
-                  <DateInputWithPanel value={edit.startAt} onChange={(v) => setEdit({ ...edit, startAt: v })} ariaLabel="选择订阅开始日期" />
+                  <input
+                    className="mt-1 w-full border rounded px-3 py-2"
+                    type="text"
+                    placeholder="YYYY-MM-DD"
+                    value={edit.startAt}
+                    onChange={(e) => setEdit({ ...edit, startAt: e.target.value.trim() })}
+                  />
                 </div>
 
                 <div>
                   <label className="text-sm">订阅结束日期</label>
-                  <DateInputWithPanel value={edit.endAt} onChange={(v) => setEdit({ ...edit, endAt: v })} ariaLabel="选择订阅结束日期" />
+                  <input
+                    className="mt-1 w-full border rounded px-3 py-2"
+                    type="text"
+                    placeholder="YYYY-MM-DD"
+                    value={edit.endAt}
+                    onChange={(e) => setEdit({ ...edit, endAt: e.target.value.trim() })}
+                  />
                 </div>
               </div>
             </div>
