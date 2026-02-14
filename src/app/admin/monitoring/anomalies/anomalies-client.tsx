@@ -72,7 +72,6 @@ export function MonitoringAnomaliesClient() {
   const [runningScan, setRunningScan] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<Data | null>(null);
-  const [open, setOpen] = useState<Record<string, boolean>>({});
 
   async function loadServers() {
     const res = await fetch("/api/admin/emby-servers", { cache: "no-store" });
@@ -187,8 +186,7 @@ export function MonitoringAnomaliesClient() {
           <table className="min-w-[1100px] w-full text-sm">
             <thead className="text-left text-gray-600 border-b">
               <tr>
-                <th className="py-2 px-3 w-[44px]"></th>
-                <th className="py-2 px-3">用户名</th>
+                                <th className="py-2 px-3">用户名</th>
                 <th className="py-2 px-3">服务器</th>
                 <th className="py-2 px-3">异常类型</th>
                 <th className="py-2 px-3">设备信息</th>
@@ -199,16 +197,10 @@ export function MonitoringAnomaliesClient() {
             </thead>
             <tbody>
               {(data?.anomalies ?? []).map((a) => {
-                const isOpen = !!open[a.id];
                 const crossRegion = isCrossRegionByIp(a.ips || []);
                 return (
                   <React.Fragment key={a.id}>
                     <tr className="border-b">
-                      <td className="py-2 px-3">
-                        <button className="text-xs border rounded px-2 py-1" onClick={() => setOpen((p) => ({ ...p, [a.id]: !p[a.id] }))}>
-                          {isOpen ? "-" : "+"}
-                        </button>
-                      </td>
                       <td className="py-2 px-3">{a.user?.name || "-"}</td>
                       <td className="py-2 px-3">{a.server?.name || "-"}</td>
                       <td className="py-2 px-3">
@@ -256,37 +248,7 @@ export function MonitoringAnomaliesClient() {
                       </td>
                       <td className="py-2 px-3 text-xs text-gray-700">{formatDateTimeShanghai(a.detectedAt)}</td>
                     </tr>
-                    {isOpen ? (
-                      <tr className="border-b">
-                        <td className="py-2 px-3" colSpan={8}>
-                          <div className="bg-gray-50 border rounded p-3">
-                            <div className="text-xs text-gray-600">会话明细</div>
-                            <div className="mt-2 overflow-auto">
-                              <table className="min-w-[900px] w-full text-xs">
-                                <thead className="text-left text-gray-600 border-b">
-                                  <tr>
-                                    <th className="py-2 px-2">设备</th>
-                                    <th className="py-2 px-2">客户端</th>
-                                    <th className="py-2 px-2">正在播放</th>
-                                    <th className="py-2 px-2">IP</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {a.sessions.map((s, idx) => (
-                                    <tr key={idx} className="border-b last:border-b-0">
-                                      <td className="py-2 px-2">{s.device || "-"}</td>
-                                      <td className="py-2 px-2">{s.client || "-"}</td>
-                                      <td className="py-2 px-2">{s.nowPlaying || "-"}</td>
-                                      <td className="py-2 px-2 font-mono">{s.ip || "-"}</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    ) : null}
+                    
                   </React.Fragment>
                 );
               })}
