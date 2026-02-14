@@ -44,7 +44,7 @@ async function ensureRepeatable(queue) {
     { kind: "anomaly-scan" },
     {
       jobId: "repeat:scan",
-      repeat: { every: 10 * 60 * 1000 },
+      repeat: { every: 5 * 60 * 1000 },
       removeOnComplete: true,
       removeOnFail: 1000,
     }

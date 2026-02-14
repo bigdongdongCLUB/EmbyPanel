@@ -21,7 +21,7 @@ function triggerMode(jobName: string) {
   if (jobName === "emby-health-check") return "定时任务（每10分钟）";
   if (jobName === "subscription-expiry-disable") return "定时任务（每10分钟）";
   if (jobName === "subscription-expiry-reminder") return "定时任务（每10分钟）";
-  if (jobName === "anomaly-scan") return "定时任务（每10分钟）";
+  if (jobName === "anomaly-scan") return "定时任务（每5分钟）";
   return "定时任务";
 }
 

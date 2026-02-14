@@ -178,7 +178,7 @@ export function MonitoringAnomaliesClient() {
 
       <div className="bg-white border rounded-lg p-4">
         <div className="flex items-center justify-between">
-          <div className="font-medium text-sm">异常列表（定时任务每10分钟检测）</div>
+          <div className="font-medium text-sm">异常列表（定时任务每5分钟检测）</div>
           <div className="text-xs text-gray-500">{data ? `共 ${data.total} 条，当前第 ${data.page}/${data.totalPages} 页` : ""}</div>
         </div>
 

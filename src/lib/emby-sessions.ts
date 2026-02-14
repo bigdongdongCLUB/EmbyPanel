@@ -57,3 +57,21 @@ export async function embyStopSessionPlayback(baseUrl: string, apiKey: string, s
   if (!res.ok) return { ok: false as const, status: res.status, body: text };
   return { ok: true as const, status: res.status, body: text };
 }
+
+export async function embyLogoutSession(baseUrl: string, apiKey: string, sessionId: string) {
+  const sid = String(sessionId || "").trim();
+  if (!sid) return { ok: false as const, status: 400, body: "missing_session_id" };
+
+  const u = new URL(normalizeBaseUrl(baseUrl) + `/Sessions/${encodeURIComponent(sid)}`);
+  u.searchParams.set("api_key", apiKey);
+
+  const res = await fetch(u.toString(), {
+    method: "DELETE",
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  });
+
+  const text = await res.text().catch(() => "");
+  if (!res.ok) return { ok: false as const, status: res.status, body: text };
+  return { ok: true as const, status: res.status, body: text };
+}

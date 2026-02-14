@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
 import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
-import { embyFetchSessions, embyStopSessionPlayback } from "@/lib/emby-sessions";
+import { embyFetchSessions, embyLogoutSession, embyStopSessionPlayback } from "@/lib/emby-sessions";
 import { embySetUserDisabled } from "@/lib/emby-provision";
 
 const PENALTY_STATE_KEY = "anomaly_penalty_state";
@@ -227,10 +227,10 @@ export async function POST(req: Request) {
           let disableError: string | null = null;
 
           // 先立刻停止该用户所有正在播放的会话，再执行禁用
-          const sessionIds = sessions.map((s: any) => String(s?.Id ?? "").trim()).filter(Boolean);
+          const playingSessionIds = sessions.map((s: any) => String(s?.Id ?? "").trim()).filter(Boolean);
           let stoppedSessions = 0;
           const stopErrors: string[] = [];
-          for (const sid of sessionIds) {
+          for (const sid of playingSessionIds) {
             try {
               const sr = await embyStopSessionPlayback(server.baseUrl, apiKey, sid);
               if (sr.ok) stoppedSessions += 1;
@@ -249,6 +249,23 @@ export async function POST(req: Request) {
           }
 
           if (disabledOk) {
+            // 禁用成功后立刻踢下线/注销该用户所有会话（包括未播放会话）
+            const allUserSessionIds = (sessionsRes.sessions ?? [])
+              .filter((x: any) => String(x?.UserId ?? "").trim() === embyUserId)
+              .map((x: any) => String(x?.Id ?? "").trim())
+              .filter(Boolean);
+            let loggedOutSessions = 0;
+            const logoutErrors: string[] = [];
+            for (const sid of allUserSessionIds) {
+              try {
+                const lr = await embyLogoutSession(server.baseUrl, apiKey, sid);
+                if (lr.ok) loggedOutSessions += 1;
+                else logoutErrors.push(`${sid}: ${lr.body || `HTTP ${lr.status}`}`);
+              } catch (e: any) {
+                logoutErrors.push(`${sid}: ${String(e?.message ?? e)}`);
+              }
+            }
+
             await prisma.embyUserLink.updateMany({ where: { id: link.id }, data: { disabled: true } });
             penaltiesApplied += 1;
             pendingPenaltyKeys.add(key);
@@ -264,8 +281,10 @@ export async function POST(req: Request) {
               unlockAt: unlockAt.toISOString(),
               status: "PENDING",
               stoppedSessions,
+              loggedOutSessions,
               stopErrors: stopErrors.length ? stopErrors.slice(0, 5) : undefined,
-              reason: `连续两次10分钟检测命中异常并发播放，已先停止播放并封禁${penaltyConfig.durationMinutes}分钟`,
+              logoutErrors: logoutErrors.length ? logoutErrors.slice(0, 5) : undefined,
+              reason: `连续两次5分钟检测命中异常并发播放，已先停止播放并踢下线后封禁${penaltyConfig.durationMinutes}分钟`,
             });
           } else {
             warnings += 1;
@@ -282,7 +301,7 @@ export async function POST(req: Request) {
               stoppedSessions,
               stopErrors: stopErrors.length ? stopErrors.slice(0, 5) : undefined,
               error: disableError || "disable_failed",
-              reason: `连续两次10分钟检测命中异常并发播放，已先停止播放，封禁失败`,
+              reason: `连续两次5分钟检测命中异常并发播放，已先停止播放，封禁失败`,
             });
           }
         }
