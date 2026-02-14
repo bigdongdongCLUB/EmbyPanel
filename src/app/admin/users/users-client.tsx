@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 type EmbyServerOption = { id: string; name: string; enabled: boolean };
 type PlanOption = { id: string; name: string };
@@ -89,11 +90,13 @@ function ymdFromUtcDate(d: Date) {
 
 function DateInputWithPanel({ value, onChange, ariaLabel }: { value: string; onChange: (v: string) => void; ariaLabel: string }) {
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
   const today = new Date();
   const initial = parseYmd(value) ?? new Date(Date.UTC(today.getFullYear(), today.getMonth(), 1));
   const [open, setOpen] = useState(false);
   const [viewYear, setViewYear] = useState(initial.getUTCFullYear());
   const [viewMonth, setViewMonth] = useState(initial.getUTCMonth());
+  const [panelPos, setPanelPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
 
   useEffect(() => {
     if (!open) return;
@@ -106,12 +109,33 @@ function DateInputWithPanel({ value, onChange, ariaLabel }: { value: string; onC
 
   useEffect(() => {
     if (!open) return;
-    const onDocDown = (e: MouseEvent) => {
-      const t = e.target as Node;
-      if (!rootRef.current?.contains(t)) setOpen(false);
+    const updatePos = () => {
+      const el = rootRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const panelWidth = Math.min(280, window.innerWidth - 16);
+      const left = Math.max(8, Math.min(r.left, window.innerWidth - panelWidth - 8));
+      setPanelPos({ top: r.bottom + 6, left });
     };
+
+    const onDocDown = (e: MouseEvent | TouchEvent) => {
+      const t = e.target as Node;
+      if (rootRef.current?.contains(t)) return;
+      if (panelRef.current?.contains(t)) return;
+      setOpen(false);
+    };
+
+    updatePos();
+    window.addEventListener("resize", updatePos);
+    window.addEventListener("scroll", updatePos, true);
     document.addEventListener("mousedown", onDocDown);
-    return () => document.removeEventListener("mousedown", onDocDown);
+    document.addEventListener("touchstart", onDocDown, { passive: true });
+    return () => {
+      window.removeEventListener("resize", updatePos);
+      window.removeEventListener("scroll", updatePos, true);
+      document.removeEventListener("mousedown", onDocDown);
+      document.removeEventListener("touchstart", onDocDown);
+    };
   }, [open]);
 
   const firstDay = new Date(Date.UTC(viewYear, viewMonth, 1));
@@ -137,6 +161,7 @@ function DateInputWithPanel({ value, onChange, ariaLabel }: { value: string; onC
   }
 
   const monthText = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}`;
+  const panelWidth = typeof window === "undefined" ? 280 : Math.min(280, window.innerWidth - 16);
 
   return (
     <div ref={rootRef} className="relative mt-1">
@@ -156,57 +181,64 @@ function DateInputWithPanel({ value, onChange, ariaLabel }: { value: string; onC
         <img src="/icons/calendar.svg" alt="" className="h-4 w-4" />
       </button>
 
-      {open ? (
-        <div className="absolute z-40 mt-1 w-[280px] max-w-[calc(100vw-2rem)] rounded-lg border bg-white p-2 shadow-xl">
-          <div className="mb-2 flex items-center justify-between">
-            <button
-              type="button"
-              className="rounded border px-2 py-1 text-xs"
-              onClick={() => {
-                const d = new Date(Date.UTC(viewYear, viewMonth - 1, 1));
-                setViewYear(d.getUTCFullYear());
-                setViewMonth(d.getUTCMonth());
-              }}
+      {open && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              ref={panelRef}
+              className="rounded-lg border bg-white p-2 shadow-xl"
+              style={{ position: "fixed", top: panelPos.top, left: panelPos.left, width: panelWidth, zIndex: 80 }}
             >
-              上月
-            </button>
-            <div className="text-sm font-medium">{monthText}</div>
-            <button
-              type="button"
-              className="rounded border px-2 py-1 text-xs"
-              onClick={() => {
-                const d = new Date(Date.UTC(viewYear, viewMonth + 1, 1));
-                setViewYear(d.getUTCFullYear());
-                setViewMonth(d.getUTCMonth());
-              }}
-            >
-              下月
-            </button>
-          </div>
-          <div className="grid grid-cols-7 gap-1 text-center text-xs text-gray-500 mb-1">
-            <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
-          </div>
-          <div className="grid grid-cols-7 gap-1">
-            {cells.map((c) => (
-              <button
-                key={c.ymd}
-                type="button"
-                className={
-                  "h-8 rounded text-sm " +
-                  (c.inCurrent ? "text-gray-800" : "text-gray-300") +
-                  (selectedYmd === c.ymd ? " bg-blue-600 text-white" : " hover:bg-gray-100")
-                }
-                onClick={() => {
-                  onChange(c.ymd);
-                  setOpen(false);
-                }}
-              >
-                {c.day}
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : null}
+              <div className="mb-2 flex items-center justify-between">
+                <button
+                  type="button"
+                  className="rounded border px-2 py-1 text-xs"
+                  onClick={() => {
+                    const d = new Date(Date.UTC(viewYear, viewMonth - 1, 1));
+                    setViewYear(d.getUTCFullYear());
+                    setViewMonth(d.getUTCMonth());
+                  }}
+                >
+                  上月
+                </button>
+                <div className="text-sm font-medium">{monthText}</div>
+                <button
+                  type="button"
+                  className="rounded border px-2 py-1 text-xs"
+                  onClick={() => {
+                    const d = new Date(Date.UTC(viewYear, viewMonth + 1, 1));
+                    setViewYear(d.getUTCFullYear());
+                    setViewMonth(d.getUTCMonth());
+                  }}
+                >
+                  下月
+                </button>
+              </div>
+              <div className="grid grid-cols-7 gap-1 text-center text-xs text-gray-500 mb-1">
+                <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+              </div>
+              <div className="grid grid-cols-7 gap-1">
+                {cells.map((c) => (
+                  <button
+                    key={c.ymd}
+                    type="button"
+                    className={
+                      "h-8 rounded text-sm " +
+                      (c.inCurrent ? "text-gray-800" : "text-gray-300") +
+                      (selectedYmd === c.ymd ? " bg-blue-600 text-white" : " hover:bg-gray-100")
+                    }
+                    onClick={() => {
+                      onChange(c.ymd);
+                      setOpen(false);
+                    }}
+                  >
+                    {c.day}
+                  </button>
+                ))}
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
