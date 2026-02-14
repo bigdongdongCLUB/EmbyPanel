@@ -5,6 +5,15 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
 
+function startOfShanghaiDayUtc(now = new Date()) {
+  const shanghaiMs = now.getTime() + 8 * 60 * 60 * 1000;
+  const shanghai = new Date(shanghaiMs);
+  const y = shanghai.getUTCFullYear();
+  const m = shanghai.getUTCMonth();
+  const d = shanghai.getUTCDate();
+  return new Date(Date.UTC(y, m, d) - 8 * 60 * 60 * 1000);
+}
+
 function mapJobName(jobName: string) {
   const m: Record<string, string> = {
     "emby-health-check": "Emby服务器健康检查",
@@ -56,7 +65,13 @@ export async function GET(req: Request) {
   const pageSize = Math.max(10, Math.min(200, Number(url.searchParams.get("pageSize") ?? "20") || 20));
   const jobName = (url.searchParams.get("jobName") ?? "").trim();
 
-  const where: any = jobName ? { jobName } : {};
+  const now = new Date();
+  const cutoff24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+  // 仅保留24小时内任务结果
+  await prisma.jobRun.deleteMany({ where: { startedAt: { lt: cutoff24h } } });
+
+  const where: any = { startedAt: { gte: cutoff24h }, ...(jobName ? { jobName } : {}) };
 
   const [rows, total] = await Promise.all([
     prisma.jobRun.findMany({
@@ -76,9 +91,9 @@ export async function GET(req: Request) {
     prisma.jobRun.count({ where }),
   ]);
 
-  const now = new Date();
-  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const todayRows = await prisma.jobRun.findMany({ where: { startedAt: { gte: startOfDay } }, select: { ok: true, jobName: true } });
+  // 今日执行次数按 Asia/Shanghai 每日0点清零重新累计
+  const shanghaiStart = startOfShanghaiDayUtc(now);
+  const todayRows = await prisma.jobRun.findMany({ where: { startedAt: { gte: shanghaiStart } }, select: { ok: true, jobName: true } });
 
   return NextResponse.json({
     ok: true,
