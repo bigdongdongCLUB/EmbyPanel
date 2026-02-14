@@ -65,10 +65,10 @@ export function AdminSidebarClient({
           <Item href="/admin/cards" label="卡密管理" icon="/icons/cards.svg" collapsed={collapsed} />
           <Item href="/admin/payments" label="支付管理" icon="/icons/payments.svg" collapsed={collapsed} />
           <Item href="/admin/orders" label="订单管理" icon="/icons/orders.svg" collapsed={collapsed} />
-          <Item href="/admin/announcements" label="公告管理" icon="/icons/announcements.svg" collapsed={collapsed} />
           <Item href="/admin/invites" label="邀请管理" icon="/icons/invite-manage.svg" collapsed={collapsed} />
           <div className="sidebar-divider my-3 border-t border-[rgb(41,41,41)]" />
           <Item href="/admin/jobs" label="定时任务" icon="/icons/jobs.svg" collapsed={collapsed} />
+          <Item href="/admin/announcements" label="公告管理" icon="/icons/announcements.svg" collapsed={collapsed} />
           <Item href="/admin/settings" label="系统设置" icon="/icons/settings.svg" collapsed={collapsed} />
         </div>
 
