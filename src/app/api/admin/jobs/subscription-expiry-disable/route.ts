@@ -18,9 +18,13 @@ export async function POST(req: Request) {
     if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
-  const now = new Date();
+  const startedAt = new Date();
+  const job = await prisma.jobRun.create({ data: { jobName: "subscription-expiry-disable", startedAt } });
 
-  const users = await prisma.user.findMany({
+  try {
+    const now = new Date();
+
+    const users = await prisma.user.findMany({
     where: {
       subscriptions: {
         some: {
@@ -70,5 +74,12 @@ export async function POST(req: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true, usersScanned, linksDisabled, apiWarnings });
+    const finishedAt = new Date();
+    await prisma.jobRun.update({ where: { id: job.id }, data: { finishedAt, ok: true, message: JSON.stringify({ usersScanned, linksDisabled, apiWarnings }) } });
+    return NextResponse.json({ ok: true, usersScanned, linksDisabled, apiWarnings, jobRunId: job.id });
+  } catch (e: any) {
+    const finishedAt = new Date();
+    await prisma.jobRun.update({ where: { id: job.id }, data: { finishedAt, ok: false, message: String(e?.message ?? e) } });
+    return NextResponse.json({ error: "job_failed", message: String(e?.message ?? e), jobRunId: job.id }, { status: 500 });
+  }
 }

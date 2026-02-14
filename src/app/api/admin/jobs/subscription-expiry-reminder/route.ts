@@ -43,7 +43,11 @@ export async function POST(req: Request) {
     if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
-  const [mailRow, tplRow, noticeRow, stateRow, siteRow] = await Promise.all([
+  const startedAt = new Date();
+  const job = await prisma.jobRun.create({ data: { jobName: "subscription-expiry-reminder", startedAt } });
+
+  try {
+    const [mailRow, tplRow, noticeRow, stateRow, siteRow] = await Promise.all([
     prisma.appSetting.findUnique({ where: { key: MAIL_KEY } }),
     prisma.appSetting.findUnique({ where: { key: TEMPLATE_KEY } }),
     prisma.appSetting.findUnique({ where: { key: NOTICE_KEY } }),
@@ -53,7 +57,9 @@ export async function POST(req: Request) {
 
   const mail = (mailRow?.valueJson as any) ?? {};
   if (!mail?.enabled || !mail?.smtpHost || !mail?.fromEmail) {
-    return NextResponse.json({ ok: true, skipped: true, reason: "mail_not_configured" });
+    const finishedAt = new Date();
+    await prisma.jobRun.update({ where: { id: job.id }, data: { finishedAt, ok: true, message: JSON.stringify({ skipped: true, reason: "mail_not_configured" }) } });
+    return NextResponse.json({ ok: true, skipped: true, reason: "mail_not_configured", jobRunId: job.id });
   }
 
   const smtpPassword = decodePassword(mail);
@@ -155,5 +161,12 @@ export async function POST(req: Request) {
     update: { valueJson: sentState },
   });
 
-  return NextResponse.json({ ok: true, noticeDays, checked, sent, errors });
+    const finishedAt = new Date();
+    await prisma.jobRun.update({ where: { id: job.id }, data: { finishedAt, ok: true, message: JSON.stringify({ noticeDays, checked, sent, errors }) } });
+    return NextResponse.json({ ok: true, noticeDays, checked, sent, errors, jobRunId: job.id });
+  } catch (e: any) {
+    const finishedAt = new Date();
+    await prisma.jobRun.update({ where: { id: job.id }, data: { finishedAt, ok: false, message: String(e?.message ?? e) } });
+    return NextResponse.json({ error: "job_failed", message: String(e?.message ?? e), jobRunId: job.id }, { status: 500 });
+  }
 }

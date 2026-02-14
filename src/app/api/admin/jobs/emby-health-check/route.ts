@@ -23,7 +23,11 @@ export async function POST(req: Request) {
     if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
-  const servers = await prisma.embyServer.findMany({
+  const startedAt = new Date();
+  const job = await prisma.jobRun.create({ data: { jobName: "emby-health-check", startedAt } });
+
+  try {
+    const servers = await prisma.embyServer.findMany({
     where: { enabled: true },
     select: { id: true, name: true, baseUrl: true, apiKey: true, apiKeyEnc: true, apiKeyIv: true, apiKeyTag: true },
     orderBy: { createdAt: "asc" },
@@ -59,5 +63,12 @@ export async function POST(req: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true, total: servers.length, okCount, failCount });
+    const finishedAt = new Date();
+    await prisma.jobRun.update({ where: { id: job.id }, data: { finishedAt, ok: true, message: JSON.stringify({ total: servers.length, okCount, failCount }) } });
+    return NextResponse.json({ ok: true, total: servers.length, okCount, failCount, jobRunId: job.id });
+  } catch (e: any) {
+    const finishedAt = new Date();
+    await prisma.jobRun.update({ where: { id: job.id }, data: { finishedAt, ok: false, message: String(e?.message ?? e) } });
+    return NextResponse.json({ error: "job_failed", message: String(e?.message ?? e), jobRunId: job.id }, { status: 500 });
+  }
 }

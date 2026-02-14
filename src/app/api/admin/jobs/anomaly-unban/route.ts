@@ -53,8 +53,12 @@ export async function POST(req: Request) {
     if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
-  const now = new Date();
-  const state = await loadPenaltyState();
+  const startedAt = new Date();
+  const job = await prisma.jobRun.create({ data: { jobName: "anomaly-unban", startedAt } });
+
+  try {
+    const now = new Date();
+    const state = await loadPenaltyState();
   const records = await loadPenaltyRecords();
 
   let dueCount = 0;
@@ -130,7 +134,15 @@ export async function POST(req: Request) {
     }
   }
 
-  await Promise.all([savePenaltyState(state), savePenaltyRecords(records)]);
+    await Promise.all([savePenaltyState(state), savePenaltyRecords(records)]);
 
-  return NextResponse.json({ ok: true, dueCount, unbanned, skipped, failed });
+    const finishedAt = new Date();
+    await prisma.jobRun.update({ where: { id: job.id }, data: { finishedAt, ok: true, message: JSON.stringify({ dueCount, unbanned, skipped, failed }) } });
+
+    return NextResponse.json({ ok: true, dueCount, unbanned, skipped, failed, jobRunId: job.id });
+  } catch (e: any) {
+    const finishedAt = new Date();
+    await prisma.jobRun.update({ where: { id: job.id }, data: { finishedAt, ok: false, message: String(e?.message ?? e) } });
+    return NextResponse.json({ error: "job_failed", message: String(e?.message ?? e), jobRunId: job.id }, { status: 500 });
+  }
 }
