@@ -55,6 +55,7 @@ export function AdminSidebarClient({
           <Item href="/admin/subscriptions" label="订阅管理" icon="/icons/subscriptions.svg" collapsed={collapsed} />
           <Item href="/admin/servers" label="Emby 服务器" icon="/icons/servers.svg" collapsed={collapsed} />
           <Item href="/admin/monitoring" label="统计监控" icon="/icons/monitoring.svg" collapsed={collapsed} />
+          <Item href="/admin/jobs" label="定时任务" icon="/icons/jobs.svg" collapsed={collapsed} />
         </div>
 
         <div className="my-3 border-t border-gray-300/20" />
