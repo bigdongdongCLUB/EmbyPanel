@@ -115,6 +115,7 @@ export function UsersClient() {
   const [importEmbyUsers, setImportEmbyUsers] = useState<Array<{ id: string; name: string }>>([]);
   const [importEmbyUsersLoaded, setImportEmbyUsersLoaded] = useState(false);
   const [importSelectedEmbyUsers, setImportSelectedEmbyUsers] = useState<Record<string, boolean>>({});
+  const [openServerDetailUserId, setOpenServerDetailUserId] = useState<string | null>(null);
 
   const [newUsername, setNewUsername] = useState("");
   const [newEmail, setNewEmail] = useState("");
@@ -423,36 +424,40 @@ export function UsersClient() {
                 <td className="py-2 px-3">{dash(r.planName)}</td>
                 <td className="py-2 px-3">
                   {r.servers?.length ? (
-                    <div className="relative group inline-block">
-                      <span
+                    <div className="relative inline-block">
+                      <button
+                        type="button"
                         className={
                           "inline-flex items-center rounded border px-2.5 py-1 text-sm " +
                           (r.serverHasConflict ? "border-amber-300 text-amber-700 bg-amber-50" : "border-gray-300 text-gray-800")
                         }
+                        onClick={() => setOpenServerDetailUserId((prev) => (prev === r.id ? null : r.id))}
                       >
                         {serverBadgeText(r)}
-                      </span>
-                      <div className="pointer-events-none absolute left-0 top-full z-20 mt-2 hidden w-[320px] rounded-xl border bg-white p-3 shadow-xl group-hover:block">
-                        <div className="space-y-2 max-h-[360px] overflow-auto">
-                          {r.servers.map((sv) => (
-                            <div key={sv.embyServerId} className="border-b last:border-b-0 pb-2 last:pb-0">
-                              <div className="flex items-center gap-2">
-                                <span
-                                  className={
-                                    "inline-block h-2.5 w-2.5 rounded-full " +
-                                    (sv.status === "ACTIVE" ? "bg-green-500" : sv.status === "DISABLED" ? "bg-red-500" : "bg-amber-500")
-                                  }
-                                />
-                                <span className="font-semibold">{sv.name}</span>
-                                {sv.status === "DISABLED" ? <span className="text-xs rounded border border-red-200 bg-red-50 text-red-600 px-2 py-0.5">已禁用</span> : null}
-                                {sv.status === "CONFLICT" ? <span className="text-xs rounded border border-amber-200 bg-amber-50 text-amber-700 px-2 py-0.5">同名用户</span> : null}
+                      </button>
+                      {openServerDetailUserId === r.id ? (
+                        <div className="absolute left-0 top-full z-20 mt-2 w-[320px] rounded-xl border bg-white p-3 shadow-xl">
+                          <div className="space-y-2 max-h-[360px] overflow-auto">
+                            {r.servers.map((sv) => (
+                              <div key={sv.embyServerId} className="border-b last:border-b-0 pb-2 last:pb-0">
+                                <div className="flex items-center gap-2">
+                                  <span
+                                    className={
+                                      "inline-block h-2.5 w-2.5 rounded-full " +
+                                      (sv.status === "ACTIVE" ? "bg-green-500" : sv.status === "DISABLED" ? "bg-red-500" : "bg-amber-500")
+                                    }
+                                  />
+                                  <span className="font-semibold">{sv.name}</span>
+                                  {sv.status === "DISABLED" ? <span className="text-xs rounded border border-red-200 bg-red-50 text-red-600 px-2 py-0.5">已禁用</span> : null}
+                                  {sv.status === "CONFLICT" ? <span className="text-xs rounded border border-amber-200 bg-amber-50 text-amber-700 px-2 py-0.5">同名用户</span> : null}
+                                </div>
+                                <div className="text-sm text-gray-600 mt-1">{sv.baseUrl}</div>
+                                <div className="text-sm text-gray-500 mt-1">分配时间：{formatDateYmdShanghai(sv.assignedAt)}</div>
                               </div>
-                              <div className="text-sm text-gray-600 mt-1">{sv.baseUrl}</div>
-                              <div className="text-sm text-gray-500 mt-1">分配时间：{formatDateYmdShanghai(sv.assignedAt)}</div>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
                         </div>
-                      </div>
+                      ) : null}
                     </div>
                   ) : (
                     "-"
