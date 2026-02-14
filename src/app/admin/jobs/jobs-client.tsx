@@ -114,7 +114,15 @@ export function JobsClient() {
                 <td className="py-2 px-3">{r.triggerMode}</td>
                 <td className="py-2 px-3">{fmt(r.executedAt)}</td>
                 <td className="py-2 px-3">
-                  <span className={r.ok === false ? "text-red-600" : r.ok === true ? "text-green-600" : "text-gray-600"}>{r.result}</span>
+                  <span className={r.ok === false ? "text-red-600" : r.ok === true ? "text-green-600" : "text-gray-600"}>
+                    {r.result.split(/(异常\d+|失败\d*|失败：[^，, ]*)/g).map((part, i) => {
+                      if (!part) return null;
+                      if (/^异常\d+$/.test(part) || /^失败\d*$/.test(part) || /^失败：/.test(part)) {
+                        return <span key={i} className="text-red-600">{part}</span>;
+                      }
+                      return <span key={i}>{part}</span>;
+                    })}
+                  </span>
                 </td>
               </tr>
             ))}
