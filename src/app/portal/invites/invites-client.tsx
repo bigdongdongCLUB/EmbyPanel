@@ -128,23 +128,28 @@ export function InvitesClient() {
         </div>
       </div>
 
-      <div className="rounded border border-amber-200 bg-amber-50 p-4 text-sm">
-        <div className="font-medium mb-2">返利计算示例</div>
-        <div>
-          返利模式：{rebatePolicy?.mode === "FIRST_ONLY" ? "仅首次返利" : "循环返利"}；
-          {rebatePolicy?.enabled ? "已开启" : "未开启"}
+      {rebatePolicy?.enabled ? (
+        <div className="rounded border border-amber-200 bg-amber-50 p-4 text-sm">
+          <div className="font-medium mb-2">返利计算示例</div>
+          <div>
+            返利模式：{rebatePolicy?.mode === "FIRST_ONLY" ? "仅首次返利" : "循环返利"}；已开启
+          </div>
+          <div className="mt-1">假设被邀请用户购买 ¥300 订阅：</div>
+          <ul className="list-disc pl-5 mt-1 space-y-1">
+            <li>一级邀请人：¥300 × {rebatePolicy?.rate1 ?? 0}% = ¥{(((rebatePolicy?.rate1 ?? 0) * 300) / 100).toFixed(2)}</li>
+            {(rebatePolicy?.level ?? 1) >= 2 ? (
+              <li>二级邀请人：¥300 × {rebatePolicy?.rate2 ?? 0}% = ¥{(((rebatePolicy?.rate2 ?? 0) * 300) / 100).toFixed(2)}</li>
+            ) : null}
+            {(rebatePolicy?.level ?? 1) >= 3 ? (
+              <li>三级邀请人：¥300 × {rebatePolicy?.rate3 ?? 0}% = ¥{(((rebatePolicy?.rate3 ?? 0) * 300) / 100).toFixed(2)}</li>
+            ) : null}
+          </ul>
         </div>
-        <div className="mt-1">假设被邀请用户购买 ¥300 订阅：</div>
-        <ul className="list-disc pl-5 mt-1 space-y-1">
-          <li>一级邀请人：¥300 × {rebatePolicy?.rate1 ?? 0}% = ¥{(((rebatePolicy?.rate1 ?? 0) * 300) / 100).toFixed(2)}</li>
-          {(rebatePolicy?.level ?? 1) >= 2 ? (
-            <li>二级邀请人：¥300 × {rebatePolicy?.rate2 ?? 0}% = ¥{(((rebatePolicy?.rate2 ?? 0) * 300) / 100).toFixed(2)}</li>
-          ) : null}
-          {(rebatePolicy?.level ?? 1) >= 3 ? (
-            <li>三级邀请人：¥300 × {rebatePolicy?.rate3 ?? 0}% = ¥{(((rebatePolicy?.rate3 ?? 0) * 300) / 100).toFixed(2)}</li>
-          ) : null}
-        </ul>
-      </div>
+      ) : (
+        <div className="rounded border border-red-200 bg-red-50 p-4 text-sm text-red-600 font-medium">
+          系统暂时无启用返利系统，您的邀请无法获得返利
+        </div>
+      )}
 
       <div className="border rounded-lg bg-white overflow-auto">
         <table className="min-w-[760px] w-full text-sm">
