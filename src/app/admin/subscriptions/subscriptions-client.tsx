@@ -396,18 +396,13 @@ export function SubscriptionsClient() {
 
       {edit.open ? (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-3xl rounded-lg shadow p-4 space-y-4 max-h-[85vh] overflow-auto">
-            <div className="flex items-center justify-between">
-              <div className="font-semibold">{edit.id ? "编辑订阅计划" : "创建订阅计划"}</div>
-              <button className="text-sm" onClick={() => setEdit({ open: false })}>
-                关闭
-              </button>
-            </div>
+          <div className="bg-white w-full max-w-[470px] rounded-lg shadow p-4 space-y-4 max-h-[85vh] overflow-auto">
+            <div className="font-semibold">{edit.id ? "编辑订阅计划" : "创建订阅计划"}</div>
 
             {edit.error ? <pre className="text-xs text-red-600 whitespace-pre-wrap">{edit.error}</pre> : null}
 
             <section className="space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3">
                 <div>
                   <label className="text-sm">订阅名称</label>
                   <input
@@ -474,7 +469,7 @@ export function SubscriptionsClient() {
 
             <section className="space-y-3">
               <div className="font-medium">订阅价格设置（元，整数）</div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3">
                 <div>
                   <label className="text-sm">试用价格（可选）</label>
                   <input
@@ -595,7 +590,7 @@ export function SubscriptionsClient() {
                       </button>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3">
                       <div>
                         <label className="text-sm">服务器</label>
                         <select
