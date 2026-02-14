@@ -6,7 +6,7 @@ type Row = {
   id: string;
   jobName: string;
   jobLabel: string;
-  penaltyMode: string;
+  triggerMode: string;
   executedAt: string;
   result: string;
   ok: boolean | null;
@@ -102,7 +102,7 @@ export function JobsClient() {
           <thead className="text-left text-gray-600 border-b">
             <tr>
               <th className="py-2 px-3">任务名称</th>
-              <th className="py-2 px-3">处罚方式</th>
+              <th className="py-2 px-3">触发方式</th>
               <th className="py-2 px-3">执行时间</th>
               <th className="py-2 px-3">处理结果</th>
             </tr>
@@ -111,7 +111,7 @@ export function JobsClient() {
             {(data?.rows ?? []).map((r) => (
               <tr key={r.id} className="border-b last:border-b-0">
                 <td className="py-2 px-3">{r.jobLabel}</td>
-                <td className="py-2 px-3">{r.penaltyMode}</td>
+                <td className="py-2 px-3">{r.triggerMode}</td>
                 <td className="py-2 px-3">{fmt(r.executedAt)}</td>
                 <td className="py-2 px-3">
                   <span className={r.ok === false ? "text-red-600" : r.ok === true ? "text-green-600" : "text-gray-600"}>{r.result}</span>

@@ -16,16 +16,13 @@ function mapJobName(jobName: string) {
   return m[jobName] || jobName;
 }
 
-function penaltyModeFromMessage(jobName: string, message?: string | null) {
-  if (jobName !== "anomaly-scan") return "-";
-  try {
-    const j = message ? JSON.parse(message) : null;
-    if (j?.penaltyEnabled === false) return "关闭处罚";
-    const d = Number(j?.penaltyDurationMinutes ?? 5);
-    return `开启处罚（${Number.isFinite(d) ? d : 5}分钟）`;
-  } catch {
-    return "开启处罚";
-  }
+function triggerMode(jobName: string) {
+  if (jobName === "anomaly-unban") return "定时任务（每1分钟）";
+  if (jobName === "emby-health-check") return "定时任务（每10分钟）";
+  if (jobName === "subscription-expiry-disable") return "定时任务（每10分钟）";
+  if (jobName === "subscription-expiry-reminder") return "定时任务（每10分钟）";
+  if (jobName === "anomaly-scan") return "定时任务（每10分钟）";
+  return "定时任务";
 }
 
 function resultText(ok: boolean | null, message?: string | null) {
@@ -96,7 +93,7 @@ export async function GET(req: Request) {
       id: r.id,
       jobName: r.jobName,
       jobLabel: mapJobName(r.jobName),
-      penaltyMode: penaltyModeFromMessage(r.jobName, r.message),
+      triggerMode: triggerMode(r.jobName),
       executedAt: r.startedAt,
       result: resultText(r.ok, r.message),
       ok: r.ok,
