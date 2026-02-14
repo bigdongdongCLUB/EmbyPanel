@@ -24,6 +24,7 @@ export function MonitoringPenaltiesClient() {
   const [penaltyDuration, setPenaltyDuration] = useState(5);
   const [savingPenalty, setSavingPenalty] = useState(false);
   const [rows, setRows] = useState<PenaltyRecord[]>([]);
+  const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -69,10 +70,16 @@ export function MonitoringPenaltiesClient() {
     refresh();
   }, []);
 
-  const total = rows.length;
+  const filteredRows = useMemo(() => {
+    const qq = q.trim().toLowerCase();
+    if (!qq) return rows;
+    return rows.filter((r) => String(r.username || "").toLowerCase().includes(qq));
+  }, [rows, q]);
+
+  const total = filteredRows.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const safePage = Math.min(Math.max(1, page), totalPages);
-  const pageRows = useMemo(() => rows.slice((safePage - 1) * pageSize, (safePage - 1) * pageSize + pageSize), [rows, safePage, pageSize]);
+  const pageRows = useMemo(() => filteredRows.slice((safePage - 1) * pageSize, (safePage - 1) * pageSize + pageSize), [filteredRows, safePage, pageSize]);
 
   useEffect(() => {
     if (page !== safePage) setPage(safePage);
@@ -81,6 +88,16 @@ export function MonitoringPenaltiesClient() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2 items-center">
+        <input
+          className="border rounded px-3 py-2 min-w-[220px]"
+          placeholder="搜索用户名"
+          value={q}
+          onChange={(e) => {
+            setQ(e.target.value);
+            setPage(1);
+          }}
+        />
+
         <label className="flex items-center gap-2 text-sm text-gray-700">
           启用处罚
           <input type="checkbox" checked={penaltyEnabled} onChange={(e) => setPenaltyEnabled(e.target.checked)} />
