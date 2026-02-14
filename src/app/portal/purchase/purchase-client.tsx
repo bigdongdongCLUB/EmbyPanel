@@ -159,12 +159,11 @@ export function PortalPurchaseClient() {
                 {p.prices.trialYuan !== null ? <div className="text-xs shrink-0 pt-0.5 inline-flex items-center rounded border border-green-200 bg-green-50 px-2 py-0.5 text-green-600">可试用</div> : null}
               </div>
 
-              <div className="flex items-end gap-2">
+              <div className="flex items-end gap-2 flex-wrap">
                 <span className="text-4xl font-bold">¥{main.price}</span>
                 <span className="text-sm text-gray-500 pb-0.5">/{main.cycle}</span>
+                <span className="text-sm text-gray-500 pb-0.5">起，更多周期可选</span>
               </div>
-
-              <div className="text-sm text-gray-500">起，更多周期可选</div>
               {p.description ? <div className="text-sm text-gray-600 whitespace-pre-wrap">{p.description}</div> : null}
 
               <button className="w-full text-center bg-blue-600 text-white rounded px-2.5 py-2 text-sm" onClick={() => openPlanModal(p.id)}>
