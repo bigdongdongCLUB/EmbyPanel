@@ -26,12 +26,11 @@ export default async function AdminHome() {
     <div className="space-y-4">
       <div>
         <h1 className="text-xl font-semibold">仪表盘</h1>
-        <p className="mt-1 text-sm text-gray-600">（MVP）概览数据，后续再逐步补图表/告警。</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <Card title="面板用户总数" value={String(stats.panelUserCount)} />
-        <Card title="所有 Emby 服务器 30 日活跃用户" value={String(stats.embyActive30dTotal)} hint="按 LastActivityDate 统计（各服活跃用户数相加）" />
+        <Card title="所有 Emby 服务器 30 日活跃用户" value={String(stats.embyActive30dTotal)} />
         <Card title="即将到期用户" value={String(stats.expiringSoonCount)} hint={`未来 ${stats.expiringSoonDays} 天内到期`} />
       </div>
 
@@ -53,7 +52,7 @@ export default async function AdminHome() {
                   <td className="py-2 px-3">{s.name}</td>
                   <td className="py-2 px-3">{s.ok ? s.active30d : "-"}</td>
                   <td className="py-2 px-3">{s.ok ? s.totalUsers : "-"}</td>
-                  <td className="py-2 px-3">{s.ok ? "OK" : `异常：${s.error ?? "unknown"}`}</td>
+                  <td className="py-2 px-3">{s.ok ? "✅" : `异常：${s.error ?? "unknown"}`}</td>
                 </tr>
               ))}
               {!stats.perServer.length ? (
