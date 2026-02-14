@@ -57,6 +57,7 @@ export function AdminSidebarClient({
           <Item href="/admin/subscriptions" label="订阅管理" icon="/icons/subscriptions.svg" collapsed={collapsed} />
           <Item href="/admin/servers" label="Emby 服务器" icon="/icons/servers.svg" collapsed={collapsed} />
           <Item href="/admin/monitoring" label="统计监控" icon="/icons/monitoring.svg" collapsed={collapsed} />
+          <Item href="/admin/payments" label="支付管理" icon="/icons/payments.svg" collapsed={collapsed} />
         </div>
 
         <div className="sidebar-divider my-3 border-t border-[rgb(41,41,41)]" />
