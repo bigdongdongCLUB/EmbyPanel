@@ -97,7 +97,7 @@ export async function GET(req: Request) {
     penaltyRecords: (Array.isArray(penaltyRecordsRow?.valueJson) ? (penaltyRecordsRow?.valueJson as any[]) : [])
       .slice()
       .sort((a: any, b: any) => String(b?.disabledAt ?? "").localeCompare(String(a?.disabledAt ?? "")))
-      .slice(0, 100),
+      .slice(0, 1000),
     anomalies,
   });
 }

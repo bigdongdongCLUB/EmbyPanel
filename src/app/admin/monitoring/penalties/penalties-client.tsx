@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type PenaltyConfig = { enabled: boolean; durationMinutes: number };
 type PenaltyRecord = {
@@ -24,6 +24,8 @@ export function MonitoringPenaltiesClient() {
   const [penaltyDuration, setPenaltyDuration] = useState(5);
   const [savingPenalty, setSavingPenalty] = useState(false);
   const [rows, setRows] = useState<PenaltyRecord[]>([]);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   async function refresh() {
     setLoading(true);
@@ -36,6 +38,7 @@ export function MonitoringPenaltiesClient() {
       setPenaltyEnabled(!!cfg.enabled);
       setPenaltyDuration(Number(cfg.durationMinutes || 5));
       setRows(Array.isArray(json?.penaltyRecords) ? json.penaltyRecords : []);
+      setPage(1);
     } catch (e: any) {
       setError(e?.message ?? "load_failed");
     } finally {
@@ -66,6 +69,15 @@ export function MonitoringPenaltiesClient() {
     refresh();
   }, []);
 
+  const total = rows.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(Math.max(1, page), totalPages);
+  const pageRows = useMemo(() => rows.slice((safePage - 1) * pageSize, (safePage - 1) * pageSize + pageSize), [rows, safePage, pageSize]);
+
+  useEffect(() => {
+    if (page !== safePage) setPage(safePage);
+  }, [page, safePage]);
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2 items-center">
@@ -79,6 +91,13 @@ export function MonitoringPenaltiesClient() {
           <option value="10">10 分钟</option>
           <option value="15">15 分钟</option>
           <option value="30">30 分钟</option>
+        </select>
+
+        <select className="border rounded px-3 py-2" value={String(pageSize)} onChange={(e) => { setPage(1); setPageSize(Number(e.target.value)); }}>
+          <option value="10">10 / page</option>
+          <option value="20">20 / page</option>
+          <option value="50">50 / page</option>
+          <option value="100">100 / page</option>
         </select>
 
         <button className="border rounded px-3 py-2" onClick={savePenaltyConfig} disabled={savingPenalty}>
@@ -97,7 +116,7 @@ export function MonitoringPenaltiesClient() {
       <div className="bg-white border rounded-lg p-4">
         <div className="flex items-center justify-between">
           <div className="font-medium text-sm">处罚记录</div>
-          <div className="text-xs text-gray-500">仅显示最近 100 条</div>
+          <div className="text-xs text-gray-500">最多显示最近 1000 条</div>
         </div>
 
         <div className="mt-3 overflow-auto">
@@ -112,7 +131,7 @@ export function MonitoringPenaltiesClient() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => {
+              {pageRows.map((r) => {
                 const statusText = r.status === "UNBANNED" ? "已解禁" : r.status === "PENDING" ? "封禁中" : r.status === "SKIPPED_NOT_ELIGIBLE" ? "到期跳过" : r.status === "FAILED_UNBAN" ? "解禁失败" : r.status === "FAILED_DISABLE" ? "封禁失败" : r.status;
                 return (
                   <tr key={r.id} className="border-b last:border-b-0">
@@ -124,13 +143,19 @@ export function MonitoringPenaltiesClient() {
                   </tr>
                 );
               })}
-              {!loading && rows.length === 0 ? (
+              {!loading && total === 0 ? (
                 <tr>
                   <td className="py-6 px-3 text-gray-500" colSpan={5}>暂无处罚记录</td>
                 </tr>
               ) : null}
             </tbody>
           </table>
+        </div>
+
+        <div className="mt-3 flex items-center justify-end gap-2 text-sm border-t pt-3">
+          <div className="mr-auto text-gray-600">共 {total} 条 · 第 {safePage}/{totalPages} 页</div>
+          <button className="border rounded px-3 py-1.5 disabled:opacity-50" disabled={safePage <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>上一页</button>
+          <button className="border rounded px-3 py-1.5 disabled:opacity-50" disabled={safePage >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>下一页</button>
         </div>
       </div>
     </div>
