@@ -117,9 +117,24 @@ export function JobsClient() {
                   <span className={r.ok === false ? "text-red-600" : r.ok === true ? "text-green-600" : "text-gray-600"}>
                     {r.result.split(/(异常\d+|失败\d*|失败：[^，, ]*)/g).map((part, i) => {
                       if (!part) return null;
-                      if (/^异常\d+$/.test(part) || /^失败\d*$/.test(part) || /^失败：/.test(part)) {
+
+                      const mAbnormal = part.match(/^异常(\d+)$/);
+                      if (mAbnormal) {
+                        const n = Number(mAbnormal[1]);
+                        return <span key={i} className={n > 0 ? "text-red-600" : ""}>{part}</span>;
+                      }
+
+                      const mFail = part.match(/^失败(\d*)$/);
+                      if (mFail) {
+                        const raw = mFail[1];
+                        const n = raw === "" ? 1 : Number(raw);
+                        return <span key={i} className={n > 0 ? "text-red-600" : ""}>{part}</span>;
+                      }
+
+                      if (/^失败：/.test(part)) {
                         return <span key={i} className="text-red-600">{part}</span>;
                       }
+
                       return <span key={i}>{part}</span>;
                     })}
                   </span>
