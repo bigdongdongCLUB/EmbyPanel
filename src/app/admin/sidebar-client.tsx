@@ -57,14 +57,14 @@ export function AdminSidebarClient({
           <Item href="/admin/subscriptions" label="订阅管理" icon="/icons/subscriptions.svg" collapsed={collapsed} />
           <Item href="/admin/servers" label="Emby 服务器" icon="/icons/servers.svg" collapsed={collapsed} />
           <Item href="/admin/monitoring" label="统计监控" icon="/icons/monitoring.svg" collapsed={collapsed} />
-          <Item href="/admin/payments" label="支付管理" icon="/icons/payments.svg" collapsed={collapsed} />
-          <Item href="/admin/orders" label="订单管理" icon="/icons/orders.svg" collapsed={collapsed} />
         </div>
 
         <div className="sidebar-divider my-3 border-t border-[rgb(41,41,41)]" />
 
         <div className="space-y-1">
           <Item href="/admin/cards" label="卡密管理" icon="/icons/cards.svg" collapsed={collapsed} />
+          <Item href="/admin/payments" label="支付管理" icon="/icons/payments.svg" collapsed={collapsed} />
+          <Item href="/admin/orders" label="订单管理" icon="/icons/orders.svg" collapsed={collapsed} />
           <Item href="/admin/announcements" label="公告管理" icon="/icons/announcements.svg" collapsed={collapsed} />
           <Item href="/admin/invites" label="邀请管理" icon="/icons/invite-manage.svg" collapsed={collapsed} />
           <Item href="/admin/jobs" label="定时任务" icon="/icons/jobs.svg" collapsed={collapsed} />
