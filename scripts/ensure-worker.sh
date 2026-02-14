@@ -3,15 +3,15 @@ set -euo pipefail
 
 ROOT="/Users/bdd-macmini/Documents/workspeace/EmbyPanel"
 LOG="$ROOT/data/logs/worker-anomaly-scan.log"
-LOCK="$ROOT/data/logs/worker-anomaly-scan.lock"
+LOCKDIR="$ROOT/data/logs/worker-anomaly-scan.lockdir"
 
 mkdir -p "$ROOT/data/logs"
 
-# 单实例锁，避免并发拉起
-exec 9>"$LOCK"
-if ! /usr/bin/flock -n 9; then
+# 单实例锁（macOS 无 flock，使用 mkdir 原子锁）
+if ! mkdir "$LOCKDIR" 2>/dev/null; then
   exit 0
 fi
+trap 'rmdir "$LOCKDIR" >/dev/null 2>&1 || true' EXIT
 
 cd "$ROOT"
 
