@@ -12,6 +12,7 @@ function mapJobName(jobName: string) {
     "subscription-expiry-reminder": "订阅到期提醒",
     "anomaly-scan": "播放异常检测",
     "anomaly-unban": "处罚自动解禁",
+    "cache-cleanup": "缓存清理", 
   };
   return m[jobName] || jobName;
 }
@@ -22,6 +23,7 @@ function triggerMode(jobName: string) {
   if (jobName === "subscription-expiry-disable") return "定时任务（每10分钟）";
   if (jobName === "subscription-expiry-reminder") return "定时任务（每10分钟）";
   if (jobName === "anomaly-scan") return "定时任务（每5分钟）";
+  if (jobName === "cache-cleanup") return "定时任务（每日 02:00）";
   return "定时任务";
 }
 
@@ -36,6 +38,7 @@ function resultText(ok: boolean | null, message?: string | null) {
       if (typeof j?.okCount === "number") return `成功：健康OK ${j.okCount}，失败${j.failCount ?? 0}`;
       if (typeof j?.linksDisabled === "number") return `成功：禁用${j.linksDisabled}，告警${j.apiWarnings ?? 0}`;
       if (typeof j?.sent === "number") return `成功：已发送${j.sent}`;
+      if (typeof j?.snapshotsDeleted === "number") return `成功：快照清理${j.snapshotsDeleted}，任务日志清理${j.jobRunsDeleted ?? 0}`;
       return "成功";
     } catch {
       return "成功";

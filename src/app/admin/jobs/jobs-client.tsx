@@ -83,6 +83,7 @@ export function JobsClient() {
           <option value="subscription-expiry-reminder">订阅到期提醒</option>
           <option value="anomaly-scan">播放异常检测</option>
           <option value="anomaly-unban">处罚自动解禁</option>
+          <option value="cache-cleanup">缓存清理</option>
         </select>
 
         <select className="border rounded px-3 py-2" value={String(pageSize)} onChange={(e) => { setPage(1); setPageSize(Number(e.target.value)); }}>

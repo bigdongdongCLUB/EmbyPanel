@@ -41,7 +41,7 @@ async function ensureRepeatable(queue) {
   // 清理历史重复任务（例如旧的10分钟scan），避免沿用旧节奏
   const all = await queue.getRepeatableJobs();
   for (const r of all) {
-    if (r?.name === "scan" || r?.name === "unban") {
+    if (r?.name === "scan" || r?.name === "unban" || r?.name === "cache-cleanup") {
       await queue.removeRepeatableByKey(r.key);
     }
   }
@@ -64,6 +64,17 @@ async function ensureRepeatable(queue) {
     {
       jobId: "repeat:unban",
       repeat: { every: 60 * 1000 },
+      removeOnComplete: true,
+      removeOnFail: 1000,
+    }
+  );
+
+  await queue.add(
+    "cache-cleanup",
+    { kind: "cache-cleanup" },
+    {
+      jobId: "repeat:cache-cleanup",
+      repeat: { pattern: "0 2 * * *", tz: "Asia/Shanghai" },
       removeOnComplete: true,
       removeOnFail: 1000,
     }
@@ -108,6 +119,12 @@ async function main() {
           console.log("[worker] anomaly-unban", { jobId: job.id, due: unban?.dueCount, unbanned: unban?.unbanned, skipped: unban?.skipped, failed: unban?.failed });
         }
         return { unban };
+      }
+
+      if (job.name === "cache-cleanup") {
+        const cleanup = await callInternal("/api/admin/jobs/cache-cleanup");
+        console.log("[worker] cache-cleanup", { jobId: job.id, snapshotsDeleted: cleanup?.snapshotsDeleted, jobRunsDeleted: cleanup?.jobRunsDeleted, emailCodesPruned: cleanup?.emailCodesPruned });
+        return { cleanup };
       }
 
       const started = Date.now();
