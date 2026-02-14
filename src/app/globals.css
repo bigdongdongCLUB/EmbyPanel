@@ -50,3 +50,8 @@ body {
   padding-top: 4px;
   padding-bottom: 4px;
 }
+
+/* 侧栏分割线单独覆盖（避免被面板全局边框色规则覆盖） */
+.panel-compact .sidebar-divider {
+  border-color: rgb(41 41 41) !important;
+}
