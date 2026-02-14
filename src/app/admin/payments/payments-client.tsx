@@ -222,7 +222,7 @@ export function PaymentsAdminClient() {
 
       {open ? (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center p-4 z-40">
-          <div className="bg-white w-full max-w-[760px] rounded-lg shadow p-4 space-y-4 max-h-[85vh] overflow-auto">
+          <div className="bg-white w-full max-w-[430px] rounded-lg shadow p-4 space-y-4 max-h-[85vh] overflow-auto">
             <div className="text-2xl font-semibold">添加支付方式</div>
 
             <div className="flex gap-6 border-b">
