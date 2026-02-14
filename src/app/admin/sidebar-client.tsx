@@ -39,7 +39,7 @@ export function AdminSidebarClient({
       <div className="h-16 flex items-center justify-center px-2 border-b border-gray-300/20">
         <Link href="/admin" className="flex items-center gap-2 min-w-0">
           <img src={siteLogoDataUrl || "/logo.png"} alt="logo" className="h-8 w-8 rounded-full object-cover shrink-0" />
-          {!collapsed ? <span className="font-semibold text-2xl tracking-wide leading-none text-center truncate">{siteName || "EmbyPanel"}</span> : null}
+          {!collapsed ? <span className="font-semibold text-base tracking-wide leading-none text-center truncate">{siteName || "EmbyPanel"}</span> : null}
         </Link>
       </div>
 
