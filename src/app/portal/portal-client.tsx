@@ -76,10 +76,10 @@ export function PortalClient() {
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-2">
         <div className="border rounded-lg">
-          <div className="px-2 py-1.5 border-b text-sm font-medium">系统公告</div>
-          <div className="p-2">
+          <div className="px-2 py-1.5 border-b text-sm font-medium text-center">系统公告</div>
+          <div className="p-2 text-center">
             <div className="text-sm font-semibold text-center">{notices[noticeIndex]?.title ?? "系统公告"}</div>
-            <div className="text-xs text-gray-700 mt-1.5 whitespace-pre-wrap min-h-[56px]">{notices[noticeIndex]?.content ?? "暂无公告"}</div>
+            <div className="text-xs text-gray-700 mt-1.5 whitespace-pre-wrap min-h-[56px] text-center">{notices[noticeIndex]?.content ?? "暂无公告"}</div>
             {notices.length > 1 ? (
               <div className="mt-2 flex items-center justify-center gap-1.5">
                 {notices.map((n, i) => (
@@ -98,11 +98,11 @@ export function PortalClient() {
         </div>
 
         <div className="border rounded-lg">
-          <div className="px-2 py-1.5 border-b text-sm font-medium">卡密兑换</div>
-          <div className="p-2 space-y-2">
-            <div className="text-xs text-gray-600">输入卡密可快速充值余额或激活订阅。</div>
+          <div className="px-2 py-1.5 border-b text-sm font-medium text-center">卡密兑换</div>
+          <div className="p-2 space-y-2 text-center">
+            <div className="text-xs text-gray-600 text-center">输入卡密可快速充值余额或激活订阅。</div>
             <input
-              className="w-full border rounded px-2 py-1.5 text-xs font-mono"
+              className="w-full border rounded px-2 py-1.5 text-xs font-mono text-center"
               placeholder="请输入卡密"
               value={redeemCode}
               onChange={(e) => setRedeemCode(e.target.value.toUpperCase())}
