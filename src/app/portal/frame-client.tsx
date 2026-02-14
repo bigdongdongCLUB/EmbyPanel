@@ -50,7 +50,7 @@ export function PortalFrameClient({ username, role, siteName, siteLogoDataUrl, c
         <header className="sticky top-0 z-20 h-14 bg-white border-b flex items-center justify-between px-3 md:px-4">
           <div className="flex items-center gap-2">
             <button className="border rounded px-2 py-1 text-sm" onClick={toggle} title={isMobile ? (mobileOpen ? "收起菜单" : "展开菜单") : collapsed ? "展开菜单" : "收起菜单"}>
-              ☰
+              <img src="/icons/menu.svg" alt="菜单" className="h-4 w-4" />
             </button>
             <div className="text-sm text-gray-700">用户中心</div>
           </div>
