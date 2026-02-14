@@ -38,6 +38,14 @@ const connection = new IORedis(REDIS_URL, {
 const queueName = "embypanel-anomaly-scan";
 
 async function ensureRepeatable(queue) {
+  // 清理历史重复任务（例如旧的10分钟scan），避免沿用旧节奏
+  const all = await queue.getRepeatableJobs();
+  for (const r of all) {
+    if (r?.name === "scan" || r?.name === "unban") {
+      await queue.removeRepeatableByKey(r.key);
+    }
+  }
+
   // Stable jobId so it is idempotent.
   await queue.add(
     "scan",
@@ -89,7 +97,7 @@ async function main() {
   const queue = new Queue(queueName, { connection });
 
   await ensureRepeatable(queue);
-  console.log(`[worker] repeatable job ensured: ${queueName} every 10min -> ${WEB_INTERNAL_URL}`);
+  console.log(`[worker] repeatable job ensured: ${queueName} every 5min -> ${WEB_INTERNAL_URL}`);
 
   const worker = new Worker(
     queueName,
