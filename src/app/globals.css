@@ -55,3 +55,12 @@ body {
 .panel-compact .sidebar-divider {
   border-color: rgb(41 41 41) !important;
 }
+
+/* 面板搜索框统一前置搜索图标 */
+.panel-compact input[placeholder*="搜索"] {
+  padding-left: 30px !important;
+  background-image: url('/icons/search.svg');
+  background-repeat: no-repeat;
+  background-size: 14px 14px;
+  background-position: 10px center;
+}
