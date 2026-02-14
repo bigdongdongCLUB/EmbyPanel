@@ -75,6 +75,142 @@ function isValidYmd(v: string) {
   return Number.isFinite(d.getTime()) && d.toISOString().slice(0, 10) === v;
 }
 
+function parseYmd(v: string): Date | null {
+  if (!isValidYmd(v)) return null;
+  return new Date(v + "T00:00:00.000Z");
+}
+
+function ymdFromUtcDate(d: Date) {
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function DateInputWithPanel({ value, onChange, ariaLabel }: { value: string; onChange: (v: string) => void; ariaLabel: string }) {
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const today = new Date();
+  const initial = parseYmd(value) ?? new Date(Date.UTC(today.getFullYear(), today.getMonth(), 1));
+  const [open, setOpen] = useState(false);
+  const [viewYear, setViewYear] = useState(initial.getUTCFullYear());
+  const [viewMonth, setViewMonth] = useState(initial.getUTCMonth());
+
+  useEffect(() => {
+    if (!open) return;
+    const selected = parseYmd(value);
+    if (selected) {
+      setViewYear(selected.getUTCFullYear());
+      setViewMonth(selected.getUTCMonth());
+    }
+  }, [open, value]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDocDown = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (!rootRef.current?.contains(t)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDocDown);
+    return () => document.removeEventListener("mousedown", onDocDown);
+  }, [open]);
+
+  const firstDay = new Date(Date.UTC(viewYear, viewMonth, 1));
+  const offset = firstDay.getUTCDay();
+  const daysInMonth = new Date(Date.UTC(viewYear, viewMonth + 1, 0)).getUTCDate();
+  const selectedYmd = value;
+
+  const cells: Array<{ ymd: string; day: number; inCurrent: boolean }> = [];
+  const prevMonthDays = new Date(Date.UTC(viewYear, viewMonth, 0)).getUTCDate();
+  for (let i = offset - 1; i >= 0; i--) {
+    const d = prevMonthDays - i;
+    const dt = new Date(Date.UTC(viewYear, viewMonth - 1, d));
+    cells.push({ ymd: ymdFromUtcDate(dt), day: d, inCurrent: false });
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dt = new Date(Date.UTC(viewYear, viewMonth, d));
+    cells.push({ ymd: ymdFromUtcDate(dt), day: d, inCurrent: true });
+  }
+  while (cells.length < 42) {
+    const d = cells.length - (offset + daysInMonth) + 1;
+    const dt = new Date(Date.UTC(viewYear, viewMonth + 1, d));
+    cells.push({ ymd: ymdFromUtcDate(dt), day: d, inCurrent: false });
+  }
+
+  const monthText = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}`;
+
+  return (
+    <div ref={rootRef} className="relative mt-1">
+      <input
+        className="w-full border rounded px-3 py-2 pr-10"
+        type="text"
+        placeholder="YYYY-MM-DD"
+        value={value}
+        onChange={(e) => onChange(e.target.value.trim())}
+      />
+      <button
+        type="button"
+        className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+        onClick={() => setOpen((v) => !v)}
+        aria-label={ariaLabel}
+      >
+        <img src="/icons/calendar.svg" alt="" className="h-4 w-4" />
+      </button>
+
+      {open ? (
+        <div className="absolute z-40 mt-1 w-[280px] max-w-[calc(100vw-2rem)] rounded-lg border bg-white p-2 shadow-xl">
+          <div className="mb-2 flex items-center justify-between">
+            <button
+              type="button"
+              className="rounded border px-2 py-1 text-xs"
+              onClick={() => {
+                const d = new Date(Date.UTC(viewYear, viewMonth - 1, 1));
+                setViewYear(d.getUTCFullYear());
+                setViewMonth(d.getUTCMonth());
+              }}
+            >
+              上月
+            </button>
+            <div className="text-sm font-medium">{monthText}</div>
+            <button
+              type="button"
+              className="rounded border px-2 py-1 text-xs"
+              onClick={() => {
+                const d = new Date(Date.UTC(viewYear, viewMonth + 1, 1));
+                setViewYear(d.getUTCFullYear());
+                setViewMonth(d.getUTCMonth());
+              }}
+            >
+              下月
+            </button>
+          </div>
+          <div className="grid grid-cols-7 gap-1 text-center text-xs text-gray-500 mb-1">
+            <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+          </div>
+          <div className="grid grid-cols-7 gap-1">
+            {cells.map((c) => (
+              <button
+                key={c.ymd}
+                type="button"
+                className={
+                  "h-8 rounded text-sm " +
+                  (c.inCurrent ? "text-gray-800" : "text-gray-300") +
+                  (selectedYmd === c.ymd ? " bg-blue-600 text-white" : " hover:bg-gray-100")
+                }
+                onClick={() => {
+                  onChange(c.ymd);
+                  setOpen(false);
+                }}
+              >
+                {c.day}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function serverBadgeText(r: UserRow) {
   const total = r.serverCount ?? r.servers?.length ?? 0;
   const online = r.serverOnlineCount ?? (r.servers ?? []).filter((x) => x.status === "ACTIVE").length;
@@ -641,44 +777,12 @@ export function UsersClient() {
 
                 <div>
                   <label className="text-sm">订阅开始日期</label>
-                  <div className="relative mt-1">
-                    <input
-                      className="w-full border rounded px-3 py-2 pr-10"
-                      type="text"
-                      placeholder="YYYY-MM-DD"
-                      value={edit.startAt}
-                      onChange={(e) => setEdit({ ...edit, startAt: e.target.value.trim() })}
-                    />
-                    <img src="/icons/calendar.svg" alt="" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-                    <input
-                      type="date"
-                      value={edit.startAt}
-                      onChange={(e) => setEdit({ ...edit, startAt: e.target.value })}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 opacity-0 cursor-pointer"
-                      aria-label="选择订阅开始日期"
-                    />
-                  </div>
+                  <DateInputWithPanel value={edit.startAt} onChange={(v) => setEdit({ ...edit, startAt: v })} ariaLabel="选择订阅开始日期" />
                 </div>
 
                 <div>
                   <label className="text-sm">订阅结束日期</label>
-                  <div className="relative mt-1">
-                    <input
-                      className="w-full border rounded px-3 py-2 pr-10"
-                      type="text"
-                      placeholder="YYYY-MM-DD"
-                      value={edit.endAt}
-                      onChange={(e) => setEdit({ ...edit, endAt: e.target.value.trim() })}
-                    />
-                    <img src="/icons/calendar.svg" alt="" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-                    <input
-                      type="date"
-                      value={edit.endAt}
-                      onChange={(e) => setEdit({ ...edit, endAt: e.target.value })}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 opacity-0 cursor-pointer"
-                      aria-label="选择订阅结束日期"
-                    />
-                  </div>
+                  <DateInputWithPanel value={edit.endAt} onChange={(v) => setEdit({ ...edit, endAt: v })} ariaLabel="选择订阅结束日期" />
                 </div>
               </div>
             </div>
