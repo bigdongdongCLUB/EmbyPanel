@@ -156,7 +156,7 @@ export function PortalPurchaseClient() {
             <div key={p.id} className="border rounded-xl p-3 space-y-2.5 bg-white shadow-sm max-w-[320px]">
               <div className="flex items-start justify-between gap-2">
                 <div className="text-2xl font-semibold leading-tight">{p.name}</div>
-                {p.prices.trialYuan !== null ? <div className="text-xs text-red-500 shrink-0 pt-0.5">可试用</div> : null}
+                {p.prices.trialYuan !== null ? <div className="text-xs shrink-0 pt-0.5 inline-flex items-center rounded border border-green-200 bg-green-50 px-2 py-0.5 text-green-600">可试用</div> : null}
               </div>
 
               <div className="flex items-end gap-2">
