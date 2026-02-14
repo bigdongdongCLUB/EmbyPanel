@@ -252,7 +252,7 @@ export function CardCodesClient() {
 
       {open ? (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg w-full max-w-3xl p-4 space-y-4 max-h-[85vh] overflow-auto">
+          <div className="bg-white rounded-lg w-full max-w-[470px] p-4 space-y-4 max-h-[85vh] overflow-auto">
             <div className="text-xl font-semibold">批量创建卡密</div>
             <div className="rounded-lg border bg-blue-50 p-4 text-sm text-gray-700">支持生成余额充值卡密和订阅卡密。卡密默认16位大写英文+数字。</div>
 
