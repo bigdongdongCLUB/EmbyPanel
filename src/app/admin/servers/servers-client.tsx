@@ -155,7 +155,7 @@ function UsersTable({
                 <tr key={u.id} className="border-b last:border-b-0">
                   <td className="py-2 px-3 font-mono">{u.name}</td>
                   <td className="py-2 px-3">{u.anomalyStatus ?? "-"}</td>
-                  <td className="py-2 px-3">{u.policy?.isDisabled ? "Emby禁用" : "Emby正常"}</td>
+                  <td className={"py-2 px-3 " + (u.policy?.isDisabled ? "text-red-600" : "")}>{u.policy?.isDisabled ? "Emby禁用" : "Emby正常"}</td>
                   <td className="py-2 px-3 font-mono">{u.panel?.username ?? "-"}</td>
                   <td className="py-2 px-3">{u.panel?.email ?? "-"}</td>
                   <td className="py-2 px-3 font-mono text-xs">{formatDateYmd(u.lastActivityDate)}</td>
