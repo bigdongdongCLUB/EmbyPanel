@@ -5,6 +5,17 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
 
+
+const PENALTY_CONFIG_KEY = "anomaly_penalty_config";
+const PENALTY_RECORDS_KEY = "anomaly_penalty_records";
+
+function normalizePenaltyConfig(v: any) {
+  const enabled = typeof v?.enabled === "boolean" ? v.enabled : true;
+  const d = Number(v?.durationMinutes ?? 5);
+  const durationMinutes = Number.isFinite(d) ? Math.max(1, Math.min(120, Math.trunc(d))) : 5;
+  return { enabled, durationMinutes };
+}
+
 export async function GET(req: Request) {
   const auth = await requireAdmin();
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
@@ -25,7 +36,7 @@ export async function GET(req: Request) {
     ...(q ? { user: { username: { contains: q, mode: "insensitive" } } } : {}),
   };
 
-  const [rows, total] = await Promise.all([
+  const [rows, total, penaltyConfigRow, penaltyRecordsRow] = await Promise.all([
     prisma.anomaly.findMany({
       where,
       orderBy: { detectedAt: "desc" },
@@ -40,6 +51,8 @@ export async function GET(req: Request) {
       },
     }),
     prisma.anomaly.count({ where }),
+    prisma.appSetting.findUnique({ where: { key: PENALTY_CONFIG_KEY } }),
+    prisma.appSetting.findUnique({ where: { key: PENALTY_RECORDS_KEY } }),
   ]);
 
   const distinctUsers = await prisma.anomaly.findMany({
@@ -80,6 +93,11 @@ export async function GET(req: Request) {
       totalEvents: total,
       totalUsers: distinctUsers.length,
     },
+    penaltyConfig: normalizePenaltyConfig(penaltyConfigRow?.valueJson ?? {}),
+    penaltyRecords: (Array.isArray(penaltyRecordsRow?.valueJson) ? (penaltyRecordsRow?.valueJson as any[]) : [])
+      .slice()
+      .sort((a: any, b: any) => String(b?.disabledAt ?? "").localeCompare(String(a?.disabledAt ?? "")))
+      .slice(0, 100),
     anomalies,
   });
 }

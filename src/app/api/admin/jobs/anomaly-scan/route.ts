@@ -10,6 +10,7 @@ import { embySetUserDisabled } from "@/lib/emby-provision";
 
 const PENALTY_STATE_KEY = "anomaly_penalty_state";
 const PENALTY_RECORDS_KEY = "anomaly_penalty_records";
+const PENALTY_CONFIG_KEY = "anomaly_penalty_config";
 
 function normalizeIp(ipRaw: string): string {
   const ip = (ipRaw ?? "").trim();
@@ -48,6 +49,17 @@ async function savePenaltyState(state: Record<string, any>) {
     create: { key: PENALTY_STATE_KEY, valueJson: state },
     update: { valueJson: state },
   });
+}
+
+
+
+async function loadPenaltyConfig() {
+  const row = await prisma.appSetting.findUnique({ where: { key: PENALTY_CONFIG_KEY } });
+  const v: any = row?.valueJson ?? {};
+  const enabled = typeof v?.enabled === "boolean" ? v.enabled : true;
+  const d = Number(v?.durationMinutes ?? 5);
+  const durationMinutes = Number.isFinite(d) ? Math.max(1, Math.min(120, Math.trunc(d))) : 5;
+  return { enabled, durationMinutes };
 }
 
 async function loadPenaltyRecords() {
@@ -95,7 +107,7 @@ export async function POST(req: Request) {
     });
 
     const now = new Date();
-    const unlockAt = new Date(now.getTime() + 5 * 60 * 1000);
+    const penaltyConfig = await loadPenaltyConfig();
 
     const penaltyState = await loadPenaltyState();
     let penaltyRecords = await loadPenaltyRecords();
@@ -208,7 +220,8 @@ export async function POST(req: Request) {
         });
         createdEvents += 1;
 
-        if (nextConsecutive >= 2 && !pendingPenaltyKeys.has(key)) {
+        if (penaltyConfig.enabled && nextConsecutive >= 2 && !pendingPenaltyKeys.has(key)) {
+          const unlockAt = new Date(now.getTime() + penaltyConfig.durationMinutes * 60 * 1000);
           const recId = `penalty_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
           let disabledOk = false;
           let disableError: string | null = null;
@@ -236,7 +249,7 @@ export async function POST(req: Request) {
               disabledAt: now.toISOString(),
               unlockAt: unlockAt.toISOString(),
               status: "PENDING",
-              reason: "连续两次10分钟检测命中异常并发播放",
+              reason: `连续两次10分钟检测命中异常并发播放，封禁${penaltyConfig.durationMinutes}分钟`,
             });
           } else {
             warnings += 1;
@@ -251,7 +264,7 @@ export async function POST(req: Request) {
               unlockAt: unlockAt.toISOString(),
               status: "FAILED_DISABLE",
               error: disableError || "disable_failed",
-              reason: "连续两次10分钟检测命中异常并发播放",
+              reason: `连续两次10分钟检测命中异常并发播放，封禁${penaltyConfig.durationMinutes}分钟`,
             });
           }
         }
@@ -300,6 +313,8 @@ export async function POST(req: Request) {
       createdEvents,
       skippedOrphanSessions,
       penaltiesApplied,
+      penaltyEnabled: penaltyConfig.enabled,
+      penaltyDurationMinutes: penaltyConfig.durationMinutes,
     });
   } catch (e: any) {
     const finishedAt = new Date();
