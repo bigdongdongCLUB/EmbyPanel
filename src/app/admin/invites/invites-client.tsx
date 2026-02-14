@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type Summary = {
   invitedUsers30d: number;
@@ -23,6 +23,7 @@ export function InvitesAdminClient() {
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [rows, setRows] = useState<Row[]>([]);
+  const [q, setQ] = useState("");
 
   async function refresh() {
     setLoading(true);
@@ -42,6 +43,12 @@ export function InvitesAdminClient() {
   useEffect(() => {
     refresh();
   }, []);
+
+  const filteredRows = useMemo(() => {
+    const qq = q.trim().toLowerCase();
+    if (!qq) return rows;
+    return rows.filter((r) => String(r.inviter || "").toLowerCase().includes(qq) || String(r.invited || "").toLowerCase().includes(qq));
+  }, [rows, q]);
 
   return (
     <div className="space-y-4">
@@ -66,6 +73,14 @@ export function InvitesAdminClient() {
 
       <div className="rounded-xl border border-gray-200 bg-white overflow-auto">
         <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 font-medium">返利记录</div>
+        <div className="p-3 border-b border-gray-200 bg-white">
+          <input
+            className="w-full md:w-80 border rounded px-3 py-2"
+            placeholder="搜索邀请人或被邀请人"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+        </div>
         <table className="min-w-[980px] w-full text-sm">
           <thead className="border-b border-gray-200 bg-gray-50/80 text-left text-gray-600">
             <tr>
@@ -79,7 +94,7 @@ export function InvitesAdminClient() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
+            {filteredRows.map((r) => (
               <tr key={r.id} className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50/60">
                 <td className="px-3 py-2">{r.inviter}</td>
                 <td className="px-3 py-2">{r.invited}</td>
@@ -90,9 +105,9 @@ export function InvitesAdminClient() {
                 <td className="px-3 py-2">{r.createdAt}</td>
               </tr>
             ))}
-            {!rows.length ? (
+            {!filteredRows.length ? (
               <tr>
-                <td className="px-3 py-6 text-gray-500" colSpan={7}>暂无返利记录</td>
+                <td className="px-3 py-6 text-gray-500" colSpan={7}>{rows.length ? "无匹配记录" : "暂无返利记录"}</td>
               </tr>
             ) : null}
           </tbody>
