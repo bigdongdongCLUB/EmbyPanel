@@ -99,8 +99,6 @@ export function UsersClient() {
   const [createOpen, setCreateOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLDivElement | null>(null);
-  const editStartDatePickerRef = useRef<HTMLInputElement | null>(null);
-  const editEndDatePickerRef = useRef<HTMLInputElement | null>(null);
   const [bulkAddOpen, setBulkAddOpen] = useState(false);
   const [bulkAddDays, setBulkAddDays] = useState("30");
   const [bulkAddLoading, setBulkAddLoading] = useState(false);
@@ -651,26 +649,13 @@ export function UsersClient() {
                       value={edit.startAt}
                       onChange={(e) => setEdit({ ...edit, startAt: e.target.value.trim() })}
                     />
-                    <button
-                      type="button"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                      onClick={() => {
-                        const anyRef = editStartDatePickerRef.current as any;
-                        if (anyRef?.showPicker) anyRef.showPicker();
-                        else editStartDatePickerRef.current?.focus();
-                      }}
-                      aria-label="选择订阅开始日期"
-                    >
-                      <img src="/icons/calendar.svg" alt="" className="h-4 w-4" />
-                    </button>
+                    <img src="/icons/calendar.svg" alt="" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
                     <input
-                      ref={editStartDatePickerRef}
                       type="date"
                       value={edit.startAt}
                       onChange={(e) => setEdit({ ...edit, startAt: e.target.value })}
-                      className="absolute opacity-0 pointer-events-none w-0 h-0"
-                      tabIndex={-1}
-                      aria-hidden="true"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 opacity-0 cursor-pointer"
+                      aria-label="选择订阅开始日期"
                     />
                   </div>
                 </div>
@@ -685,26 +670,13 @@ export function UsersClient() {
                       value={edit.endAt}
                       onChange={(e) => setEdit({ ...edit, endAt: e.target.value.trim() })}
                     />
-                    <button
-                      type="button"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                      onClick={() => {
-                        const anyRef = editEndDatePickerRef.current as any;
-                        if (anyRef?.showPicker) anyRef.showPicker();
-                        else editEndDatePickerRef.current?.focus();
-                      }}
-                      aria-label="选择订阅结束日期"
-                    >
-                      <img src="/icons/calendar.svg" alt="" className="h-4 w-4" />
-                    </button>
+                    <img src="/icons/calendar.svg" alt="" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
                     <input
-                      ref={editEndDatePickerRef}
                       type="date"
                       value={edit.endAt}
                       onChange={(e) => setEdit({ ...edit, endAt: e.target.value })}
-                      className="absolute opacity-0 pointer-events-none w-0 h-0"
-                      tabIndex={-1}
-                      aria-hidden="true"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 opacity-0 cursor-pointer"
+                      aria-label="选择订阅结束日期"
                     />
                   </div>
                 </div>
