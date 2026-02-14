@@ -78,11 +78,11 @@ export function JobsClient() {
       <div className="bg-white border rounded-lg p-3 flex flex-wrap gap-2 items-center">
         <select className="border rounded px-3 py-2" value={jobName} onChange={(e) => { setPage(1); setJobName(e.target.value); }}>
           <option value="">全部任务类型</option>
-          <option value="emby-health-check">emby-health-check</option>
-          <option value="subscription-expiry-disable">subscription-expiry-disable</option>
-          <option value="subscription-expiry-reminder">subscription-expiry-reminder</option>
-          <option value="anomaly-scan">anomaly-scan</option>
-          <option value="anomaly-unban">anomaly-unban</option>
+          <option value="emby-health-check">Emby服务器健康检查</option>
+          <option value="subscription-expiry-disable">订阅到期禁用</option>
+          <option value="subscription-expiry-reminder">订阅到期提醒</option>
+          <option value="anomaly-scan">播放异常检测</option>
+          <option value="anomaly-unban">处罚自动解禁</option>
         </select>
 
         <select className="border rounded px-3 py-2" value={String(pageSize)} onChange={(e) => { setPage(1); setPageSize(Number(e.target.value)); }}>
