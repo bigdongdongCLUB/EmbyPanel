@@ -184,13 +184,15 @@ function DetailModal({
             </div>
           </div>
 
-          <div className="flex gap-2 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 mb-4">
-            <span className="text-blue-500 shrink-0 mt-0.5 text-sm">ℹ</span>
-            <div className="text-sm text-gray-700">
-              <div className="font-medium text-gray-800 mb-0.5">点播说明</div>
-              提交请求后，管理员将审核您的请求。通过审核后，内容将会被添加到服务器中。请注意您的点播配额限制。
+          {!allExist && (
+            <div className="flex gap-2 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 mb-4">
+              <span className="text-blue-500 shrink-0 mt-0.5 text-sm">ℹ</span>
+              <div className="text-sm text-gray-700">
+                <div className="font-medium text-gray-800 mb-0.5">点播说明</div>
+                提交请求后，管理员将审核您的请求。通过审核后，内容将会被添加到服务器中。请注意您的点播配额限制。
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Server table */}
           {isTv && (
@@ -271,19 +273,20 @@ function DetailModal({
             </div>
           )}
 
-          <div className="mb-4">
-            <label className="text-sm font-medium text-gray-700 mb-1.5 block">备注（可选）</label>
-            <textarea
-              className="w-full border rounded-lg px-3 py-2 text-sm resize-none"
-              rows={3}
-              maxLength={500}
-              placeholder="您可以添加备注信息，如特定的版本要求、字幕语言等..."
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              disabled={allExist}
-            />
-            <div className="text-right text-xs text-gray-400">{note.length} / 500</div>
-          </div>
+          {!allExist && (
+            <div className="mb-4">
+              <label className="text-sm font-medium text-gray-700 mb-1.5 block">备注（可选）</label>
+              <textarea
+                className="w-full border rounded-lg px-3 py-2 text-sm resize-none"
+                rows={3}
+                maxLength={500}
+                placeholder="您可以添加备注信息，如特定的版本要求、字幕语言等..."
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+              />
+              <div className="text-right text-xs text-gray-400">{note.length} / 500</div>
+            </div>
+          )}
 
           {submitError && <div className="text-sm text-red-600 mb-3">{submitError}</div>}
 
