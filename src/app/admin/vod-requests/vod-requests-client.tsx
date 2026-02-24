@@ -1,0 +1,231 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+
+type Row = {
+  id: string;
+  tmdbId: number;
+  mediaType: "MOVIE" | "TV";
+  title: string;
+  titleOriginal: string;
+  posterPath: string | null;
+  year: string | null;
+  season: number | null;
+  status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
+  note: string | null;
+  adminNote: string | null;
+  createdAt: string;
+  user: { id: string; username: string; email: string | null };
+};
+
+type Resp = {
+  ok: boolean;
+  summary: { total: number; pending: number; processing: number; completed: number };
+  pagination: { page: number; pageSize: number; total: number; totalPages: number };
+  rows: Row[];
+};
+
+function fmt(v?: string | null) {
+  if (!v) return "-";
+  return new Date(v).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false }).replace(/\//g, "-");
+}
+
+function statusText(v: Row["status"]) {
+  if (v === "PENDING") return "待审核";
+  if (v === "APPROVED") return "已上架";
+  if (v === "REJECTED") return "已拒绝";
+  return "已取消";
+}
+
+function statusCls(v: Row["status"]) {
+  if (v === "PENDING") return "border-blue-200 bg-blue-50 text-blue-700";
+  if (v === "APPROVED") return "border-green-200 bg-green-50 text-green-700";
+  if (v === "REJECTED") return "border-red-200 bg-red-50 text-red-600";
+  return "border-gray-200 bg-gray-50 text-gray-600";
+}
+
+export function VodRequestsAdminClient() {
+  const [q, setQ] = useState("");
+  const [status, setStatus] = useState("");
+  const [mediaType, setMediaType] = useState("");
+  const [rows, setRows] = useState<Row[]>([]);
+  const [summary, setSummary] = useState({ total: 0, pending: 0, processing: 0, completed: 0 });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [replyMap, setReplyMap] = useState<Record<string, string>>({});
+
+  const canPrev = page > 1;
+  const canNext = page < totalPages;
+
+  async function refresh(nextPage = page, nextPageSize = pageSize) {
+    setLoading(true);
+    setError(null);
+    try {
+      const qs = new URLSearchParams({ page: String(nextPage), pageSize: String(nextPageSize) });
+      if (q.trim()) qs.set("q", q.trim());
+      if (status) qs.set("status", status);
+      if (mediaType) qs.set("mediaType", mediaType);
+      const res = await fetch(`/api/admin/vod-requests?${qs.toString()}`, { cache: "no-store" });
+      const json: Resp = await res.json().catch(() => null as any);
+      if (!res.ok) throw new Error((json as any)?.error || `HTTP ${res.status}`);
+      setRows(Array.isArray(json.rows) ? json.rows : []);
+      setSummary(json.summary || { total: 0, pending: 0, processing: 0, completed: 0 });
+      setPage(json.pagination?.page || 1);
+      setPageSize(json.pagination?.pageSize || nextPageSize);
+      setTotal(json.pagination?.total || 0);
+      setTotalPages(json.pagination?.totalPages || 1);
+      setReplyMap((prev) => {
+        const out = { ...prev };
+        for (const r of json.rows || []) {
+          if (out[r.id] == null) out[r.id] = r.adminNote || "";
+        }
+        return out;
+      });
+    } catch (e: any) {
+      setError(e?.message || "load_failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    refresh(1, pageSize);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q, status, mediaType]);
+
+  async function patchRow(id: string, body: { status?: Row["status"]; adminNote?: string }) {
+    const res = await fetch(`/api/admin/vod-requests/${id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const json = await res.json().catch(() => null);
+    if (!res.ok) throw new Error((json as any)?.error || `HTTP ${res.status}`);
+  }
+
+  async function approve(row: Row) {
+    const ok = await (window as any).showConfirm(`确认同意该点播申请？\n\n${row.title}`);
+    if (!ok) return;
+    await patchRow(row.id, { status: "APPROVED", adminNote: replyMap[row.id] || "" });
+    await refresh(page, pageSize);
+  }
+
+  async function reject(row: Row) {
+    const ok = await (window as any).showConfirm(`确认拒绝该点播申请？\n\n${row.title}`);
+    if (!ok) return;
+    await patchRow(row.id, { status: "REJECTED", adminNote: replyMap[row.id] || "" });
+    await refresh(page, pageSize);
+  }
+
+  const visibleRows = useMemo(() => rows, [rows]);
+
+  return (
+    <div className="space-y-4">
+      <h1 className="text-xl font-semibold">点播管理</h1>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="border rounded p-3"><div className="text-xs text-gray-500">总计</div><div className="text-2xl text-gray-800">{summary.total}</div></div>
+        <div className="border rounded p-3"><div className="text-xs text-gray-500">待审核</div><div className="text-2xl text-blue-600">{summary.pending}</div></div>
+        <div className="border rounded p-3"><div className="text-xs text-gray-500">处理中</div><div className="text-2xl text-amber-600">{summary.processing}</div></div>
+        <div className="border rounded p-3"><div className="text-xs text-gray-500">已上架</div><div className="text-2xl text-teal-600">{summary.completed}</div></div>
+      </div>
+
+      {error ? <div className="text-sm text-red-600">{error}</div> : null}
+
+      <div className="flex flex-wrap items-center gap-2">
+        <input className="w-full md:w-72 h-8 border rounded px-3 text-sm" placeholder="搜索标题或用户名" value={q} onChange={(e) => setQ(e.target.value)} />
+        <select className="h-8 border rounded px-3 text-sm" value={status} onChange={(e) => setStatus(e.target.value)}>
+          <option value="">选择状态</option>
+          <option value="PENDING">待审核</option>
+          <option value="REJECTED">已拒绝</option>
+          <option value="APPROVED">已上架</option>
+          <option value="CANCELLED">已取消</option>
+        </select>
+        <select className="h-8 border rounded px-3 text-sm" value={mediaType} onChange={(e) => setMediaType(e.target.value)}>
+          <option value="">选择类型</option>
+          <option value="MOVIE">电影</option>
+          <option value="TV">电视剧</option>
+        </select>
+        <button className="h-8 bg-blue-600 text-white rounded px-3 text-sm ml-auto disabled:opacity-50" disabled={loading} onClick={() => refresh(1, pageSize)}>刷新</button>
+      </div>
+
+      <div className="border rounded overflow-auto bg-white">
+        <table className="min-w-[1180px] w-full text-sm">
+          <thead className="border-b text-left text-gray-600 bg-gray-50">
+            <tr>
+              <th className="px-3 py-2">媒体信息</th>
+              <th className="px-3 py-2">用户</th>
+              <th className="px-3 py-2">状态</th>
+              <th className="px-3 py-2">用户备注</th>
+              <th className="px-3 py-2">管理员回复</th>
+              <th className="px-3 py-2">请求时间</th>
+              <th className="px-3 py-2">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            {visibleRows.map((r) => (
+              <tr key={r.id} className="border-b align-top">
+                <td className="px-3 py-3">
+                  <div className="flex items-start gap-2 min-w-[260px]">
+                    {r.posterPath ? <img src={r.posterPath} alt={r.title} className="w-10 h-14 rounded object-cover" /> : <div className="w-10 h-14 rounded bg-gray-100" />}
+                    <div className="min-w-0">
+                      <div className="font-medium text-gray-800 truncate">{r.title}</div>
+                      <div className="text-xs text-gray-500 truncate">{r.titleOriginal || "-"}</div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] mr-1 ${r.mediaType === "MOVIE" ? "bg-blue-50 text-blue-700" : "bg-purple-50 text-purple-700"}`}>{r.mediaType === "MOVIE" ? "电影" : "电视剧"}</span>
+                        {r.mediaType === "TV" && r.season ? `S${String(r.season).padStart(2, "0")} · ` : ""}{r.year || "-"}
+                      </div>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-3 py-3 whitespace-nowrap">{r.user.username || r.user.email || "-"}</td>
+                <td className="px-3 py-3 whitespace-nowrap">
+                  <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${statusCls(r.status)}`}>{statusText(r.status)}</span>
+                </td>
+                <td className="px-3 py-3 text-xs text-gray-600 max-w-[220px]">{r.note || "-"}</td>
+                <td className="px-3 py-3 min-w-[220px]">
+                  <textarea
+                    className="w-full border rounded px-2 py-1.5 text-xs resize-none"
+                    rows={2}
+                    maxLength={500}
+                    value={replyMap[r.id] ?? ""}
+                    onChange={(e) => setReplyMap((m) => ({ ...m, [r.id]: e.target.value }))}
+                    placeholder="给用户的回复（可选）"
+                  />
+                </td>
+                <td className="px-3 py-3 text-xs whitespace-nowrap">{fmt(r.createdAt)}</td>
+                <td className="px-3 py-3 whitespace-nowrap">
+                  <div className="flex items-center gap-3 text-sm">
+                    <button className="text-green-700 hover:text-green-800 disabled:opacity-40" disabled={loading} onClick={() => approve(r)}>✓ 同意</button>
+                    <button className="text-red-600 hover:text-red-700 disabled:opacity-40" disabled={loading} onClick={() => reject(r)}>✕ 拒绝</button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {!loading && visibleRows.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="px-3 py-10 text-center text-gray-500">暂无点播申请</td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="flex items-center gap-2 text-sm">
+        <div className="mr-auto text-gray-600">第 {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, total)} 条，共 {total} 条记录</div>
+        <button className="border rounded px-2 py-1 disabled:opacity-40" disabled={!canPrev || loading} onClick={() => refresh(page - 1, pageSize)}>‹</button>
+        <span className="border rounded px-2 py-1 text-blue-600">{page}</span>
+        <button className="border rounded px-2 py-1 disabled:opacity-40" disabled={!canNext || loading} onClick={() => refresh(page + 1, pageSize)}>›</button>
+        <select className="h-8 border rounded px-2" value={String(pageSize)} onChange={(e) => { const n = Number(e.target.value) || 10; setPageSize(n); refresh(1, n); }}>
+          <option value="10">10 / page</option>
+          <option value="20">20 / page</option>
+          <option value="30">30 / page</option>
+        </select>
+      </div>
+    </div>
+  );
+}
