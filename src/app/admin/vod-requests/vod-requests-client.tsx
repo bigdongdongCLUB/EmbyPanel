@@ -132,14 +132,13 @@ export function VodRequestsAdminClient() {
 
   async function applyQuickAction(row: Row, action: "PENDING" | "NO_RESOURCE" | "PROCESSING" | "CANNOT_UPDATE" | "COMPLETED") {
     if (!action) return;
-    const actionText = action === "PENDING" ? "待处理" : action === "NO_RESOURCE" ? "无资源" : action === "PROCESSING" ? "进行中" : action === "CANNOT_UPDATE" ? "无法更新" : "已完成";
-
     const nextStatus: Row["status"] = action === "COMPLETED" ? "APPROVED" : action === "PENDING" || action === "PROCESSING" ? "PENDING" : "REJECTED";
-    const baseReply = (replyMap[row.id] || "").trim().replace(/^(待处理|无资源|进行中|无法更新|已完成)[:：]?\s*/u, "");
-    const nextReply = (baseReply ? `${actionText}：${baseReply}` : actionText).slice(0, 20);
 
-    await patchRow(row.id, { status: nextStatus, adminNote: nextReply });
-    setReplyMap((m) => ({ ...m, [row.id]: nextReply }));
+    // 状态切换不自动写入管理员回复；仅保留手动输入内容
+    const manualReply = (replyMap[row.id] || "").trim().slice(0, 20);
+
+    await patchRow(row.id, { status: nextStatus, adminNote: manualReply || undefined });
+    setReplyMap((m) => ({ ...m, [row.id]: manualReply }));
     await refresh(page, pageSize);
   }
 
