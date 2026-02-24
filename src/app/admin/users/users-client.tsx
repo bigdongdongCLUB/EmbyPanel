@@ -53,6 +53,24 @@ type EditState =
       plans: Array<{ id: string; name: string }>;
     };
 
+function avatarColor(username: string) {
+  const palette = [
+    "bg-cyan-500",
+    "bg-violet-500",
+    "bg-emerald-500",
+    "bg-rose-500",
+    "bg-amber-500",
+    "bg-sky-500",
+    "bg-pink-500",
+    "bg-teal-500",
+    "bg-indigo-500",
+    "bg-orange-500",
+  ];
+  let hash = 0;
+  for (let i = 0; i < username.length; i++) hash = (hash * 31 + username.charCodeAt(i)) >>> 0;
+  return palette[hash % palette.length];
+}
+
 function dash(v: any) {
   if (v === null || v === undefined || v === "") return "-";
   return String(v);
@@ -429,7 +447,7 @@ export function UsersClient() {
                 </td>
                 <td className="py-2 px-3 font-mono">
                   <span className="inline-flex items-center gap-2">
-                    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-cyan-400 text-white text-xs font-semibold select-none">
+                    <span className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${avatarColor(r.username)} text-white text-xs font-semibold select-none`}>
                       {(r.username || "?").slice(0, 2).toUpperCase()}
                     </span>
                     {r.role === "ADMIN" ? <span title="管理员">👑</span> : null}
