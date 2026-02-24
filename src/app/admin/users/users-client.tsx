@@ -366,7 +366,9 @@ export function UsersClient() {
                   disabled={!selectedIds.length}
                   onClick={async () => {
                     setMoreOpen(false);
-                    if (!confirm(`确定批量删除所选用户？\n将同步删除 Emby 服务器对应用户。\n数量：${selectedIds.length}`)) return;
+                    if (!(await (window as any).showConfirm(`确定批量删除所选用户？
+将同步删除 Emby 服务器对应用户。
+数量：${selectedIds.length}`))) return;
 
                     const res = await fetch("/api/admin/users/bulk-delete", {
                       method: "POST",
