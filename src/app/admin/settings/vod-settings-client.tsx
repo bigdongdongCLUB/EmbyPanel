@@ -67,9 +67,8 @@ export function VodSettingsClient() {
     <div className="space-y-6">
       <SettingsTabs />
       <div className="space-y-6 max-w-2xl">
-      <h2 className="text-lg font-semibold text-gray-800">点播功能设置</h2>
 
-      {/* 说明卡片 */}
+        {/* 说明卡片 */}
       <div className="flex gap-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-4">
         <span className="text-blue-500 text-lg mt-0.5 shrink-0">ℹ</span>
         <div className="text-sm text-gray-700 leading-relaxed">
