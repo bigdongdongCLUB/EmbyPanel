@@ -297,7 +297,6 @@ function DetailModal({
 }
 
 export function VodClient() {
-  const [quota, setQuota] = useState<Quota | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("now_playing_movie");
   const [items, setItems] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -309,14 +308,6 @@ export function VodClient() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [showMyRequests, setShowMyRequests] = useState(false);
   const [myRequests, setMyRequests] = useState<any[]>([]);
-
-  const refreshQuota = useCallback(async () => {
-    const r = await fetch("/api/portal/vod/quota", { cache: "no-store" });
-    const j = await r.json();
-    if (j?.ok) setQuota(j);
-  }, []);
-
-  useEffect(() => { refreshQuota(); }, [refreshQuota]);
 
   const loadTab = useCallback(async (tab: Tab) => {
     setLoading(true);
@@ -376,34 +367,13 @@ export function VodClient() {
     });
     const j = await r.json();
     if (!r.ok) throw new Error(j?.message ?? j?.error ?? `HTTP ${r.status}`);
-    await refreshQuota();
     alert("点播请求已提交！");
   }
 
   return (
     <div className="space-y-4">
-      <div className="text-xl font-semibold text-gray-800">点播功能</div>
-
-      {/* Quota card */}
-      <div className="bg-white border rounded-xl p-4 flex flex-wrap items-end justify-between gap-4">
-        <div className="flex flex-wrap gap-6">
-          <div>
-            <div className="text-xs text-gray-400 mb-1">电影剩余配额</div>
-            <div className="text-2xl font-bold text-green-600">{quota ? `${quota.movieRemaining}/${quota.movieTotal}` : "-/-"}</div>
-          </div>
-          <div>
-            <div className="text-xs text-gray-400 mb-1">电视剧剩余配额（按季）</div>
-            <div className="text-2xl font-bold text-green-600">{quota ? `${quota.tvRemaining}/${quota.tvTotal}` : "-/-"}</div>
-          </div>
-          <div>
-            <div className="text-xs text-gray-400 mb-1">配额周期</div>
-            <div className="text-lg font-semibold text-gray-800">{quota?.resetPeriod ?? "-"}</div>
-          </div>
-          <div>
-            <div className="text-xs text-gray-400 mb-1">重置时间</div>
-            <div className="text-lg font-semibold text-gray-800">{quota?.nextReset ?? "-"}</div>
-          </div>
-        </div>
+      <div className="flex items-center justify-between">
+        <div className="text-xl font-semibold text-gray-800">点播功能</div>
         <button
           className="flex items-center gap-1.5 border rounded-lg px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 shrink-0"
           onClick={async () => {
