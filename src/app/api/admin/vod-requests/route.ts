@@ -30,6 +30,8 @@ export async function GET(req: Request) {
     andWhere.push({ OR: [{ status: "PENDING" }, { adminNote: { contains: "进行中", mode: "insensitive" } }] });
   } else if (bizStatus === "CANNOT_UPDATE") {
     andWhere.push({ adminNote: { contains: "无法更新", mode: "insensitive" } });
+  } else if (bizStatus === "COMPLETED") {
+    andWhere.push({ status: "APPROVED" });
   }
 
   if (q) {
@@ -46,11 +48,12 @@ export async function GET(req: Request) {
 
   const where: any = andWhere.length ? { AND: andWhere } : {};
 
-  const [total, noResource, processing, cannotUpdate, rows] = await Promise.all([
+  const [total, noResource, processing, cannotUpdate, completed, rows] = await Promise.all([
     prisma.vodRequest.count({ where }),
-    prisma.vodRequest.count({ where: { ...where, adminNote: { contains: "无资源", mode: "insensitive" } } }),
-    prisma.vodRequest.count({ where: { ...where, OR: [{ status: "PENDING" }, { adminNote: { contains: "进行中", mode: "insensitive" } }] } }),
-    prisma.vodRequest.count({ where: { ...where, adminNote: { contains: "无法更新", mode: "insensitive" } } }),
+    prisma.vodRequest.count({ where: { ...where, status: "REJECTED", adminNote: { contains: "无资源", mode: "insensitive" } } }),
+    prisma.vodRequest.count({ where: { ...where, status: "PENDING" } }),
+    prisma.vodRequest.count({ where: { ...where, status: "REJECTED", adminNote: { contains: "无法更新", mode: "insensitive" } } }),
+    prisma.vodRequest.count({ where: { ...where, status: "APPROVED" } }),
     prisma.vodRequest.findMany({
       where,
       include: { user: { select: { id: true, username: true, email: true } } },
@@ -62,7 +65,7 @@ export async function GET(req: Request) {
 
   return NextResponse.json({
     ok: true,
-    summary: { total, noResource, processing, cannotUpdate },
+    summary: { total, noResource, processing, cannotUpdate, completed },
     pagination: { page, pageSize, total, totalPages: Math.max(1, Math.ceil(total / pageSize)) },
     rows: rows.map((r) => ({
       id: r.id,
