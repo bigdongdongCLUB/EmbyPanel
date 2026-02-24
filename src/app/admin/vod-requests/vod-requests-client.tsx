@@ -94,7 +94,7 @@ export function VodRequestsAdminClient() {
       setReplyMap((prev) => {
         const out = { ...prev };
         for (const r of json.rows || []) {
-          if (out[r.id] == null) out[r.id] = r.adminNote || "";
+          out[r.id] = r.adminNote || "";
         }
         return out;
       });
