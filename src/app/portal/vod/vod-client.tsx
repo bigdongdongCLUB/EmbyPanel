@@ -123,7 +123,7 @@ function DetailModal({
   const allExist = isTv ? allSeasonsExist : movieExists;
 
   const overview = d.overview.length > 100 ? d.overview.slice(0, 100) + "…" : d.overview;
-  const canSubmit = !allExist && (!isTv || selectedSeason !== "") && !submitting;
+  const canSubmit = (!isTv || selectedSeason !== "") && !submitting;
 
   const serverTableSeasons = seasons.slice(0, 8);
 
@@ -295,7 +295,7 @@ function DetailModal({
               disabled={!canSubmit}
               onClick={handleSubmit}
             >
-              {allExist ? (isTv ? "所有季度已存在或已点播" : "该电影已存在") : submitting ? "提交中…" : "提交请求"}
+              {submitting ? "提交中…" : "提交申请"}
             </button>
           </div>
         </div>
