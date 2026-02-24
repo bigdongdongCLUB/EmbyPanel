@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type Row = {
   id: string;
@@ -69,6 +69,7 @@ export function VodRequestsAdminClient() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [replyMap, setReplyMap] = useState<Record<string, string>>({});
+  const saveTimerRef = useRef<Record<string, any>>({});
 
   const canPrev = page > 1;
   const canNext = page < totalPages;
@@ -109,6 +110,14 @@ export function VodRequestsAdminClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, bizStatus, mediaType]);
 
+  useEffect(() => {
+    return () => {
+      for (const k of Object.keys(saveTimerRef.current)) {
+        clearTimeout(saveTimerRef.current[k]);
+      }
+    };
+  }, []);
+
   async function patchRow(id: string, body: { status?: Row["status"]; adminNote?: string }) {
     const res = await fetch(`/api/admin/vod-requests/${id}`, {
       method: "PATCH",
@@ -122,8 +131,6 @@ export function VodRequestsAdminClient() {
   async function applyQuickAction(row: Row, action: "NO_RESOURCE" | "PROCESSING" | "CANNOT_UPDATE" | "COMPLETED") {
     if (!action) return;
     const actionText = action === "NO_RESOURCE" ? "无资源" : action === "PROCESSING" ? "进行中" : action === "CANNOT_UPDATE" ? "无法更新" : "已完成";
-    const ok = await (window as any).showConfirm(`确认将该申请标记为“${actionText}”？\n\n${row.title}`);
-    if (!ok) return;
 
     const nextStatus: Row["status"] = action === "PROCESSING" ? "PENDING" : action === "COMPLETED" ? "APPROVED" : "REJECTED";
     const baseReply = (replyMap[row.id] || "").trim().replace(/^(无资源|进行中|无法更新|已完成)[:：]?\s*/u, "");
@@ -132,6 +139,15 @@ export function VodRequestsAdminClient() {
     await patchRow(row.id, { status: nextStatus, adminNote: nextReply });
     setReplyMap((m) => ({ ...m, [row.id]: nextReply }));
     await refresh(page, pageSize);
+  }
+
+  function saveReplyDebounced(id: string, value: string) {
+    if (saveTimerRef.current[id]) clearTimeout(saveTimerRef.current[id]);
+    saveTimerRef.current[id] = setTimeout(async () => {
+      try {
+        await patchRow(id, { adminNote: value.slice(0, 20) });
+      } catch {}
+    }, 300);
   }
 
   const visibleRows = useMemo(() => rows, [rows]);
@@ -198,12 +214,15 @@ export function VodRequestsAdminClient() {
                 <td className="px-3 py-3 whitespace-nowrap">{r.user.username || r.user.email || "-"}</td>
                 <td className="px-3 py-3 text-xs text-gray-600 max-w-[220px]">{r.note || "-"}</td>
                 <td className="px-3 py-3 min-w-[220px]">
-                  <textarea
-                    className="w-full border rounded px-2 py-1.5 text-xs resize-none"
-                    rows={2}
+                  <input
+                    className="w-full h-8 border rounded px-2 text-xs"
                     maxLength={20}
                     value={replyMap[r.id] ?? ""}
-                    onChange={(e) => setReplyMap((m) => ({ ...m, [r.id]: e.target.value.slice(0, 20) }))}
+                    onChange={(e) => {
+                      const v = e.target.value.replace(/[\r\n]/g, "").slice(0, 20);
+                      setReplyMap((m) => ({ ...m, [r.id]: v }));
+                      saveReplyDebounced(r.id, v);
+                    }}
                     placeholder="给用户的回复（最多20字）"
                   />
                   <div className="text-[10px] text-gray-400 text-right mt-1">{(replyMap[r.id] || "").length}/20</div>
