@@ -63,7 +63,7 @@ export async function POST(req: Request) {
   return NextResponse.json({ ok: true, id: request.id });
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const username = (session as any)?.username as string | undefined;
@@ -72,12 +72,36 @@ export async function GET() {
   if (!dbUser) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const userId = dbUser.id;
 
-  const rows = await prisma.vodRequest.findMany({
-    where: { userId: userId },
-    orderBy: { createdAt: "desc" },
-    take: 50,
-    select: { id: true, title: true, titleOriginal: true, mediaType: true, season: true, status: true, createdAt: true, adminNote: true, posterPath: true, year: true },
+  const url = new URL(req.url);
+  const page = Math.max(1, Number(url.searchParams.get("page") || "1") || 1);
+  const pageSize = Math.max(1, Math.min(30, Number(url.searchParams.get("pageSize") || "10") || 10));
+
+  const where = { userId };
+  const [total, rows] = await Promise.all([
+    prisma.vodRequest.count({ where }),
+    prisma.vodRequest.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      select: { id: true, title: true, titleOriginal: true, mediaType: true, season: true, status: true, createdAt: true, adminNote: true, posterPath: true, year: true },
+    }),
+  ]);
+
+  return NextResponse.json({ ok: true, rows, pagination: { page, pageSize, total, totalPages: Math.max(1, Math.ceil(total / pageSize)) } });
+}
+
+export async function DELETE() {
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const username = (session as any)?.username as string | undefined;
+  if (!username) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const dbUser = await prisma.user.findUnique({ where: { username }, select: { id: true } });
+  if (!dbUser) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  const result = await prisma.vodRequest.deleteMany({
+    where: { userId: dbUser.id, status: { not: "PENDING" } },
   });
 
-  return NextResponse.json({ ok: true, rows });
+  return NextResponse.json({ ok: true, deleted: result.count });
 }

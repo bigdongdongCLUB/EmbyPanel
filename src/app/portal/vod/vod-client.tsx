@@ -325,6 +325,10 @@ export function VodClient() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [showMyRequests, setShowMyRequests] = useState(false);
   const [myRequests, setMyRequests] = useState<any[]>([]);
+  const [myReqPage, setMyReqPage] = useState(1);
+  const [myReqTotalPages, setMyReqTotalPages] = useState(1);
+  const [myReqTotal, setMyReqTotal] = useState(0);
+  const [myReqLoading, setMyReqLoading] = useState(false);
 
   const checkLibrary = useCallback(async (list: MediaItem[]) => {
     if (!list.length) return;
@@ -401,6 +405,29 @@ export function VodClient() {
     } finally { setDetailLoading(false); }
   }
 
+  async function loadMyRequests(page = 1) {
+    setMyReqLoading(true);
+    try {
+      const r = await fetch(`/api/portal/vod/request?page=${page}&pageSize=10`, { cache: "no-store" });
+      const j = await r.json();
+      setMyRequests(j?.rows ?? []);
+      setMyReqPage(j?.pagination?.page ?? page);
+      setMyReqTotalPages(j?.pagination?.totalPages ?? 1);
+      setMyReqTotal(j?.pagination?.total ?? 0);
+    } finally {
+      setMyReqLoading(false);
+    }
+  }
+
+  async function clearCompletedRequests() {
+    const ok = await (window as any).showConfirm("确认清空已完成点播记录？（已通过/已拒绝/已取消）");
+    if (!ok) return;
+    const r = await fetch("/api/portal/vod/request", { method: "DELETE" });
+    const j = await r.json().catch(() => null);
+    if (!r.ok) throw new Error(j?.error || `HTTP ${r.status}`);
+    await loadMyRequests(1);
+  }
+
   async function submitRequest({ season, note }: { season?: number; note: string }) {
     if (!selectedItem) throw new Error("no item");
     const r = await fetch("/api/portal/vod/request", {
@@ -429,9 +456,7 @@ export function VodClient() {
         <button
           className="flex items-center gap-1.5 border rounded-lg px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 shrink-0"
           onClick={async () => {
-            const r = await fetch("/api/portal/vod/request");
-            const j = await r.json();
-            setMyRequests(j?.rows ?? []);
+            await loadMyRequests(1);
             setShowMyRequests(true);
           }}
         >
@@ -540,9 +565,22 @@ export function VodClient() {
           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto p-5">
             <div className="flex items-center justify-between mb-4">
               <div className="font-semibold text-gray-800">我的点播记录</div>
-              <button onClick={() => setShowMyRequests(false)} className="text-gray-400 hover:text-gray-600 text-xl">×</button>
+              <div className="flex items-center gap-2">
+                <button
+                  className="text-xs border rounded px-2 py-1 text-gray-600 hover:bg-gray-50 disabled:opacity-40"
+                  disabled={myReqLoading}
+                  onClick={async () => {
+                    try { await clearCompletedRequests(); } catch {}
+                  }}
+                >
+                  清空已完成
+                </button>
+                <button onClick={() => setShowMyRequests(false)} className="text-gray-400 hover:text-gray-600 text-xl">×</button>
+              </div>
             </div>
-            {myRequests.length === 0 ? (
+            {myReqLoading ? (
+              <div className="text-gray-400 text-sm text-center py-10">加载中…</div>
+            ) : myRequests.length === 0 ? (
               <div className="text-gray-400 text-sm text-center py-10">暂无点播记录</div>
             ) : (
               <div className="space-y-2">
@@ -571,6 +609,17 @@ export function VodClient() {
                     </div>
                   </div>
                 ))}
+
+                {myReqTotalPages > 1 && (
+                  <div className="flex items-center justify-between pt-2 text-xs text-gray-600">
+                    <div>共 {myReqTotal} 条</div>
+                    <div className="flex items-center gap-2">
+                      <button className="border rounded px-2 py-1 disabled:opacity-40" disabled={myReqPage <= 1 || myReqLoading} onClick={() => loadMyRequests(myReqPage - 1)}>‹</button>
+                      <span>{myReqPage} / {myReqTotalPages}</span>
+                      <button className="border rounded px-2 py-1 disabled:opacity-40" disabled={myReqPage >= myReqTotalPages || myReqLoading} onClick={() => loadMyRequests(myReqPage + 1)}>›</button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
