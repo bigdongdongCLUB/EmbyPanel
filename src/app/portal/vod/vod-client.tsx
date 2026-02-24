@@ -54,7 +54,7 @@ const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: "popular_tv", label: "热门电视剧", icon: "🔥" },
 ];
 
-function PosterCard({ item, onClick }: { item: MediaItem; onClick: () => void }) {
+function PosterCard({ item, inLibrary, onClick }: { item: MediaItem; inLibrary: boolean; onClick: () => void }) {
   return (
     <div className="cursor-pointer group" onClick={onClick}>
       <div className="relative rounded-xl overflow-hidden aspect-[2/3] bg-gray-100 shadow-sm">
@@ -74,6 +74,13 @@ function PosterCard({ item, onClick }: { item: MediaItem; onClick: () => void })
             <span className="text-white text-[10px] font-medium">{item.rating}</span>
           </div>
         ) : null}
+        {inLibrary && (
+          <div className="absolute bottom-1.5 left-1.5">
+            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded border border-green-400 bg-green-50 text-green-700 shadow-sm">
+              已入库
+            </span>
+          </div>
+        )}
       </div>
       <div className="mt-1.5 px-0.5">
         <div className="text-sm font-medium text-gray-800 truncate">{item.title}</div>
@@ -299,6 +306,7 @@ function DetailModal({
 export function VodClient() {
   const [activeTab, setActiveTab] = useState<Tab>("now_playing_movie");
   const [items, setItems] = useState<MediaItem[]>([]);
+  const [inLibrarySet, setInLibrarySet] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchInput, setSearchInput] = useState("");
@@ -309,14 +317,34 @@ export function VodClient() {
   const [showMyRequests, setShowMyRequests] = useState(false);
   const [myRequests, setMyRequests] = useState<any[]>([]);
 
+  const checkLibrary = useCallback(async (list: MediaItem[]) => {
+    if (!list.length) return;
+    setInLibrarySet(new Set()); // reset while checking
+    try {
+      const r = await fetch("/api/portal/vod/check-library", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          items: list.map((i) => ({ id: i.id, title: i.title, titleOriginal: i.titleOriginal, mediaType: i.mediaType })),
+        }),
+      });
+      const j = await r.json();
+      if (j?.inLibrary) setInLibrarySet(new Set(j.inLibrary as number[]));
+    } catch {
+      // non-critical, ignore
+    }
+  }, []);
+
   const loadTab = useCallback(async (tab: Tab) => {
     setLoading(true);
     try {
       const r = await fetch(`/api/portal/vod/discover?category=${tab}&page=1`);
       const j = await r.json();
-      setItems(j?.results ?? []);
+      const results = j?.results ?? [];
+      setItems(results);
+      checkLibrary(results);
     } finally { setLoading(false); }
-  }, []);
+  }, [checkLibrary]);
 
   useEffect(() => { if (!searchQuery) loadTab(activeTab); }, [activeTab, searchQuery, loadTab]);
 
@@ -327,8 +355,10 @@ export function VodClient() {
     try {
       const r = await fetch(`/api/portal/vod/search?q=${encodeURIComponent(q)}&page=1`);
       const j = await r.json();
-      setItems(j?.results ?? []);
+      const results = j?.results ?? [];
+      setItems(results);
       setSearchTotal(j?.totalResults ?? 0);
+      checkLibrary(results);
     } finally { setLoading(false); }
   }
 
@@ -443,7 +473,7 @@ export function VodClient() {
       ) : (
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
           {items.map((item) => (
-            <PosterCard key={`${item.mediaType}-${item.id}`} item={item} onClick={() => openDetail(item)} />
+            <PosterCard key={`${item.mediaType}-${item.id}`} item={item} inLibrary={inLibrarySet.has(item.id)} onClick={() => openDetail(item)} />
           ))}
           {items.length === 0 && (
             <div className="col-span-6 py-16 text-center text-gray-400 text-sm">暂无内容</div>
