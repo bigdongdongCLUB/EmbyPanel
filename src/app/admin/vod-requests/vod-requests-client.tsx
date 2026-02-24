@@ -35,6 +35,7 @@ type BizStatus = "PENDING" | "NO_RESOURCE" | "PROCESSING" | "CANNOT_UPDATE" | "C
 function deriveBizStatus(r: Row): BizStatus {
   const note = (r.adminNote || "").trim();
   if (r.status === "APPROVED") return "COMPLETED";
+  if (r.status === "CANCELLED") return "PROCESSING";
   if (r.status === "PENDING") return note.includes("进行中") ? "PROCESSING" : "PENDING";
   if (note.includes("无资源")) return "NO_RESOURCE";
   if (note.includes("无法更新")) return "CANNOT_UPDATE";
@@ -71,6 +72,7 @@ export function VodRequestsAdminClient() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [replyMap, setReplyMap] = useState<Record<string, string>>({});
+  const [actionMap, setActionMap] = useState<Record<string, string>>({});
   const saveTimerRef = useRef<Record<string, any>>({});
 
   const canPrev = page > 1;
@@ -132,7 +134,7 @@ export function VodRequestsAdminClient() {
 
   async function applyQuickAction(row: Row, action: "PENDING" | "NO_RESOURCE" | "PROCESSING" | "CANNOT_UPDATE" | "COMPLETED") {
     if (!action) return;
-    const nextStatus: Row["status"] = action === "COMPLETED" ? "APPROVED" : action === "PENDING" || action === "PROCESSING" ? "PENDING" : "REJECTED";
+    const nextStatus: Row["status"] = action === "COMPLETED" ? "APPROVED" : action === "PENDING" ? "PENDING" : action === "PROCESSING" ? "CANCELLED" : "REJECTED";
 
     // 状态切换不自动写入管理员回复；仅保留手动输入内容
     const manualReply = (replyMap[row.id] || "").trim().slice(0, 20);
@@ -235,13 +237,14 @@ export function VodRequestsAdminClient() {
                   <div className="flex items-center gap-2">
                     <select
                       className="h-8 border rounded px-2 text-xs"
-                      defaultValue=""
+                      value={actionMap[r.id] ?? ""}
                       disabled={loading}
                       onChange={async (e) => {
                         const v = e.target.value as "" | "PENDING" | "NO_RESOURCE" | "PROCESSING" | "CANNOT_UPDATE" | "COMPLETED";
+                        setActionMap((m) => ({ ...m, [r.id]: v }));
                         if (!v) return;
                         await applyQuickAction(r, v as any);
-                        e.currentTarget.value = "";
+                        setActionMap((m) => ({ ...m, [r.id]: "" }));
                       }}
                     >
                       <option value="">操作</option>

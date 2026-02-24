@@ -29,7 +29,7 @@ export async function GET(req: Request) {
   } else if (bizStatus === "NO_RESOURCE") {
     andWhere.push({ status: "REJECTED", adminNote: { contains: "无资源", mode: "insensitive" } });
   } else if (bizStatus === "PROCESSING") {
-    andWhere.push({ status: "PENDING", adminNote: { contains: "进行中", mode: "insensitive" } });
+    andWhere.push({ OR: [{ status: "CANCELLED" }, { status: "PENDING", adminNote: { contains: "进行中", mode: "insensitive" } }] });
   } else if (bizStatus === "CANNOT_UPDATE") {
     andWhere.push({ status: "REJECTED", adminNote: { contains: "无法更新", mode: "insensitive" } });
   } else if (bizStatus === "COMPLETED") {
@@ -54,7 +54,7 @@ export async function GET(req: Request) {
     prisma.vodRequest.count({ where }),
     prisma.vodRequest.count({ where: { ...where, status: "PENDING", NOT: { adminNote: { contains: "进行中", mode: "insensitive" } } } }),
     prisma.vodRequest.count({ where: { ...where, status: "REJECTED", adminNote: { contains: "无资源", mode: "insensitive" } } }),
-    prisma.vodRequest.count({ where: { ...where, status: "PENDING", adminNote: { contains: "进行中", mode: "insensitive" } } }),
+    prisma.vodRequest.count({ where: { ...where, OR: [{ status: "CANCELLED" }, { status: "PENDING", adminNote: { contains: "进行中", mode: "insensitive" } }] } }),
     prisma.vodRequest.count({ where: { ...where, status: "REJECTED", adminNote: { contains: "无法更新", mode: "insensitive" } } }),
     prisma.vodRequest.count({ where: { ...where, status: "APPROVED" } }),
     prisma.vodRequest.findMany({

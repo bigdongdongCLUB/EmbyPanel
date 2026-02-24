@@ -25,6 +25,7 @@ function shanghaiDayStart(now = new Date()) {
 function deriveBizStatus(row: { status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED"; adminNote?: string | null }) {
   const note = (row.adminNote || "").trim();
   if (row.status === "APPROVED") return "COMPLETED" as const;
+  if (row.status === "CANCELLED") return "PROCESSING" as const;
   if (row.status === "PENDING") return note.includes("进行中") ? "PROCESSING" as const : "PENDING" as const;
   if (note.includes("无资源")) return "NO_RESOURCE" as const;
   if (note.includes("无法更新")) return "CANNOT_UPDATE" as const;
