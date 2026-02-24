@@ -125,7 +125,7 @@ function DetailModal({
   const overview = d.overview.length > 100 ? d.overview.slice(0, 100) + "…" : d.overview;
   const canSubmit = (!isTv || selectedSeason !== "") && !submitting;
 
-  const serverTableSeasons = seasons.slice(0, 8);
+  const serverTableSeasons = seasons;
 
   async function handleSubmit() {
     setSubmitError(null);
@@ -197,17 +197,17 @@ function DetailModal({
           {/* Server table */}
           {isTv && (
             <div className="mb-4">
-              <div className="text-sm font-medium text-gray-700 mb-2">服务器季度资源</div>
+              <div className="text-sm font-medium text-gray-700 mb-2">资源情况</div>
               {serverResults.length === 0 ? (
                 <div className="text-xs text-gray-400 border rounded-lg px-3 py-3">暂无订阅服务器</div>
               ) : (
-                <div className="overflow-x-auto rounded-lg border">
-                  <table className="min-w-full text-xs">
+                <div className="overflow-x-auto rounded-lg border pb-1" style={{ scrollbarWidth: "thin" }}>
+                  <table className="text-xs" style={{ minWidth: `${Math.max(680, 180 + serverTableSeasons.length * 88)}px` }}>
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-3 py-2 text-left font-medium text-gray-600">服务器</th>
                         {serverTableSeasons.map((s) => (
-                          <th key={s.seasonNumber} className="px-3 py-2 text-center font-medium text-gray-600">第{s.seasonNumber}季</th>
+                          <th key={s.seasonNumber} className="px-3 py-2 text-center font-medium text-gray-600">S{String(s.seasonNumber).padStart(2, "0")}</th>
                         ))}
                       </tr>
                     </thead>
