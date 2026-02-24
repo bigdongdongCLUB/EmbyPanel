@@ -598,12 +598,12 @@ export function VodClient() {
                       </div>
                       <div className="text-xs mt-0.5">
                         <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                          r.status === "APPROVED" ? "bg-green-50 text-green-700" :
-                          r.status === "REJECTED" ? "bg-red-50 text-red-600" :
-                          r.status === "CANCELLED" ? "bg-gray-100 text-gray-500" :
+                          r.bizStatus === "COMPLETED" ? "bg-green-50 text-green-700" :
+                          r.bizStatus === "NO_RESOURCE" ? "bg-red-50 text-red-600" :
+                          r.bizStatus === "CANNOT_UPDATE" ? "bg-purple-50 text-purple-700" :
                           "bg-amber-50 text-amber-700"
                         }`}>
-                          {r.status === "APPROVED" ? "已通过" : r.status === "REJECTED" ? "已拒绝" : r.status === "CANCELLED" ? "已取消" : "待审核"}
+                          {r.bizStatus === "COMPLETED" ? "已完成" : r.bizStatus === "NO_RESOURCE" ? "无资源" : r.bizStatus === "CANNOT_UPDATE" ? "无法更新" : "进行中"}
                         </span>
                       </div>
                     </div>

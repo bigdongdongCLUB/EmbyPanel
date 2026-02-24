@@ -22,6 +22,15 @@ function shanghaiDayStart(now = new Date()) {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - 8 * 3600 * 1000);
 }
 
+function deriveBizStatus(row: { status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED"; adminNote?: string | null }) {
+  const note = (row.adminNote || "").trim();
+  if (row.status === "APPROVED") return "COMPLETED" as const;
+  if (row.status === "PENDING") return "PROCESSING" as const;
+  if (note.includes("无资源")) return "NO_RESOURCE" as const;
+  if (note.includes("无法更新")) return "CANNOT_UPDATE" as const;
+  return "CANNOT_UPDATE" as const;
+}
+
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -88,7 +97,14 @@ export async function GET(req: Request) {
     }),
   ]);
 
-  return NextResponse.json({ ok: true, rows, pagination: { page, pageSize, total, totalPages: Math.max(1, Math.ceil(total / pageSize)) } });
+  return NextResponse.json({
+    ok: true,
+    rows: rows.map((r) => ({
+      ...r,
+      bizStatus: deriveBizStatus({ status: r.status, adminNote: r.adminNote }),
+    })),
+    pagination: { page, pageSize, total, totalPages: Math.max(1, Math.ceil(total / pageSize)) },
+  });
 }
 
 export async function DELETE() {
