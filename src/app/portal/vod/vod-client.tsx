@@ -318,6 +318,8 @@ export function VodClient() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [searchTotal, setSearchTotal] = useState<number | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [selectedItem, setSelectedItem] = useState<MediaItem | null>(null);
   const [selectedDetail, setSelectedDetail] = useState<DetailData | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -342,29 +344,33 @@ export function VodClient() {
     }
   }, []);
 
-  const loadTab = useCallback(async (tab: Tab) => {
+  const loadTab = useCallback(async (tab: Tab, page = 1) => {
     setLoading(true);
     try {
-      const r = await fetch(`/api/portal/vod/discover?category=${tab}&page=1`);
+      const r = await fetch(`/api/portal/vod/discover?category=${tab}&page=${page}`);
       const j = await r.json();
       const results = j?.results ?? [];
       setItems(results);
+      setCurrentPage(j?.page ?? page);
+      setTotalPages(Math.max(1, Number(j?.totalPages ?? 1)));
       checkLibrary(results);
     } finally { setLoading(false); }
   }, [checkLibrary]);
 
   useEffect(() => { if (!searchQuery) loadTab(activeTab); }, [activeTab, searchQuery, loadTab]);
 
-  async function doSearch(q: string) {
-    if (!q.trim()) { setSearchQuery(""); setSearchTotal(null); return; }
+  async function doSearch(q: string, page = 1) {
+    if (!q.trim()) { setSearchQuery(""); setSearchTotal(null); setCurrentPage(1); setTotalPages(1); return; }
     setSearchQuery(q);
     setLoading(true);
     try {
-      const r = await fetch(`/api/portal/vod/search?q=${encodeURIComponent(q)}&page=1`);
+      const r = await fetch(`/api/portal/vod/search?q=${encodeURIComponent(q)}&page=${page}`);
       const j = await r.json();
       const results = j?.results ?? [];
       setItems(results);
       setSearchTotal(j?.totalResults ?? 0);
+      setCurrentPage(j?.page ?? page);
+      setTotalPages(Math.max(1, Number(j?.totalPages ?? 1)));
       checkLibrary(results);
     } finally { setLoading(false); }
   }
@@ -373,6 +379,15 @@ export function VodClient() {
     setSearchInput("");
     setSearchQuery("");
     setSearchTotal(null);
+    setCurrentPage(1);
+    setTotalPages(1);
+  }
+
+  async function changePage(nextPage: number) {
+    const page = Math.max(1, Math.min(totalPages, nextPage));
+    if (page === currentPage) return;
+    if (searchQuery) await doSearch(searchQuery, page);
+    else await loadTab(activeTab, page);
   }
 
   async function openDetail(item: MediaItem) {
@@ -463,7 +478,7 @@ export function VodClient() {
             className={`flex items-center gap-1.5 px-4 py-2.5 text-sm whitespace-nowrap border-b-2 -mb-px transition-colors ${
               activeTab === tab.key && !searchQuery ? "border-blue-600 text-blue-600 font-medium" : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
-            onClick={() => { setActiveTab(tab.key); clearSearch(); }}
+            onClick={() => { setActiveTab(tab.key); clearSearch(); setCurrentPage(1); }}
           >
             <span>{tab.icon}</span>{tab.label}
           </button>
@@ -478,14 +493,26 @@ export function VodClient() {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
-          {items.map((item) => (
-            <PosterCard key={`${item.mediaType}-${item.id}`} item={item} inLibrary={inLibrarySet.has(item.id)} onClick={() => openDetail(item)} />
-          ))}
-          {items.length === 0 && (
-            <div className="col-span-6 py-16 text-center text-gray-400 text-sm">暂无内容</div>
+        <>
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+            {items.map((item) => (
+              <PosterCard key={`${item.mediaType}-${item.id}`} item={item} inLibrary={inLibrarySet.has(item.id)} onClick={() => openDetail(item)} />
+            ))}
+            {items.length === 0 && (
+              <div className="col-span-6 py-16 text-center text-gray-400 text-sm">暂无内容</div>
+            )}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 pt-2">
+              <button className="h-8 px-2 rounded border text-sm text-gray-600 disabled:opacity-40" onClick={() => changePage(1)} disabled={currentPage <= 1}>«</button>
+              <button className="h-8 px-2 rounded border text-sm text-gray-600 disabled:opacity-40" onClick={() => changePage(currentPage - 1)} disabled={currentPage <= 1}>‹</button>
+              <span className="text-sm text-gray-600 px-2">{currentPage} / {totalPages}</span>
+              <button className="h-8 px-2 rounded border text-sm text-gray-600 disabled:opacity-40" onClick={() => changePage(currentPage + 1)} disabled={currentPage >= totalPages}>›</button>
+              <button className="h-8 px-2 rounded border text-sm text-gray-600 disabled:opacity-40" onClick={() => changePage(totalPages)} disabled={currentPage >= totalPages}>»</button>
+            </div>
           )}
-        </div>
+        </>
       )}
 
       {/* Detail loading */}
