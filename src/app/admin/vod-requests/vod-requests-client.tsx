@@ -107,17 +107,18 @@ export function VodRequestsAdminClient() {
     if (!res.ok) throw new Error((json as any)?.error || `HTTP ${res.status}`);
   }
 
-  async function approve(row: Row) {
-    const ok = await (window as any).showConfirm(`确认同意该点播申请？\n\n${row.title}`);
+  async function applyQuickAction(row: Row, action: "NO_RESOURCE" | "PROCESSING" | "CANNOT_UPDATE") {
+    if (!action) return;
+    const actionText = action === "NO_RESOURCE" ? "无资源" : action === "PROCESSING" ? "进行中" : "无法更新";
+    const ok = await (window as any).showConfirm(`确认将该申请标记为“${actionText}”？\n\n${row.title}`);
     if (!ok) return;
-    await patchRow(row.id, { status: "APPROVED", adminNote: replyMap[row.id] || "" });
-    await refresh(page, pageSize);
-  }
 
-  async function reject(row: Row) {
-    const ok = await (window as any).showConfirm(`确认拒绝该点播申请？\n\n${row.title}`);
-    if (!ok) return;
-    await patchRow(row.id, { status: "REJECTED", adminNote: replyMap[row.id] || "" });
+    const nextStatus: Row["status"] = action === "PROCESSING" ? "PENDING" : "REJECTED";
+    const baseReply = (replyMap[row.id] || "").trim();
+    const nextReply = baseReply || actionText;
+
+    await patchRow(row.id, { status: nextStatus, adminNote: nextReply });
+    setReplyMap((m) => ({ ...m, [row.id]: nextReply }));
     await refresh(page, pageSize);
   }
 
@@ -154,12 +155,11 @@ export function VodRequestsAdminClient() {
       </div>
 
       <div className="border rounded overflow-auto bg-white">
-        <table className="min-w-[1180px] w-full text-sm">
+        <table className="min-w-[1100px] w-full text-sm">
           <thead className="border-b text-left text-gray-600 bg-gray-50">
             <tr>
               <th className="px-3 py-2">媒体信息</th>
               <th className="px-3 py-2">用户</th>
-              <th className="px-3 py-2">状态</th>
               <th className="px-3 py-2">用户备注</th>
               <th className="px-3 py-2">管理员回复</th>
               <th className="px-3 py-2">请求时间</th>
@@ -183,9 +183,6 @@ export function VodRequestsAdminClient() {
                   </div>
                 </td>
                 <td className="px-3 py-3 whitespace-nowrap">{r.user.username || r.user.email || "-"}</td>
-                <td className="px-3 py-3 whitespace-nowrap">
-                  <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${statusCls(r.status)}`}>{statusText(r.status)}</span>
-                </td>
                 <td className="px-3 py-3 text-xs text-gray-600 max-w-[220px]">{r.note || "-"}</td>
                 <td className="px-3 py-3 min-w-[220px]">
                   <textarea
@@ -199,16 +196,31 @@ export function VodRequestsAdminClient() {
                 </td>
                 <td className="px-3 py-3 text-xs whitespace-nowrap">{fmt(r.createdAt)}</td>
                 <td className="px-3 py-3 whitespace-nowrap">
-                  <div className="flex items-center gap-3 text-sm">
-                    <button className="text-green-700 hover:text-green-800 disabled:opacity-40" disabled={loading} onClick={() => approve(r)}>✓ 同意</button>
-                    <button className="text-red-600 hover:text-red-700 disabled:opacity-40" disabled={loading} onClick={() => reject(r)}>✕ 拒绝</button>
+                  <div className="flex items-center gap-2">
+                    <select
+                      className="h-8 border rounded px-2 text-xs"
+                      defaultValue=""
+                      disabled={loading}
+                      onChange={async (e) => {
+                        const v = e.target.value as "" | "NO_RESOURCE" | "PROCESSING" | "CANNOT_UPDATE";
+                        if (!v) return;
+                        await applyQuickAction(r, v as any);
+                        e.currentTarget.value = "";
+                      }}
+                    >
+                      <option value="">操作</option>
+                      <option value="NO_RESOURCE">无资源</option>
+                      <option value="PROCESSING">进行中</option>
+                      <option value="CANNOT_UPDATE">无法更新</option>
+                    </select>
+                    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${statusCls(r.status)}`}>{statusText(r.status)}</span>
                   </div>
                 </td>
               </tr>
             ))}
             {!loading && visibleRows.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-3 py-10 text-center text-gray-500">暂无点播申请</td>
+                <td colSpan={6} className="px-3 py-10 text-center text-gray-500">暂无点播申请</td>
               </tr>
             ) : null}
           </tbody>
