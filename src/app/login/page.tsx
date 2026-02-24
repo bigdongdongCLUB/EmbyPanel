@@ -45,8 +45,11 @@ export default function LoginPage() {
 
   const usernameErrors = useMemo(() => {
     const list: string[] = [];
-    if (username && (username.length < 3 || username.length > 24)) list.push("用户名长度必须在3-24个字符之间");
-    if (username && !/^[a-zA-Z0-9_]+$/.test(username)) list.push("用户名只能包含字母、数字和下划线");
+    if (!username) return list;
+    if (username.length < 5) list.push("用户名至少需要 5 个字符");
+    if (username.length > 24) list.push("用户名不能超过 24 个字符");
+    if (!/^[a-zA-Z0-9]+$/.test(username)) list.push("用户名只能包含字母或字母与数字的组合，不支持下划线、中文及其他符号");
+    if (username.length >= 5 && /^[0-9]+$/.test(username)) list.push("用户名不能全为数字，需包含至少一个字母");
     return list;
   }, [username]);
 
@@ -259,13 +262,25 @@ export default function LoginPage() {
           </form>
         ) : (
           <form className="mt-3 max-w-3xl mx-auto px-10 space-y-1.5" onSubmit={doRegister}>
-            <div className={`border rounded-xl px-3 py-1.5 flex items-center gap-2 ${usernameErrors.length ? "border-red-300" : ""}`}>
+            <div className={`border rounded-xl px-3 py-1.5 flex items-center gap-2 ${username && usernameErrors.length ? "border-red-300 bg-red-50" : ""}`}>
               <span className="text-gray-400 text-sm">👤</span>
-              <input className="w-full text-sm outline-none" placeholder="用户名" value={username} onChange={(e) => setUsername(e.target.value)} />
+              <input className="w-full text-sm outline-none bg-transparent" placeholder="用户名（5位以上字母或字母+数字）" value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" />
             </div>
-            {usernameErrors.map((x) => (
-              <div key={x} className="text-red-500 text-[11px]">{x}</div>
-            ))}
+            {username && usernameErrors.length > 0 ? (
+              <div className="border border-red-200 bg-red-50 rounded-lg px-3 py-2 space-y-0.5">
+                {usernameErrors.map((x) => (
+                  <div key={x} className="flex items-start gap-1.5 text-red-500 text-[11px]">
+                    <span className="mt-0.5 shrink-0">✕</span>
+                    <span>{x}</span>
+                  </div>
+                ))}
+              </div>
+            ) : username && !usernameErrors.length ? (
+              <div className="flex items-center gap-1.5 text-green-600 text-[11px] px-1">
+                <span>✓</span>
+                <span>用户名格式正确</span>
+              </div>
+            ) : null}
 
             <div className="border rounded-xl px-3 py-1.5 flex items-center gap-2">
               <span className="text-gray-400 text-sm">✉️</span>
