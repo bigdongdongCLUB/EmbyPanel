@@ -111,7 +111,7 @@ export function InvitesClient() {
           <button
             className="border rounded px-3 py-2 text-sm"
             onClick={async () => {
-              const ok = confirm("确认重新生成邀请码？旧邀请码将失效。");
+              const ok = await (window as any).showConfirm("确认重新生成邀请码？旧邀请码将失效。");
               if (!ok) return;
               const res = await fetch("/api/portal/invites/regenerate", { method: "POST" });
               const json = await res.json().catch(() => null);

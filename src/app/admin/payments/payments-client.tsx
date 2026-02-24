@@ -164,7 +164,7 @@ export function PaymentsAdminClient() {
   }
 
   async function removeItem(id: string) {
-    if (!confirm("确认删除该支付方式？")) return;
+    if (!(await (window as any).showConfirm("确认删除该支付方式？"))) return;
     const res = await fetch(`/api/admin/payments?id=${encodeURIComponent(id)}`, { method: "DELETE" });
     const json = await res.json().catch(() => null);
     if (!res.ok) return alert(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);

@@ -144,7 +144,7 @@ export function AnnouncementsClient() {
                     <button
                       className="text-red-600"
                       onClick={async () => {
-                        if (!confirm("确认删除该公告？")) return;
+                        if (!(await (window as any).showConfirm("确认删除该公告？"))) return;
                         await fetch(`/api/admin/announcements?id=${encodeURIComponent(r.id)}`, { method: "DELETE" });
                         await refresh();
                       }}

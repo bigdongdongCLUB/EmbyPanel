@@ -83,6 +83,7 @@ model User {
   anomalies     Anomaly[]
   usedCardCodes CardCode[]
   serviceOrders ServiceOrder[]
+  vodRequests   VodRequest[]
 }
 
 model Plan {
@@ -287,4 +288,38 @@ model JobRun {
   finishedAt DateTime?
   ok        Boolean?
   message   String?
+}
+
+enum VodMediaType {
+  MOVIE
+  TV
+}
+
+enum VodRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+model VodRequest {
+  id            String           @id @default(cuid())
+  userId        String
+  tmdbId        Int
+  mediaType     VodMediaType
+  title         String
+  titleOriginal String
+  posterPath    String?
+  year          String?
+  season        Int?
+  note          String?
+  status        VodRequestStatus @default(PENDING)
+  adminNote     String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status, createdAt])
+  @@index([tmdbId, mediaType])
 }

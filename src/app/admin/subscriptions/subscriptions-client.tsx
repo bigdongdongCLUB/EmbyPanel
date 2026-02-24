@@ -315,7 +315,7 @@ export function SubscriptionsClient() {
     const plan = plans.find((p) => p.id === id);
     const cnt = plan?.subscriptionCount ?? null;
     const hint = cnt && cnt > 0 ? `\n\n注意：该计划当前有 ${cnt} 个订阅，不能删除。` : "";
-    if (!confirm("确定删除该订阅计划？" + hint)) return;
+    if (!(await (window as any).showConfirm("确定删除该订阅计划？" + hint))) return;
 
     const res = await fetch(`/api/admin/plans/${id}`, { method: "DELETE" });
     const text = await res.text();

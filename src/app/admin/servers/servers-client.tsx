@@ -180,7 +180,7 @@ function UsersTable({
                         onClick={async () => {
                           const nextDisabled = !u.policy?.isDisabled;
                           const label = nextDisabled ? "禁用" : "启用";
-                          if (!confirm(`确定${label} Emby 用户：${u.name} ?`)) return;
+                          if (!(await (window as any).showConfirm(`确定${label} Emby 用户：${u.name} ?`))) return;
                           const res = await fetch(`/api/admin/emby-servers/${serverId}/users/${u.id}`, {
                             method: "PATCH",
                             headers: { "content-type": "application/json" },
@@ -203,7 +203,7 @@ function UsersTable({
                         title={u.policy?.isAdministrator ? "管理员账户不可删除" : ""}
                         onClick={async () => {
                           const panelHint = u.panel?.username ? `\n\n提示：该用户已绑定面板账号（${u.panel.username}），本操作只删除 Emby 端用户，不会删除面板账号。` : "";
-                          if (!confirm(`确定从 Emby 服务器删除用户：${u.name} ?\n\n注意：此操作不可恢复。${panelHint}`)) return;
+                          if (!(await (window as any).showConfirm(`确定从 Emby 服务器删除用户：${u.name} ?\n\n注意：此操作不可恢复。${panelHint}`))) return;
                           const res = await fetch(`/api/admin/emby-servers/${serverId}/users/${u.id}`, { method: "DELETE" });
                           const txt = await res.text();
                           if (!res.ok) {
@@ -450,7 +450,7 @@ export function ServersClient() {
                 <button
                   className="border rounded px-3 py-2 text-red-600"
                   onClick={async () => {
-                    if (!confirm(`确定删除服务器：${s.name} ?`)) return;
+                    if (!(await (window as any).showConfirm(`确定删除服务器：${s.name} ?`))) return;
                     const res = await fetch(`/api/admin/emby-servers/${s.id}`, { method: "DELETE" });
                     if (!res.ok) {
                       alert(`删除失败: ${await res.text()}`);
