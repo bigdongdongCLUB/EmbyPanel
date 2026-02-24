@@ -449,7 +449,7 @@ export function VodClient() {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b overflow-x-auto">
+      <div className="flex border-b overflow-x-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
         {TABS.map((tab) => (
           <button
             key={tab.key}
