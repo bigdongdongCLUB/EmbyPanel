@@ -127,7 +127,7 @@ export function VodRequestsAdminClient() {
 
     const nextStatus: Row["status"] = action === "PROCESSING" ? "PENDING" : action === "COMPLETED" ? "APPROVED" : "REJECTED";
     const baseReply = (replyMap[row.id] || "").trim().replace(/^(无资源|进行中|无法更新|已完成)[:：]?\s*/u, "");
-    const nextReply = baseReply ? `${actionText}：${baseReply}` : actionText;
+    const nextReply = (baseReply ? `${actionText}：${baseReply}` : actionText).slice(0, 20);
 
     await patchRow(row.id, { status: nextStatus, adminNote: nextReply });
     setReplyMap((m) => ({ ...m, [row.id]: nextReply }));
@@ -201,11 +201,12 @@ export function VodRequestsAdminClient() {
                   <textarea
                     className="w-full border rounded px-2 py-1.5 text-xs resize-none"
                     rows={2}
-                    maxLength={500}
+                    maxLength={20}
                     value={replyMap[r.id] ?? ""}
-                    onChange={(e) => setReplyMap((m) => ({ ...m, [r.id]: e.target.value }))}
-                    placeholder="给用户的回复（可选）"
+                    onChange={(e) => setReplyMap((m) => ({ ...m, [r.id]: e.target.value.slice(0, 20) }))}
+                    placeholder="给用户的回复（最多20字）"
                   />
+                  <div className="text-[10px] text-gray-400 text-right mt-1">{(replyMap[r.id] || "").length}/20</div>
                 </td>
                 <td className="px-3 py-3 text-xs whitespace-nowrap">{fmt(r.createdAt)}</td>
                 <td className="px-3 py-3 whitespace-nowrap">

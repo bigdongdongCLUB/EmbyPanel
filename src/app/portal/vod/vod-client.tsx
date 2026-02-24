@@ -606,6 +606,9 @@ export function VodClient() {
                           {r.bizStatus === "COMPLETED" ? "已完成" : r.bizStatus === "NO_RESOURCE" ? "无资源" : r.bizStatus === "CANNOT_UPDATE" ? "无法更新" : "进行中"}
                         </span>
                       </div>
+                      {r.adminNote ? (
+                        <div className="text-[11px] text-gray-500 mt-1 truncate">管理员回复：{String(r.adminNote).slice(0, 20)}</div>
+                      ) : null}
                     </div>
                   </div>
                 ))}

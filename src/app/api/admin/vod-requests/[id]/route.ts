@@ -8,7 +8,7 @@ import { prisma } from "@/lib/db";
 
 const PatchSchema = z.object({
   status: z.enum(["PENDING", "APPROVED", "REJECTED", "CANCELLED"]).optional(),
-  adminNote: z.string().max(500).optional(),
+  adminNote: z.string().max(20).optional(),
 });
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
