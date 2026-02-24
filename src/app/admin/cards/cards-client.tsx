@@ -173,7 +173,7 @@ export function CardCodesClient() {
               className="w-full text-left px-2 py-1.5 hover:bg-gray-50 text-red-600 disabled:opacity-50"
               disabled={!selectedIds.length}
               onClick={async () => {
-                if (!confirm(`确认批量删除 ${selectedIds.length} 个卡密？`)) return;
+                if (!(await (window as any).showConfirm(`确认批量删除 ${selectedIds.length} 个卡密？`))) return;
                 for (const id of selectedIds) {
                   await fetch(`/api/admin/card-codes?id=${encodeURIComponent(id)}`, { method: "DELETE" });
                 }
@@ -205,11 +205,25 @@ export function CardCodesClient() {
               <tr key={r.id} className="border-b">
                 <td className="px-3 py-2"><input type="checkbox" checked={!!selected[r.id]} onChange={(e) => setSelected((m) => ({ ...m, [r.id]: e.target.checked }))} /></td>
                 <td className="px-3 py-2 font-mono">{r.code}</td>
-                <td className="px-3 py-2">{r.type === "BALANCE" ? "余额卡密" : "订阅卡密"}</td>
+                <td className="px-3 py-2">
+                  {r.type === "BALANCE" ? (
+                    <span className="inline-flex items-center rounded-full border border-green-200 bg-green-50 text-green-700 px-2.5 py-0.5 text-xs font-medium">余额卡密</span>
+                  ) : (
+                    <span className="inline-flex items-center rounded-full border border-violet-200 bg-violet-50 text-violet-700 px-2.5 py-0.5 text-xs font-medium">订阅卡密</span>
+                  )}
+                </td>
                 <td className="px-3 py-2 text-xs">
                   {r.type === "BALANCE" ? `充值 ¥${((r.amountCents || 0) / 100).toFixed(0)}` : `${r.plan?.name || "-"} / ${r.subscriptionDays || 0} 天 / ${r.payCycle || "-"}`}
                 </td>
-                                <td className="px-3 py-2">{r.status === "UNUSED" ? "未使用" : r.status === "USED" ? "已使用" : "已禁用"}</td>
+                                <td className="px-3 py-2">
+                                  {r.status === "UNUSED" ? (
+                                    <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 text-blue-700 px-2.5 py-0.5 text-xs font-medium">未使用</span>
+                                  ) : r.status === "USED" ? (
+                                    <span className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 text-gray-500 px-2.5 py-0.5 text-xs font-medium">已使用</span>
+                                  ) : (
+                                    <span className="inline-flex items-center rounded-full border border-red-200 bg-red-50 text-red-600 px-2.5 py-0.5 text-xs font-medium">已禁用</span>
+                                  )}
+                                </td>
                 <td className="px-3 py-2">{fmt(r.usedAt)}</td>
                 <td className="px-3 py-2">{fmt(r.createdAt)}</td>
                 <td className="px-3 py-2">
@@ -227,7 +241,7 @@ export function CardCodesClient() {
                     <button
                       className="text-red-600 hover:text-red-700"
                       onClick={async () => {
-                        if (!confirm("确认删除该卡密？")) return;
+                        if (!(await (window as any).showConfirm("确认删除该卡密？"))) return;
                         const res = await fetch(`/api/admin/card-codes?id=${encodeURIComponent(r.id)}`, { method: "DELETE" });
                         const txt = await res.text();
                         let json: any = null;
