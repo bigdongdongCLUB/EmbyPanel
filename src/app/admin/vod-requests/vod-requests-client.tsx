@@ -20,7 +20,7 @@ type Row = {
 
 type Resp = {
   ok: boolean;
-  summary: { total: number; noResource: number; processing: number; cannotUpdate: number; completed: number };
+  summary: { total: number; pending: number; noResource: number; processing: number; cannotUpdate: number; completed: number };
   pagination: { page: number; pageSize: number; total: number; totalPages: number };
   rows: Row[];
 };
@@ -30,19 +30,20 @@ function fmt(v?: string | null) {
   return new Date(v).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false }).replace(/\//g, "-");
 }
 
-type BizStatus = "NO_RESOURCE" | "PROCESSING" | "CANNOT_UPDATE" | "COMPLETED";
+type BizStatus = "PENDING" | "NO_RESOURCE" | "PROCESSING" | "CANNOT_UPDATE" | "COMPLETED";
 
 function deriveBizStatus(r: Row): BizStatus {
   const note = (r.adminNote || "").trim();
   if (r.status === "APPROVED") return "COMPLETED";
-  if (r.status === "PENDING") return "PROCESSING";
+  if (r.status === "PENDING") return note.includes("进行中") ? "PROCESSING" : "PENDING";
   if (note.includes("无资源")) return "NO_RESOURCE";
   if (note.includes("无法更新")) return "CANNOT_UPDATE";
   if (note.includes("已完成")) return "COMPLETED";
-  return "PROCESSING";
+  return "CANNOT_UPDATE";
 }
 
 function statusText(v: BizStatus) {
+  if (v === "PENDING") return "待处理";
   if (v === "NO_RESOURCE") return "无资源";
   if (v === "PROCESSING") return "进行中";
   if (v === "CANNOT_UPDATE") return "无法更新";
@@ -50,6 +51,7 @@ function statusText(v: BizStatus) {
 }
 
 function statusCls(v: BizStatus) {
+  if (v === "PENDING") return "border-blue-200 bg-blue-50 text-blue-700";
   if (v === "NO_RESOURCE") return "border-red-200 bg-red-50 text-red-600";
   if (v === "PROCESSING") return "border-amber-200 bg-amber-50 text-amber-700";
   if (v === "CANNOT_UPDATE") return "border-purple-200 bg-purple-50 text-purple-700";
@@ -61,7 +63,7 @@ export function VodRequestsAdminClient() {
   const [bizStatus, setBizStatus] = useState("");
   const [mediaType, setMediaType] = useState("");
   const [rows, setRows] = useState<Row[]>([]);
-  const [summary, setSummary] = useState({ total: 0, noResource: 0, processing: 0, cannotUpdate: 0, completed: 0 });
+  const [summary, setSummary] = useState({ total: 0, pending: 0, noResource: 0, processing: 0, cannotUpdate: 0, completed: 0 });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
@@ -86,7 +88,7 @@ export function VodRequestsAdminClient() {
       const json: Resp = await res.json().catch(() => null as any);
       if (!res.ok) throw new Error((json as any)?.error || `HTTP ${res.status}`);
       setRows(Array.isArray(json.rows) ? json.rows : []);
-      setSummary(json.summary || { total: 0, noResource: 0, processing: 0, cannotUpdate: 0, completed: 0 });
+      setSummary(json.summary || { total: 0, pending: 0, noResource: 0, processing: 0, cannotUpdate: 0, completed: 0 });
       setPage(json.pagination?.page || 1);
       setPageSize(json.pagination?.pageSize || nextPageSize);
       setTotal(json.pagination?.total || 0);
@@ -128,12 +130,12 @@ export function VodRequestsAdminClient() {
     if (!res.ok) throw new Error((json as any)?.error || `HTTP ${res.status}`);
   }
 
-  async function applyQuickAction(row: Row, action: "NO_RESOURCE" | "PROCESSING" | "CANNOT_UPDATE" | "COMPLETED") {
+  async function applyQuickAction(row: Row, action: "PENDING" | "NO_RESOURCE" | "PROCESSING" | "CANNOT_UPDATE" | "COMPLETED") {
     if (!action) return;
-    const actionText = action === "NO_RESOURCE" ? "无资源" : action === "PROCESSING" ? "进行中" : action === "CANNOT_UPDATE" ? "无法更新" : "已完成";
+    const actionText = action === "PENDING" ? "待处理" : action === "NO_RESOURCE" ? "无资源" : action === "PROCESSING" ? "进行中" : action === "CANNOT_UPDATE" ? "无法更新" : "已完成";
 
-    const nextStatus: Row["status"] = action === "PROCESSING" ? "PENDING" : action === "COMPLETED" ? "APPROVED" : "REJECTED";
-    const baseReply = (replyMap[row.id] || "").trim().replace(/^(无资源|进行中|无法更新|已完成)[:：]?\s*/u, "");
+    const nextStatus: Row["status"] = action === "COMPLETED" ? "APPROVED" : action === "PENDING" || action === "PROCESSING" ? "PENDING" : "REJECTED";
+    const baseReply = (replyMap[row.id] || "").trim().replace(/^(待处理|无资源|进行中|无法更新|已完成)[:：]?\s*/u, "");
     const nextReply = (baseReply ? `${actionText}：${baseReply}` : actionText).slice(0, 20);
 
     await patchRow(row.id, { status: nextStatus, adminNote: nextReply });
@@ -156,9 +158,10 @@ export function VodRequestsAdminClient() {
     <div className="space-y-4">
       <h1 className="text-xl font-semibold">点播管理</h1>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
         <div className="border rounded p-3"><div className="text-xs text-gray-500">总计</div><div className="text-2xl text-gray-800">{summary.total}</div></div>
-        <div className="border rounded p-3"><div className="text-xs text-gray-500">无资源</div><div className="text-2xl text-blue-600">{summary.noResource}</div></div>
+        <div className="border rounded p-3"><div className="text-xs text-gray-500">待处理</div><div className="text-2xl text-blue-600">{summary.pending}</div></div>
+        <div className="border rounded p-3"><div className="text-xs text-gray-500">无资源</div><div className="text-2xl text-red-600">{summary.noResource}</div></div>
         <div className="border rounded p-3"><div className="text-xs text-gray-500">进行中</div><div className="text-2xl text-amber-600">{summary.processing}</div></div>
         <div className="border rounded p-3"><div className="text-xs text-gray-500">无法更新</div><div className="text-2xl text-purple-600">{summary.cannotUpdate}</div></div>
         <div className="border rounded p-3"><div className="text-xs text-gray-500">已完成</div><div className="text-2xl text-green-600">{summary.completed}</div></div>
@@ -170,6 +173,7 @@ export function VodRequestsAdminClient() {
         <input className="w-full md:w-72 h-8 border rounded px-3 text-sm" placeholder="搜索标题或用户名" value={q} onChange={(e) => setQ(e.target.value)} />
         <select className="h-8 border rounded px-3 text-sm" value={bizStatus} onChange={(e) => setBizStatus(e.target.value)}>
           <option value="">选择状态</option>
+          <option value="PENDING">待处理</option>
           <option value="NO_RESOURCE">无资源</option>
           <option value="PROCESSING">进行中</option>
           <option value="CANNOT_UPDATE">无法更新</option>
@@ -235,17 +239,18 @@ export function VodRequestsAdminClient() {
                       defaultValue=""
                       disabled={loading}
                       onChange={async (e) => {
-                        const v = e.target.value as "" | "NO_RESOURCE" | "PROCESSING" | "CANNOT_UPDATE" | "COMPLETED";
+                        const v = e.target.value as "" | "PENDING" | "NO_RESOURCE" | "PROCESSING" | "CANNOT_UPDATE" | "COMPLETED";
                         if (!v) return;
                         await applyQuickAction(r, v as any);
                         e.currentTarget.value = "";
                       }}
                     >
                       <option value="">操作</option>
+                      <option value="PENDING">待处理</option>
                       <option value="NO_RESOURCE">无资源</option>
                       <option value="PROCESSING">进行中</option>
                       <option value="CANNOT_UPDATE">无法更新</option>
-          <option value="COMPLETED">已完成</option>
+                      <option value="COMPLETED">已完成</option>
                     </select>
                     <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${statusCls(deriveBizStatus(r))}`}>{statusText(deriveBizStatus(r))}</span>
                   </div>

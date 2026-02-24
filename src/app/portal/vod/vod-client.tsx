@@ -599,11 +599,12 @@ export function VodClient() {
                       <div className="text-xs mt-0.5">
                         <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium ${
                           r.bizStatus === "COMPLETED" ? "bg-green-50 text-green-700" :
+                          r.bizStatus === "PENDING" ? "bg-blue-50 text-blue-700" :
                           r.bizStatus === "NO_RESOURCE" ? "bg-red-50 text-red-600" :
                           r.bizStatus === "CANNOT_UPDATE" ? "bg-purple-50 text-purple-700" :
                           "bg-amber-50 text-amber-700"
                         }`}>
-                          {r.bizStatus === "COMPLETED" ? "已完成" : r.bizStatus === "NO_RESOURCE" ? "无资源" : r.bizStatus === "CANNOT_UPDATE" ? "无法更新" : "进行中"}
+                          {r.bizStatus === "COMPLETED" ? "已完成" : r.bizStatus === "PENDING" ? "待处理" : r.bizStatus === "NO_RESOURCE" ? "无资源" : r.bizStatus === "CANNOT_UPDATE" ? "无法更新" : "进行中"}
                         </span>
                       </div>
                       {r.adminNote ? (
