@@ -428,7 +428,10 @@ export function UsersClient() {
                   />
                 </td>
                 <td className="py-2 px-3 font-mono">
-                  <span className="inline-flex items-center gap-1">
+                  <span className="inline-flex items-center gap-2">
+                    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-cyan-400 text-white text-xs font-semibold select-none">
+                      {(r.username || "?").slice(0, 2).toUpperCase()}
+                    </span>
                     {r.role === "ADMIN" ? <span title="管理员">👑</span> : null}
                     <span>{r.username}</span>
                   </span>
