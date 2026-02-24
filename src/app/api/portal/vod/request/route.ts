@@ -24,9 +24,12 @@ function shanghaiDayStart(now = new Date()) {
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const userId = ((session.user as any).id ?? "") as string;
-  if (!userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const username = (session as any)?.username as string | undefined;
+  if (!username) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const dbUser = await prisma.user.findUnique({ where: { username }, select: { id: true } });
+  if (!dbUser) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const userId = dbUser.id;
 
   const json = await req.json().catch(() => null);
   const parsed = Schema.safeParse(json);
@@ -62,9 +65,12 @@ export async function POST(req: Request) {
 
 export async function GET() {
   const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const userId = ((session.user as any).id ?? "") as string;
-  if (!userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const username = (session as any)?.username as string | undefined;
+  if (!username) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const dbUser = await prisma.user.findUnique({ where: { username }, select: { id: true } });
+  if (!dbUser) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const userId = dbUser.id;
 
   const rows = await prisma.vodRequest.findMany({
     where: { userId: userId },

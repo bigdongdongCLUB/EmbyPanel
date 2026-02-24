@@ -32,9 +32,12 @@ function mapItem(item: any, mediaType: string) {
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const userId = ((session.user as any).id ?? "") as string;
-  if (!userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const username = (session as any)?.username as string | undefined;
+  if (!username) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const dbUser = await prisma.user.findUnique({ where: { username }, select: { id: true } });
+  if (!dbUser) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const userId = dbUser.id;
 
   const url = new URL(req.url);
   const category = url.searchParams.get("category") ?? "now_playing_movie";
@@ -66,6 +69,6 @@ export async function GET(req: Request) {
       totalPages: data.total_pages ?? 1,
     });
   } catch (e: any) {
-    return NextResponse.json({ error: "tmdb_fetch_failed", message: e?.message }, { status: 502 });
+    return NextResponse.json({ error: "tmdb_fetch_failed", message: e?.message, category, path }, { status: 502 });
   }
 }

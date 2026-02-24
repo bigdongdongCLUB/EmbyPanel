@@ -382,7 +382,7 @@ export function VodClient() {
 
   return (
     <div className="space-y-4">
-      <div className="text-xl font-semibold text-gray-800">影视点播</div>
+      <div className="text-xl font-semibold text-gray-800">点播功能</div>
 
       {/* Quota card */}
       <div className="bg-white border rounded-xl p-4 flex flex-wrap items-end justify-between gap-4">
@@ -421,7 +421,6 @@ export function VodClient() {
       <div className="bg-white border rounded-xl p-4 space-y-2">
         <div className="flex gap-2">
           <div className="flex-1 flex items-center border rounded-lg px-3 py-2 gap-2 focus-within:border-blue-400">
-            <span className="text-gray-400 text-sm">🔍</span>
             <input
               className="flex-1 text-sm outline-none"
               placeholder="搜索电影或电视剧..."
