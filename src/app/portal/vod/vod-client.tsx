@@ -201,8 +201,14 @@ function DetailModal({
               {serverResults.length === 0 ? (
                 <div className="text-xs text-gray-400 border rounded-lg px-3 py-3">暂无订阅服务器</div>
               ) : (
-                <div className="overflow-x-auto rounded-lg border pb-1" style={{ scrollbarWidth: "thin" }}>
-                  <table className="text-xs" style={{ minWidth: `${Math.max(680, 180 + serverTableSeasons.length * 88)}px` }}>
+                <div
+                  className={`rounded-lg border pb-1 ${serverTableSeasons.length > 4 ? "overflow-x-auto" : "overflow-x-hidden"}`}
+                  style={serverTableSeasons.length > 4 ? { scrollbarWidth: "thin" } : undefined}
+                >
+                  <table
+                    className="text-xs w-full"
+                    style={serverTableSeasons.length > 4 ? { minWidth: `${Math.max(680, 180 + serverTableSeasons.length * 88)}px` } : undefined}
+                  >
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-3 py-2 text-left font-medium text-gray-600">服务器</th>
@@ -260,7 +266,7 @@ function DetailModal({
                 className="w-full border rounded-lg px-3 py-2 text-sm"
                 value={selectedSeason}
                 onChange={(e) => setSelectedSeason(e.target.value === "" ? "" : Number(e.target.value))}
-                disabled={allExist}
+                disabled={submitting}
               >
                 <option value="">请选择要点播的季度</option>
                 {seasons.map((s) => (
