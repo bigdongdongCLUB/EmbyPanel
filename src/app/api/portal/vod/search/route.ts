@@ -31,7 +31,7 @@ export async function GET(req: Request) {
     const data = await res.json();
     const results = (data.results ?? [])
       .filter((item: any) => item.media_type === "movie" || item.media_type === "tv")
-      .slice(0, 15)
+      .slice(0, 18)
       .map((item: any) => ({
         id: item.id,
         title: item.title ?? item.name ?? "",

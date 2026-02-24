@@ -63,7 +63,7 @@ export async function GET(req: Request) {
     const mt = category.endsWith("_tv") ? "tv" : "movie";
     return NextResponse.json({
       ok: true,
-      results: (data.results ?? []).slice(0, 15).map((i: any) => mapItem(i, mt)),
+      results: (data.results ?? []).slice(0, 18).map((i: any) => mapItem(i, mt)),
       totalResults: data.total_results ?? 0,
       page,
       totalPages: data.total_pages ?? 1,
