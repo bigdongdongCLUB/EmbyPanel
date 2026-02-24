@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { SettingsTabs } from "./tabs";
 
 type Settings = {
   enabled: boolean;
@@ -63,7 +64,9 @@ export function VodSettingsClient() {
   if (loading) return <div className="text-sm text-gray-500 py-8 text-center">加载中…</div>;
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6">
+      <SettingsTabs />
+      <div className="space-y-6 max-w-2xl">
       <h2 className="text-lg font-semibold text-gray-800">点播功能设置</h2>
 
       {/* 说明卡片 */}
@@ -172,6 +175,7 @@ export function VodSettingsClient() {
           {testing ? "测试中…" : "测试 API 连接"}
         </button>
       </div>
+    </div>
     </div>
   );
 }
