@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
 import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
-import { embyFetchSessions, embyLogoutSession, embyStopSessionPlayback } from "@/lib/emby-sessions";
+import { embyFetchSessions, embyLogoutSession, embyRevokeAllUserTokens, embyStopSessionPlayback } from "@/lib/emby-sessions";
 import { embySetUserDisabled } from "@/lib/emby-provision";
 
 const PENALTY_STATE_KEY = "anomaly_penalty_state";
@@ -267,6 +267,10 @@ export async function POST(req: Request) {
             }
 
             await prisma.embyUserLink.updateMany({ where: { id: link.id }, data: { disabled: true } });
+
+            // 撤销用户所有 AccessToken/设备登录（彻底踢下线，解决第三方播放器缓存绕过）
+            const revokeResult = await embyRevokeAllUserTokens(server.baseUrl, apiKey, embyUserId);
+
             penaltiesApplied += 1;
             pendingPenaltyKeys.add(key);
             penaltyState[key] = { ...penaltyState[key], consecutive: 0, penaltyActive: true, lastPenaltyAt: now.toISOString() };
@@ -282,9 +286,11 @@ export async function POST(req: Request) {
               status: "PENDING",
               stoppedSessions,
               loggedOutSessions,
+              revokedTokens: revokeResult.revokedCount ?? 0,
               stopErrors: stopErrors.length ? stopErrors.slice(0, 5) : undefined,
               logoutErrors: logoutErrors.length ? logoutErrors.slice(0, 5) : undefined,
-              reason: `连续两次5分钟检测命中异常并发播放，已先停止播放并踢下线后封禁${penaltyConfig.durationMinutes}分钟`,
+              revokeErrors: revokeResult.errors?.length ? revokeResult.errors : undefined,
+              reason: `连续两次5分钟检测命中异常并发播放，已停止播放、踢下线、撤销所有AccessToken后封禁${penaltyConfig.durationMinutes}分钟`,
             });
           } else {
             warnings += 1;
