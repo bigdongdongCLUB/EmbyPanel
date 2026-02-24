@@ -185,7 +185,6 @@ export function VodRequestsAdminClient() {
           <option value="MOVIE">电影</option>
           <option value="TV">电视剧</option>
         </select>
-        <button className="h-8 bg-blue-600 text-white rounded px-3 text-sm ml-auto disabled:opacity-50" disabled={loading} onClick={() => refresh(1, pageSize)}>刷新</button>
       </div>
 
       <div className="border rounded overflow-auto bg-white">
