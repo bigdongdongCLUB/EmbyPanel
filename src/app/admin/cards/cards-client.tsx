@@ -217,11 +217,11 @@ export function CardCodesClient() {
                 </td>
                                 <td className="px-3 py-2">
                                   {r.status === "UNUSED" ? (
-                                    <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 text-blue-700 px-2.5 py-0.5 text-xs font-medium">未使用</span>
+                                    <span className="inline-flex items-center rounded-full border border-green-200 bg-green-50 text-green-700 px-2.5 py-0.5 text-xs font-medium">未使用</span>
                                   ) : r.status === "USED" ? (
-                                    <span className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 text-gray-500 px-2.5 py-0.5 text-xs font-medium">已使用</span>
+                                    <span className="inline-flex items-center rounded-full border border-red-200 bg-red-50 text-red-600 px-2.5 py-0.5 text-xs font-medium">已使用</span>
                                   ) : (
-                                    <span className="inline-flex items-center rounded-full border border-red-200 bg-red-50 text-red-600 px-2.5 py-0.5 text-xs font-medium">已禁用</span>
+                                    <span className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 text-gray-500 px-2.5 py-0.5 text-xs font-medium">已禁用</span>
                                   )}
                                 </td>
                 <td className="px-3 py-2">{fmt(r.usedAt)}</td>
