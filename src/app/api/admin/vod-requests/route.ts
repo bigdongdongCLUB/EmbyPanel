@@ -16,29 +16,41 @@ export async function GET(req: Request) {
 
   const url = new URL(req.url);
   const q = (url.searchParams.get("q") || "").trim();
-  const status = (url.searchParams.get("status") || "").trim();
+  const bizStatus = (url.searchParams.get("bizStatus") || "").trim();
   const mediaType = (url.searchParams.get("mediaType") || "").trim();
   const page = Math.max(1, toInt(url.searchParams.get("page"), 1));
   const pageSize = Math.max(1, Math.min(50, toInt(url.searchParams.get("pageSize"), 10)));
 
-  const where: any = {};
-  if (["PENDING", "APPROVED", "REJECTED", "CANCELLED"].includes(status)) where.status = status;
-  if (["MOVIE", "TV"].includes(mediaType)) where.mediaType = mediaType;
-  if (q) {
-    where.OR = [
-      { title: { contains: q, mode: "insensitive" } },
-      { titleOriginal: { contains: q, mode: "insensitive" } },
-      { note: { contains: q, mode: "insensitive" } },
-      { user: { username: { contains: q, mode: "insensitive" } } },
-      { user: { email: { contains: q, mode: "insensitive" } } },
-    ];
+  const andWhere: any[] = [];
+  if (["MOVIE", "TV"].includes(mediaType)) andWhere.push({ mediaType });
+
+  if (bizStatus === "NO_RESOURCE") {
+    andWhere.push({ adminNote: { contains: "无资源", mode: "insensitive" } });
+  } else if (bizStatus === "PROCESSING") {
+    andWhere.push({ OR: [{ status: "PENDING" }, { adminNote: { contains: "进行中", mode: "insensitive" } }] });
+  } else if (bizStatus === "CANNOT_UPDATE") {
+    andWhere.push({ adminNote: { contains: "无法更新", mode: "insensitive" } });
   }
 
-  const [total, pending, approved, rejected, rows] = await Promise.all([
+  if (q) {
+    andWhere.push({
+      OR: [
+        { title: { contains: q, mode: "insensitive" } },
+        { titleOriginal: { contains: q, mode: "insensitive" } },
+        { note: { contains: q, mode: "insensitive" } },
+        { user: { username: { contains: q, mode: "insensitive" } } },
+        { user: { email: { contains: q, mode: "insensitive" } } },
+      ],
+    });
+  }
+
+  const where: any = andWhere.length ? { AND: andWhere } : {};
+
+  const [total, noResource, processing, cannotUpdate, rows] = await Promise.all([
     prisma.vodRequest.count({ where }),
-    prisma.vodRequest.count({ where: { ...where, status: "PENDING" } }),
-    prisma.vodRequest.count({ where: { ...where, status: "APPROVED" } }),
-    prisma.vodRequest.count({ where: { ...where, status: "REJECTED" } }),
+    prisma.vodRequest.count({ where: { ...where, adminNote: { contains: "无资源", mode: "insensitive" } } }),
+    prisma.vodRequest.count({ where: { ...where, OR: [{ status: "PENDING" }, { adminNote: { contains: "进行中", mode: "insensitive" } }] } }),
+    prisma.vodRequest.count({ where: { ...where, adminNote: { contains: "无法更新", mode: "insensitive" } } }),
     prisma.vodRequest.findMany({
       where,
       include: { user: { select: { id: true, username: true, email: true } } },
@@ -50,7 +62,7 @@ export async function GET(req: Request) {
 
   return NextResponse.json({
     ok: true,
-    summary: { total, pending, processing: 0, completed: approved },
+    summary: { total, noResource, processing, cannotUpdate },
     pagination: { page, pageSize, total, totalPages: Math.max(1, Math.ceil(total / pageSize)) },
     rows: rows.map((r) => ({
       id: r.id,

@@ -20,7 +20,7 @@ type Row = {
 
 type Resp = {
   ok: boolean;
-  summary: { total: number; pending: number; processing: number; completed: number };
+  summary: { total: number; noResource: number; processing: number; cannotUpdate: number };
   pagination: { page: number; pageSize: number; total: number; totalPages: number };
   rows: Row[];
 };
@@ -30,26 +30,36 @@ function fmt(v?: string | null) {
   return new Date(v).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false }).replace(/\//g, "-");
 }
 
-function statusText(v: Row["status"]) {
-  if (v === "PENDING") return "待审核";
-  if (v === "APPROVED") return "已上架";
-  if (v === "REJECTED") return "已拒绝";
-  return "已取消";
+type BizStatus = "NO_RESOURCE" | "PROCESSING" | "CANNOT_UPDATE";
+
+function deriveBizStatus(r: Row): BizStatus {
+  const note = (r.adminNote || "").trim();
+  if (note.includes("无资源")) return "NO_RESOURCE";
+  if (note.includes("无法更新")) return "CANNOT_UPDATE";
+  if (note.includes("进行中")) return "PROCESSING";
+  if (r.status === "PENDING") return "PROCESSING";
+  if (r.status === "REJECTED") return "CANNOT_UPDATE";
+  return "PROCESSING";
 }
 
-function statusCls(v: Row["status"]) {
-  if (v === "PENDING") return "border-blue-200 bg-blue-50 text-blue-700";
-  if (v === "APPROVED") return "border-green-200 bg-green-50 text-green-700";
-  if (v === "REJECTED") return "border-red-200 bg-red-50 text-red-600";
-  return "border-gray-200 bg-gray-50 text-gray-600";
+function statusText(v: BizStatus) {
+  if (v === "NO_RESOURCE") return "无资源";
+  if (v === "PROCESSING") return "进行中";
+  return "无法更新";
+}
+
+function statusCls(v: BizStatus) {
+  if (v === "NO_RESOURCE") return "border-red-200 bg-red-50 text-red-600";
+  if (v === "PROCESSING") return "border-amber-200 bg-amber-50 text-amber-700";
+  return "border-purple-200 bg-purple-50 text-purple-700";
 }
 
 export function VodRequestsAdminClient() {
   const [q, setQ] = useState("");
-  const [status, setStatus] = useState("");
+  const [bizStatus, setBizStatus] = useState("");
   const [mediaType, setMediaType] = useState("");
   const [rows, setRows] = useState<Row[]>([]);
-  const [summary, setSummary] = useState({ total: 0, pending: 0, processing: 0, completed: 0 });
+  const [summary, setSummary] = useState({ total: 0, noResource: 0, processing: 0, cannotUpdate: 0 });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
@@ -67,13 +77,13 @@ export function VodRequestsAdminClient() {
     try {
       const qs = new URLSearchParams({ page: String(nextPage), pageSize: String(nextPageSize) });
       if (q.trim()) qs.set("q", q.trim());
-      if (status) qs.set("status", status);
+      if (bizStatus) qs.set("bizStatus", bizStatus);
       if (mediaType) qs.set("mediaType", mediaType);
       const res = await fetch(`/api/admin/vod-requests?${qs.toString()}`, { cache: "no-store" });
       const json: Resp = await res.json().catch(() => null as any);
       if (!res.ok) throw new Error((json as any)?.error || `HTTP ${res.status}`);
       setRows(Array.isArray(json.rows) ? json.rows : []);
-      setSummary(json.summary || { total: 0, pending: 0, processing: 0, completed: 0 });
+      setSummary(json.summary || { total: 0, noResource: 0, processing: 0, cannotUpdate: 0 });
       setPage(json.pagination?.page || 1);
       setPageSize(json.pagination?.pageSize || nextPageSize);
       setTotal(json.pagination?.total || 0);
@@ -95,7 +105,7 @@ export function VodRequestsAdminClient() {
   useEffect(() => {
     refresh(1, pageSize);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, status, mediaType]);
+  }, [q, bizStatus, mediaType]);
 
   async function patchRow(id: string, body: { status?: Row["status"]; adminNote?: string }) {
     const res = await fetch(`/api/admin/vod-requests/${id}`, {
@@ -130,21 +140,20 @@ export function VodRequestsAdminClient() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="border rounded p-3"><div className="text-xs text-gray-500">总计</div><div className="text-2xl text-gray-800">{summary.total}</div></div>
-        <div className="border rounded p-3"><div className="text-xs text-gray-500">待审核</div><div className="text-2xl text-blue-600">{summary.pending}</div></div>
-        <div className="border rounded p-3"><div className="text-xs text-gray-500">处理中</div><div className="text-2xl text-amber-600">{summary.processing}</div></div>
-        <div className="border rounded p-3"><div className="text-xs text-gray-500">已上架</div><div className="text-2xl text-teal-600">{summary.completed}</div></div>
+        <div className="border rounded p-3"><div className="text-xs text-gray-500">无资源</div><div className="text-2xl text-blue-600">{summary.noResource}</div></div>
+        <div className="border rounded p-3"><div className="text-xs text-gray-500">进行中</div><div className="text-2xl text-amber-600">{summary.processing}</div></div>
+        <div className="border rounded p-3"><div className="text-xs text-gray-500">无法更新</div><div className="text-2xl text-teal-600">{summary.cannotUpdate}</div></div>
       </div>
 
       {error ? <div className="text-sm text-red-600">{error}</div> : null}
 
       <div className="flex flex-wrap items-center gap-2">
         <input className="w-full md:w-72 h-8 border rounded px-3 text-sm" placeholder="搜索标题或用户名" value={q} onChange={(e) => setQ(e.target.value)} />
-        <select className="h-8 border rounded px-3 text-sm" value={status} onChange={(e) => setStatus(e.target.value)}>
+        <select className="h-8 border rounded px-3 text-sm" value={bizStatus} onChange={(e) => setBizStatus(e.target.value)}>
           <option value="">选择状态</option>
-          <option value="PENDING">待审核</option>
-          <option value="REJECTED">已拒绝</option>
-          <option value="APPROVED">已上架</option>
-          <option value="CANCELLED">已取消</option>
+          <option value="NO_RESOURCE">无资源</option>
+          <option value="PROCESSING">进行中</option>
+          <option value="CANNOT_UPDATE">无法更新</option>
         </select>
         <select className="h-8 border rounded px-3 text-sm" value={mediaType} onChange={(e) => setMediaType(e.target.value)}>
           <option value="">选择类型</option>
@@ -213,7 +222,7 @@ export function VodRequestsAdminClient() {
                       <option value="PROCESSING">进行中</option>
                       <option value="CANNOT_UPDATE">无法更新</option>
                     </select>
-                    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${statusCls(r.status)}`}>{statusText(r.status)}</span>
+                    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${statusCls(deriveBizStatus(r))}`}>{statusText(deriveBizStatus(r))}</span>
                   </div>
                 </td>
               </tr>
