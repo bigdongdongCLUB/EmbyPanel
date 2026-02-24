@@ -116,7 +116,7 @@ export async function DELETE() {
   if (!dbUser) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const result = await prisma.vodRequest.deleteMany({
-    where: { userId: dbUser.id, status: { not: "PENDING" } },
+    where: { userId: dbUser.id, status: "APPROVED" },
   });
 
   return NextResponse.json({ ok: true, deleted: result.count });

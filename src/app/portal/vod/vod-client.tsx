@@ -420,7 +420,7 @@ export function VodClient() {
   }
 
   async function clearCompletedRequests() {
-    const ok = await (window as any).showConfirm("确认清空所有已处理点播记录？");
+    const ok = await (window as any).showConfirm("确认清空所有已完成点播记录？");
     if (!ok) return;
     const r = await fetch("/api/portal/vod/request", { method: "DELETE" });
     const j = await r.json().catch(() => null);
