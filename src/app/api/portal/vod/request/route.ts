@@ -49,6 +49,8 @@ export async function POST(req: Request) {
 
   const settingRow = await prisma.appSetting.findUnique({ where: { key: "vod_settings" } });
   const settings = (settingRow?.valueJson as any) ?? {};
+  const enabled = Boolean(settings.enabled ?? false);
+  if (!enabled) return NextResponse.json({ error: "vod_disabled", message: "目前点播功能暂未开启" }, { status: 403 });
   const dailyMovieQuota = Number(settings.dailyMovieQuota ?? 5);
   const dailyTvQuota = Number(settings.dailyTvQuota ?? 5);
 

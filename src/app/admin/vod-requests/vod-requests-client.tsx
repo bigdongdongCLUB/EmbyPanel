@@ -238,12 +238,16 @@ export function VodRequestsAdminClient() {
                       className="h-8 border rounded px-2 text-xs"
                       value={actionMap[r.id] ?? ""}
                       disabled={loading}
-                      onChange={async (e) => {
+                      onChange={(e) => {
                         const v = e.target.value as "" | "PENDING" | "NO_RESOURCE" | "PROCESSING" | "CANNOT_UPDATE" | "COMPLETED";
-                        setActionMap((m) => ({ ...m, [r.id]: v }));
                         if (!v) return;
-                        await applyQuickAction(r, v as any);
-                        setActionMap((m) => ({ ...m, [r.id]: "" }));
+                        (async () => {
+                          try {
+                            await applyQuickAction(r, v as any);
+                          } finally {
+                            setActionMap((m) => ({ ...m, [r.id]: "" }));
+                          }
+                        })();
                       }}
                     >
                       <option value="">操作</option>
