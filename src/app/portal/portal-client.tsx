@@ -166,14 +166,14 @@ export function PortalClient() {
                       </span>
                     </div>
                     {!!it.serverNames?.length && (
-                      <div className="absolute bottom-1.5 left-1.5 flex flex-col gap-1 max-w-[92%]">
+                      <div className="absolute bottom-1.5 left-1.5 flex flex-col items-start gap-1 max-w-[92%]">
                         {it.serverNames.slice(0, 5).map((sn) => (
-                          <span key={sn} className="text-[10px] font-medium px-1.5 py-0.5 rounded border border-green-200 bg-green-50 text-green-700 leading-none truncate">
+                          <span key={sn} className="inline-flex w-auto max-w-full text-[10px] font-medium px-1.5 py-0.5 rounded border border-green-200 bg-green-50 text-green-700 leading-none whitespace-nowrap">
                             {sn}
                           </span>
                         ))}
                         {it.serverNames.length > 5 ? (
-                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded border border-green-200 bg-green-50 text-green-700 leading-none">...</span>
+                          <span className="inline-flex w-auto text-[10px] font-medium px-1.5 py-0.5 rounded border border-green-200 bg-green-50 text-green-700 leading-none">...</span>
                         ) : null}
                       </div>
                     )}
