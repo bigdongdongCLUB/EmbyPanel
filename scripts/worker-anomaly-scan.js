@@ -41,7 +41,7 @@ async function ensureRepeatable(queue) {
   // 清理历史重复任务（例如旧的10分钟scan），避免沿用旧节奏
   const all = await queue.getRepeatableJobs();
   for (const r of all) {
-    if (r?.name === "scan" || r?.name === "unban" || r?.name === "cache-cleanup") {
+    if (r?.name === "scan" || r?.name === "unban" || r?.name === "cache-cleanup" || r?.name === "dashboard-active30d") {
       await queue.removeRepeatableByKey(r.key);
     }
   }
@@ -75,6 +75,17 @@ async function ensureRepeatable(queue) {
     {
       jobId: "repeat:cache-cleanup",
       repeat: { pattern: "0 2 * * *", tz: "Asia/Shanghai" },
+      removeOnComplete: true,
+      removeOnFail: 1000,
+    }
+  );
+
+  await queue.add(
+    "dashboard-active30d",
+    { kind: "dashboard-active30d" },
+    {
+      jobId: "repeat:dashboard-active30d",
+      repeat: { pattern: "10 2 * * *", tz: "Asia/Shanghai" },
       removeOnComplete: true,
       removeOnFail: 1000,
     }
@@ -125,6 +136,12 @@ async function main() {
         const cleanup = await callInternal("/api/admin/jobs/cache-cleanup");
         console.log("[worker] cache-cleanup", { jobId: job.id, snapshotsDeleted: cleanup?.snapshotsDeleted, jobRunsDeleted: cleanup?.jobRunsDeleted, emailCodesPruned: cleanup?.emailCodesPruned });
         return { cleanup };
+      }
+
+      if (job.name === "dashboard-active30d") {
+        const snapshot = await callInternal("/api/admin/jobs/dashboard-active30d-snapshot");
+        console.log("[worker] dashboard-active30d", { jobId: job.id, total: snapshot?.embyActive30dTotal, servers: snapshot?.serverCount, snapshotAt: snapshot?.snapshotAt });
+        return { snapshot };
       }
 
       const started = Date.now();

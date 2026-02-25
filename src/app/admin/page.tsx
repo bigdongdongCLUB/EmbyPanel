@@ -30,7 +30,11 @@ export default async function AdminHome() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <Card title="面板用户总数" value={String(stats.panelUserCount)} />
-        <Card title="所有 Emby 服务器 30 日活跃用户" value={String(stats.embyActive30dTotal)} />
+        <Card
+          title="所有 Emby 服务器 30 日活跃用户"
+          value={String(stats.embyActive30dTotal)}
+          hint={stats.activeSnapshotAt ? `每日更新：${new Date(stats.activeSnapshotAt).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false })}` : "每日更新"}
+        />
         <Card title="即将到期用户" value={String(stats.expiringSoonCount)} hint={`未来 ${stats.expiringSoonDays} 天内到期`} />
       </div>
 
