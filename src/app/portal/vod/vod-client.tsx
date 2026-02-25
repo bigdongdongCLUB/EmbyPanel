@@ -46,6 +46,7 @@ type Quota = {
 };
 
 type Tab = "now_playing_movie" | "now_playing_tv" | "popular_movie" | "popular_tv";
+const MAX_DISCOVER_PAGES = 10;
 
 const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: "now_playing_movie", label: "最新电影", icon: "🎬" },
@@ -357,9 +358,12 @@ export function VodClient() {
       const r = await fetch(`/api/portal/vod/discover?category=${tab}&page=${page}`);
       const j = await r.json();
       const results = j?.results ?? [];
+      const apiTotalPages = Math.max(1, Number(j?.totalPages ?? 1));
+      const cappedTotalPages = Math.min(MAX_DISCOVER_PAGES, apiTotalPages);
+      const safePage = Math.max(1, Math.min(cappedTotalPages, Number(j?.page ?? page)));
       setItems(results);
-      setCurrentPage(j?.page ?? page);
-      setTotalPages(Math.max(1, Number(j?.totalPages ?? 1)));
+      setCurrentPage(safePage);
+      setTotalPages(cappedTotalPages);
       checkLibrary(results);
     } finally { setLoading(false); }
   }, [checkLibrary]);
