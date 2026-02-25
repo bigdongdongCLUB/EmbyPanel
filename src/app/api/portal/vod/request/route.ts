@@ -37,9 +37,22 @@ export async function POST(req: Request) {
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const username = (session as any)?.username as string | undefined;
   if (!username) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const dbUser = await prisma.user.findUnique({ where: { username }, select: { id: true } });
+  const dbUser = await prisma.user.findUnique({
+    where: { username },
+    select: {
+      id: true,
+      subscriptions: {
+        where: { status: "ACTIVE", endAt: { gt: new Date() }, planId: { not: null } },
+        select: { id: true },
+        take: 1,
+      },
+    },
+  });
   if (!dbUser) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const userId = dbUser.id;
+  if (!dbUser.subscriptions?.length) {
+    return NextResponse.json({ error: "subscription_required", message: "无有效订阅计划，无法提交点播申请" }, { status: 403 });
+  }
 
   const json = await req.json().catch(() => null);
   const parsed = Schema.safeParse(json);

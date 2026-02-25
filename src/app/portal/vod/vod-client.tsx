@@ -97,12 +97,16 @@ function DetailModal({
   onClose,
   onSubmit,
   vodEnabled,
+  vodCanRequest,
+  vodDisabledReason,
 }: {
   item: MediaItem | null;
   detail: DetailData | null;
   onClose: () => void;
   onSubmit: (params: { season?: number; note: string }) => Promise<void>;
   vodEnabled: boolean;
+  vodCanRequest: boolean;
+  vodDisabledReason: string;
 }) {
   const [selectedSeason, setSelectedSeason] = useState<number | "">("");
   const [note, setNote] = useState("");
@@ -126,7 +130,7 @@ function DetailModal({
   const allExist = isTv ? allSeasonsExist : movieExists;
 
   const overview = d.overview.length > 100 ? d.overview.slice(0, 100) + "…" : d.overview;
-  const canSubmit = vodEnabled && (!isTv || selectedSeason !== "") && !submitting;
+  const canSubmit = vodEnabled && vodCanRequest && (!isTv || selectedSeason !== "") && !submitting;
 
   const serverTableSeasons = seasons;
 
@@ -295,6 +299,7 @@ function DetailModal({
             <div className="text-right text-xs text-gray-400">{note.length} / 20</div>
           </div>
 
+          {!vodEnabled || !vodCanRequest ? <div className="text-sm text-red-600 mb-3">{vodDisabledReason}</div> : null}
           {submitError && <div className="text-sm text-red-600 mb-3">{submitError}</div>}
 
           <div className="flex justify-end gap-2">
@@ -304,7 +309,7 @@ function DetailModal({
               disabled={!canSubmit}
               onClick={handleSubmit}
             >
-              {!vodEnabled ? "目前点播功能暂未开启" : submitting ? "提交中…" : "提交申请"}
+              {!vodEnabled || !vodCanRequest ? vodDisabledReason : submitting ? "提交中…" : "提交申请"}
             </button>
           </div>
         </div>
@@ -333,6 +338,8 @@ export function VodClient() {
   const [myReqTotal, setMyReqTotal] = useState(0);
   const [myReqLoading, setMyReqLoading] = useState(false);
   const [vodEnabled, setVodEnabled] = useState(true);
+  const [vodCanRequest, setVodCanRequest] = useState(true);
+  const [vodDisabledReason, setVodDisabledReason] = useState("目前点播功能暂未开启");
 
   const checkLibrary = useCallback(async (list: MediaItem[]) => {
     if (!list.length) return;
@@ -371,8 +378,17 @@ export function VodClient() {
   useEffect(() => {
     fetch("/api/portal/vod/feature", { cache: "no-store" })
       .then((r) => r.json())
-      .then((j) => setVodEnabled(Boolean(j?.enabled)))
-      .catch(() => setVodEnabled(true));
+      .then((j) => {
+        const enabled = Boolean(j?.enabled);
+        const canRequest = Boolean(j?.canRequest ?? enabled);
+        setVodEnabled(enabled);
+        setVodCanRequest(canRequest);
+        setVodDisabledReason(String(j?.reason || (enabled ? "无有效订阅计划，无法提交点播申请" : "目前点播功能暂未开启")));
+      })
+      .catch(() => {
+        setVodEnabled(true);
+        setVodCanRequest(true);
+      });
   }, []);
 
   useEffect(() => { if (!searchQuery) loadTab(activeTab); }, [activeTab, searchQuery, loadTab]);
@@ -443,7 +459,7 @@ export function VodClient() {
   }
 
   async function submitRequest({ season, note }: { season?: number; note: string }) {
-    if (!vodEnabled) throw new Error("目前点播功能暂未开启");
+    if (!vodEnabled || !vodCanRequest) throw new Error(vodDisabledReason);
     if (!selectedItem) throw new Error("no item");
     const r = await fetch("/api/portal/vod/request", {
       method: "POST",
@@ -469,7 +485,7 @@ export function VodClient() {
       <div className="flex items-center justify-between">
         <div>
           <div className="text-xl font-semibold text-gray-800">点播功能</div>
-          {!vodEnabled ? <div className="text-sm text-red-600 mt-1">目前点播功能暂未开启</div> : null}
+          {!vodEnabled || !vodCanRequest ? <div className="text-sm text-red-600 mt-1">{vodDisabledReason}</div> : null}
         </div>
         <button
           className="flex items-center gap-1.5 border rounded-lg px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 shrink-0"
@@ -574,6 +590,8 @@ export function VodClient() {
           onClose={() => { setSelectedDetail(null); setSelectedItem(null); }}
           onSubmit={submitRequest}
           vodEnabled={vodEnabled}
+          vodCanRequest={vodCanRequest}
+          vodDisabledReason={vodDisabledReason}
         />
       )}
 
