@@ -17,12 +17,7 @@ type Data = {
 
 function fmtDateYmd(v?: string | null) {
   if (!v) return "--";
-  const d = new Date(v);
-  const y = d.toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", year: "numeric" });
-  const m = d.toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", month: "2-digit" });
-  const day = d.toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", day: "2-digit" });
-  const h = d.toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour: "2-digit", hour12: false });
-  return `${y}-${m}-${day} ${h}:00`;
+  return new Date(v).toLocaleDateString("zh-CN", { timeZone: "Asia/Shanghai" });
 }
 
 export function PortalClient() {
