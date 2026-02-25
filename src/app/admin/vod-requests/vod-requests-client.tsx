@@ -173,6 +173,22 @@ export function VodRequestsAdminClient() {
         <div className="border rounded p-3"><div className="text-xs text-gray-500">已完成</div><div className="text-2xl text-green-600">{summary.completed}</div></div>
       </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="border rounded p-3 bg-white">
+          <div className="text-xs text-gray-500">近30日电视剧点播数量</div>
+          <div className="text-2xl text-purple-700">{summary.recentTvCount}</div>
+        </div>
+        <div className="border rounded p-3 bg-white">
+          <div className="text-xs text-gray-500">近30日电影点播数量</div>
+          <div className="text-2xl text-blue-700">{summary.recentMovieCount}</div>
+        </div>
+        <div className="border rounded p-3 bg-white">
+          <div className="text-xs text-gray-500">近30日提交最多用户</div>
+          <div className="text-base font-medium text-gray-800 truncate">{summary.recentTopUser}</div>
+          <div className="text-xs text-gray-500 mt-1">{summary.recentTopUserCount} 条</div>
+        </div>
+      </div>
+
       {error ? <div className="text-sm text-red-600">{error}</div> : null}
 
       <div className="flex flex-wrap items-center gap-2">
@@ -274,22 +290,6 @@ export function VodRequestsAdminClient() {
             ) : null}
           </tbody>
         </table>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="border rounded p-3 bg-white">
-          <div className="text-xs text-gray-500">近30日电视剧点播数量</div>
-          <div className="text-2xl text-purple-700">{summary.recentTvCount}</div>
-        </div>
-        <div className="border rounded p-3 bg-white">
-          <div className="text-xs text-gray-500">近30日电影点播数量</div>
-          <div className="text-2xl text-blue-700">{summary.recentMovieCount}</div>
-        </div>
-        <div className="border rounded p-3 bg-white">
-          <div className="text-xs text-gray-500">近30日提交最多用户</div>
-          <div className="text-base font-medium text-gray-800 truncate">{summary.recentTopUser}</div>
-          <div className="text-xs text-gray-500 mt-1">{summary.recentTopUserCount} 条</div>
-        </div>
       </div>
 
       <div className="flex items-center gap-2 text-sm">
