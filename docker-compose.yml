@@ -26,6 +26,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_APP_VERSION: ${NEXT_PUBLIC_APP_VERSION:-v00.00.00}
     container_name: embypanel-web
     restart: unless-stopped
     environment:
@@ -46,6 +48,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_APP_VERSION: ${NEXT_PUBLIC_APP_VERSION:-v00.00.00}
     container_name: embypanel-worker
     restart: unless-stopped
     environment:

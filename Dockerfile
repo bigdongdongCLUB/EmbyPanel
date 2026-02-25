@@ -5,6 +5,8 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 FROM node:22-alpine AS builder
+ARG NEXT_PUBLIC_APP_VERSION=v00.00.00
+ENV NEXT_PUBLIC_APP_VERSION=${NEXT_PUBLIC_APP_VERSION}
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .

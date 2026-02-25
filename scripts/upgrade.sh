@@ -17,6 +17,14 @@ dc() {
 
 log() { printf "\033[1;34m[EmbyPanel]\033[0m %s\n" "$*"; }
 
+format_version_from_count() {
+  local count="$1"
+  local major=$((count / 10000))
+  local minor=$(((count % 10000) / 100))
+  local patch=$((count % 100))
+  printf 'v%02d.%02d.%02d' "$major" "$minor" "$patch"
+}
+
 if [ ! -d "$APP_DIR/.git" ]; then
   echo "Project not found at $APP_DIR" >&2
   exit 1
@@ -28,6 +36,16 @@ log "Pulling latest code ($BRANCH)..."
 git fetch origin "$BRANCH"
 git checkout "$BRANCH"
 git pull --ff-only origin "$BRANCH"
+
+commit_count="$(git rev-list --count HEAD 2>/dev/null || echo 0)"
+app_version="$(format_version_from_count "${commit_count:-0}")"
+if grep -q '^NEXT_PUBLIC_APP_VERSION=' .env; then
+  sed -i.bak "s|^NEXT_PUBLIC_APP_VERSION=.*|NEXT_PUBLIC_APP_VERSION=${app_version}|" .env
+else
+  echo "NEXT_PUBLIC_APP_VERSION=${app_version}" >> .env
+fi
+rm -f .env.bak
+log "App version set to ${app_version}"
 
 log "Refreshing services..."
 dc up -d db redis

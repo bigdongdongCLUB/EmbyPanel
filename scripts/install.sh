@@ -9,6 +9,14 @@ APP_URL="${APP_URL:-}"
 log() { printf "\033[1;34m[EmbyPanel]\033[0m %s\n" "$*"; }
 warn() { printf "\033[1;33m[Warn]\033[0m %s\n" "$*"; }
 
+format_version_from_count() {
+  local count="$1"
+  local major=$((count / 10000))
+  local minor=$(((count % 10000) / 100))
+  local patch=$((count % 100))
+  printf 'v%02d.%02d.%02d' "$major" "$minor" "$patch"
+}
+
 need_cmd() {
   command -v "$1" >/dev/null 2>&1 || {
     echo "Missing required command: $1" >&2
@@ -84,6 +92,7 @@ NEXTAUTH_URL=http://localhost:${WEB_PORT}
 NEXTAUTH_SECRET=change_me_base64_32bytes
 EMBYPANEL_ENCRYPTION_KEY=change_me_base64_32bytes
 INTERNAL_JOBS_SECRET=change_me
+NEXT_PUBLIC_APP_VERSION=v00.00.00
 EOF
       log "Created .env from built-in template (no .env.example found)"
     fi
@@ -94,12 +103,14 @@ EOF
   [ -n "$host_ip" ] || host_ip="127.0.0.1"
 
   local nextauth_url="${APP_URL:-http://${host_ip}:3000}"
-  local nextauth_secret encryption_key jobs_secret pg_pass redis_pass
+  local nextauth_secret encryption_key jobs_secret pg_pass redis_pass app_version commit_count
   nextauth_secret="$(openssl rand -base64 32)"
   encryption_key="$(openssl rand -base64 32)"
   jobs_secret="$(openssl rand -hex 24)"
   pg_pass="$(openssl rand -hex 12)"
   redis_pass="$(openssl rand -hex 12)"
+  commit_count="$(git rev-list --count HEAD 2>/dev/null || echo 0)"
+  app_version="$(format_version_from_count "${commit_count:-0}")"
 
   sed -i.bak \
     -e "s|^NEXTAUTH_URL=.*|NEXTAUTH_URL=${nextauth_url}|" \
@@ -108,7 +119,12 @@ EOF
     -e "s|^INTERNAL_JOBS_SECRET=.*|INTERNAL_JOBS_SECRET=${jobs_secret}|" \
     -e "s|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=${pg_pass}|" \
     -e "s|^REDIS_PASSWORD=.*|REDIS_PASSWORD=${redis_pass}|" \
+    -e "s|^NEXT_PUBLIC_APP_VERSION=.*|NEXT_PUBLIC_APP_VERSION=${app_version}|" \
     .env
+
+  if ! grep -q '^NEXT_PUBLIC_APP_VERSION=' .env; then
+    echo "NEXT_PUBLIC_APP_VERSION=${app_version}" >> .env
+  fi
 
   rm -f .env.bak
 }
