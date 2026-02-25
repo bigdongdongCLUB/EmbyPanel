@@ -32,10 +32,14 @@ export async function POST(req: Request) {
   if (!plan || !plan.enabled || !plan.visible) return NextResponse.json({ error: "plan_not_available" }, { status: 400 });
 
   if (parsed.data.payCycle === "TRIAL") {
-    const [trialPaidCount, trialSubCount] = await Promise.all([
+    const [trialPaidCount, trialSubCount, activeSubCount] = await Promise.all([
       prisma.serviceOrder.count({ where: { userId: user.id, payCycle: "TRIAL", status: "PAID" } }),
       prisma.subscription.count({ where: { userId: user.id, payCycle: "TRIAL" } }),
+      prisma.subscription.count({ where: { userId: user.id, status: "ACTIVE", endAt: { gt: new Date() } } }),
     ]);
+    if (activeSubCount > 0) {
+      return NextResponse.json({ error: "trial_blocked_by_active_subscription" }, { status: 400 });
+    }
     if (trialPaidCount > 0 || trialSubCount > 0) {
       return NextResponse.json({ error: "trial_already_used" }, { status: 400 });
     }

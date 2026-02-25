@@ -50,11 +50,13 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   const trialHasPrice = typeof pr?.trial?.priceCents === "number";
   const trialHasHours = typeof trialHours === "number" && trialHours >= 1 && trialHours <= 168;
 
-  const [trialPaidCount, trialSubCount] = await Promise.all([
+  const [trialPaidCount, trialSubCount, activeSubCount] = await Promise.all([
     prisma.serviceOrder.count({ where: { userId: user.id, payCycle: "TRIAL", status: "PAID" } }),
     prisma.subscription.count({ where: { userId: user.id, payCycle: "TRIAL" } }),
+    prisma.subscription.count({ where: { userId: user.id, status: "ACTIVE", endAt: { gt: new Date() } } }),
   ]);
   const trialUsed = trialPaidCount > 0 || trialSubCount > 0;
+  const trialBlockedByActive = activeSubCount > 0;
 
   const cycles = [
     {
@@ -63,8 +65,8 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
       priceYuan: centsToYuan(pr?.trial?.priceCents),
       days: Math.max(1, Math.ceil(trialHours / 24)),
       hours: trialHours,
-      available: trialHasPrice && trialHasHours && !trialUsed,
-      reason: trialUsed ? "每个用户仅可试用一次" : null,
+      available: trialHasPrice && trialHasHours && !trialUsed && !trialBlockedByActive,
+      reason: trialBlockedByActive ? "当前订阅仍在有效期内，试用暂不可用" : (trialUsed ? "每个用户仅可试用一次" : null),
     },
     { key: "MONTHLY", label: "月付", priceYuan: centsToYuan(pr?.monthly?.priceCents), days: cycleDays("MONTHLY"), available: typeof pr?.monthly?.priceCents === "number" },
     { key: "QUARTERLY", label: "季付", priceYuan: centsToYuan(pr?.quarterly?.priceCents), days: cycleDays("QUARTERLY"), available: typeof pr?.quarterly?.priceCents === "number" },
