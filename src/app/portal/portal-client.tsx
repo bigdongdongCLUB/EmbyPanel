@@ -10,6 +10,7 @@ type Data = {
     remainingDays: number;
   };
   announcements: Array<{ id: string; title: string; content: string }>;
+  recentUpdates: Array<{ id: string; title: string; type: "MOVIE" | "TV"; year: string; imageUrl: string | null; serverName: string }>;
 };
 
 function fmtDateYmd(v?: string | null) {
@@ -136,6 +137,34 @@ export function PortalClient() {
             </button>
           </div>
         </div>
+      </div>
+
+      <div className="border rounded-lg p-2">
+        <div className="text-base font-semibold text-gray-800 mb-2">最近添加和更新</div>
+        {(data?.recentUpdates?.length || 0) === 0 ? (
+          <div className="text-sm text-gray-400 py-6 text-center">暂无数据</div>
+        ) : (
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2">
+            {data!.recentUpdates.slice(0, 18).map((it) => (
+              <div key={`${it.serverName}-${it.id}`} className="group">
+                <div className="relative rounded-xl overflow-hidden aspect-[2/3] bg-gray-100">
+                  {it.imageUrl ? (
+                    <img src={it.imageUrl} alt={it.title} className="w-full h-full object-cover" loading="lazy" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-xs text-gray-400 p-2 text-center">{it.title}</div>
+                  )}
+                  <div className="absolute top-1.5 left-1.5">
+                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded text-white ${it.type === "MOVIE" ? "bg-blue-500" : "bg-purple-500"}`}>
+                      {it.type === "MOVIE" ? "电影" : "电视剧"}
+                    </span>
+                  </div>
+                </div>
+                <div className="mt-1 px-0.5 text-xs text-gray-700 truncate">{it.title}</div>
+                <div className="text-[10px] text-gray-400 px-0.5">{it.year || "-"}</div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
