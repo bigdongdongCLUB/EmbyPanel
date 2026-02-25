@@ -182,8 +182,8 @@ export function PortalClient() {
                 {tv.length ? renderGrid(tv.slice(0, 18)) : <div className="text-xs text-gray-400">暂无电视剧更新</div>}
               </div>
               <div>
-                <div className="text-sm font-medium text-gray-700 mb-2">最近电影新增</div>
-                {movie.length ? renderGrid(movie.slice(0, 18)) : <div className="text-xs text-gray-400">暂无电影新增</div>}
+                <div className="text-sm font-medium text-gray-700 mb-2">最近电影更新</div>
+                {movie.length ? renderGrid(movie.slice(0, 18)) : <div className="text-xs text-gray-400">暂无电影更新</div>}
               </div>
             </div>
           );
