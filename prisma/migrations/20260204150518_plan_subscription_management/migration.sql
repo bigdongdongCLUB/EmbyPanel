@@ -8,17 +8,17 @@
 -- CreateEnum
 CREATE TYPE "ServerAssignStrategy" AS ENUM ('ALL', 'LOAD_BALANCE');
 
--- AlterEnum
--- This migration adds more than one value to an enum.
--- With PostgreSQL versions 11 and earlier, this is not possible
--- in a single migration. This can be worked around by creating
--- multiple migrations, each migration adding only one value to
--- the enum.
+-- Ensure enum exists before altering (fresh install compatibility)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'PayCycle') THEN
+    CREATE TYPE "PayCycle" AS ENUM ('MONTHLY', 'QUARTERLY', 'YEARLY');
+  END IF;
+END $$;
 
-
-ALTER TYPE "PayCycle" ADD VALUE 'TRIAL';
-ALTER TYPE "PayCycle" ADD VALUE 'HALF_YEARLY';
-ALTER TYPE "PayCycle" ADD VALUE 'TWO_YEARLY';
+ALTER TYPE "PayCycle" ADD VALUE IF NOT EXISTS 'TRIAL';
+ALTER TYPE "PayCycle" ADD VALUE IF NOT EXISTS 'HALF_YEARLY';
+ALTER TYPE "PayCycle" ADD VALUE IF NOT EXISTS 'TWO_YEARLY';
 
 -- DropForeignKey
 ALTER TABLE "Subscription" DROP CONSTRAINT "Subscription_planId_fkey";
