@@ -41,17 +41,38 @@ type EmbyLatestItem = {
 
 async function fetchServerRecent(baseUrl: string, apiKey: string, serverName: string): Promise<RecentItem[]> {
   const base = normalizeBaseUrl(baseUrl);
-  const u = new URL(base + "/Items/Latest");
-  u.searchParams.set("api_key", apiKey);
-  u.searchParams.set("Limit", "50");
-  // 关键：包含 Episode，这样“最后一集添加”的剧也能被抓到
-  u.searchParams.set("IncludeItemTypes", "Movie,Series,Episode");
-  u.searchParams.set("Fields", "DateCreated,PremiereDate,ProductionYear,ImageTags,Type,SeriesName,ParentIndexNumber,IndexNumber");
 
-  const res = await fetch(u.toString(), { cache: "no-store", signal: AbortSignal.timeout(7000) });
-  if (!res.ok) return [];
-  const arr = (await res.json().catch(() => [])) as EmbyLatestItem[];
-  if (!Array.isArray(arr)) return [];
+  async function fetchLatestLike(): Promise<EmbyLatestItem[]> {
+    // 1) 优先 /Items/Latest（部分服务端可能不支持）
+    const latestUrl = new URL(base + "/Items/Latest");
+    latestUrl.searchParams.set("api_key", apiKey);
+    latestUrl.searchParams.set("Limit", "50");
+    latestUrl.searchParams.set("IncludeItemTypes", "Movie,Series,Episode");
+    latestUrl.searchParams.set("Fields", "DateCreated,PremiereDate,ProductionYear,ImageTags,Type,SeriesName,ParentIndexNumber,IndexNumber");
+    const latestRes = await fetch(latestUrl.toString(), { cache: "no-store", signal: AbortSignal.timeout(7000) });
+    if (latestRes.ok) {
+      const arr = (await latestRes.json().catch(() => [])) as EmbyLatestItem[];
+      if (Array.isArray(arr)) return arr;
+    }
+
+    // 2) 回退 /Items + DateCreated 排序（兼容 404 的服务端）
+    const itemsUrl = new URL(base + "/Items");
+    itemsUrl.searchParams.set("api_key", apiKey);
+    itemsUrl.searchParams.set("Recursive", "true");
+    itemsUrl.searchParams.set("IncludeItemTypes", "Movie,Series,Episode");
+    itemsUrl.searchParams.set("SortBy", "DateCreated");
+    itemsUrl.searchParams.set("SortOrder", "Descending");
+    itemsUrl.searchParams.set("Limit", "50");
+    itemsUrl.searchParams.set("Fields", "DateCreated,PremiereDate,ProductionYear,ImageTags,Type,SeriesName,ParentIndexNumber,IndexNumber");
+
+    const itemsRes = await fetch(itemsUrl.toString(), { cache: "no-store", signal: AbortSignal.timeout(7000) });
+    if (!itemsRes.ok) return [];
+    const json = await itemsRes.json().catch(() => null as any);
+    return Array.isArray(json?.Items) ? (json.Items as EmbyLatestItem[]) : [];
+  }
+
+  const arr = await fetchLatestLike();
+  if (!arr.length) return [];
 
   const rows = arr
     .filter((x) => x && x.Id && (x.Type === "Movie" || x.Type === "Series" || x.Type === "Episode"))
@@ -85,7 +106,6 @@ async function fetchServerRecent(baseUrl: string, apiKey: string, serverName: st
       };
     });
 
-  // 服务器内去重（同一标题+类型）
   return rows.filter((x, idx, list) => list.findIndex((k) => `${k.type}:${k.title}` === `${x.type}:${x.title}`) === idx);
 }
 
