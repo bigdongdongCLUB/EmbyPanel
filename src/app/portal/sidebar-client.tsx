@@ -23,6 +23,7 @@ function Item({ href, label, icon, collapsed }: { href: string; label: string; i
 }
 
 export function PortalSidebarClient({ collapsed, siteName, siteLogoDataUrl, className }: { collapsed?: boolean; siteName: string; siteLogoDataUrl: string | null; className?: string }) {
+  const appVersion = process.env.NEXT_PUBLIC_APP_VERSION || "v00.00.0";
   return (
     <aside className={(collapsed ? "w-16" : "w-60") + " fixed inset-y-0 left-0 bg-[rgb(17,17,17)] text-white flex flex-col z-30 " + (className || "")}>
       <div className="sidebar-divider h-16 flex items-center justify-center px-2 border-b border-[rgb(41,41,41)]">
@@ -41,6 +42,10 @@ export function PortalSidebarClient({ collapsed, siteName, siteLogoDataUrl, clas
           <Item href="/portal/emby-services" label="Emby 服务" icon="/icons/emby-services.svg" collapsed={collapsed} />
         </div>
       </nav>
+
+      <div className={"sidebar-divider p-3 border-t border-[rgb(41,41,41)] text-xs text-white/65 " + (collapsed ? "text-center" : "text-left")}>
+        {collapsed ? "v" : `版本：${appVersion}`}
+      </div>
     </aside>
   );
 }

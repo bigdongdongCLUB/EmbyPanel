@@ -36,6 +36,7 @@ export function AdminSidebarClient({
   collapsed?: boolean;
   className?: string;
 }) {
+  const appVersion = process.env.NEXT_PUBLIC_APP_VERSION || "v00.00.0";
   return (
     <aside className={(collapsed ? "w-16" : "w-60") + " fixed inset-y-0 left-0 bg-[rgb(17,17,17)] text-white flex flex-col z-30 " + (className || "")}>
       <div className="sidebar-divider h-16 flex items-center justify-center px-2 border-b border-[rgb(41,41,41)]">
@@ -76,7 +77,19 @@ export function AdminSidebarClient({
         <div className="sidebar-divider my-3 border-t border-[rgb(41,41,41)]" />
       </nav>
 
-      <div className="sidebar-divider p-3 border-t border-[rgb(41,41,41)] text-xs text-white/65 text-center">{collapsed ? (username || "U").slice(0, 1) : username}</div>
+      <div className="sidebar-divider p-3 border-t border-[rgb(41,41,41)] text-xs text-white/65">
+        {collapsed ? (
+          <div className="text-center space-y-1">
+            <div>v</div>
+            <div>{(username || "U").slice(0, 1)}</div>
+          </div>
+        ) : (
+          <div className="space-y-1">
+            <div className="text-left">版本：{appVersion}</div>
+            <div className="text-center">{username}</div>
+          </div>
+        )}
+      </div>
     </aside>
   );
 }
