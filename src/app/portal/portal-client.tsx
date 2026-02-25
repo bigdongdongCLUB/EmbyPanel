@@ -10,9 +10,9 @@ type Data = {
     remainingDays: number;
   };
   announcements: Array<{ id: string; title: string; content: string }>;
-  recentUpdates: Array<{ id: string; title: string; type: "MOVIE" | "TV"; year: string; imageUrl: string | null; serverName: string }>;
-  recentUpdatesTv?: Array<{ id: string; title: string; type: "MOVIE" | "TV"; year: string; imageUrl: string | null; serverName: string }>;
-  recentUpdatesMovie?: Array<{ id: string; title: string; type: "MOVIE" | "TV"; year: string; imageUrl: string | null; serverName: string }>;
+  recentUpdates: Array<{ id: string; title: string; type: "MOVIE" | "TV"; year: string; imageUrl: string | null; serverNames: string[] }>;
+  recentUpdatesTv?: Array<{ id: string; title: string; type: "MOVIE" | "TV"; year: string; imageUrl: string | null; serverNames: string[] }>;
+  recentUpdatesMovie?: Array<{ id: string; title: string; type: "MOVIE" | "TV"; year: string; imageUrl: string | null; serverNames: string[] }>;
 };
 
 function fmtDateYmd(v?: string | null) {
@@ -153,7 +153,7 @@ export function PortalClient() {
           const renderGrid = (items: typeof tv) => (
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2">
               {items.map((it) => (
-                <div key={`${it.serverName}-${it.id}`} className="group">
+                <div key={`${it.type}-${it.title}`} className="group">
                   <div className="relative rounded-xl overflow-hidden aspect-[2/3] bg-gray-100">
                     {it.imageUrl ? (
                       <img src={it.imageUrl} alt={it.title} className="w-full h-full object-cover" loading="lazy" />
@@ -165,6 +165,18 @@ export function PortalClient() {
                         {it.type === "MOVIE" ? "电影" : "电视剧"}
                       </span>
                     </div>
+                    {!!it.serverNames?.length && (
+                      <div className="absolute bottom-1.5 left-1.5 flex flex-wrap gap-1 max-w-[95%]">
+                        {it.serverNames.slice(0, 2).map((sn) => (
+                          <span key={sn} className="text-[10px] font-medium px-1.5 py-0.5 rounded border border-green-200 bg-green-50 text-green-700">
+                            {sn}
+                          </span>
+                        ))}
+                        {it.serverNames.length > 2 ? (
+                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded border border-green-200 bg-green-50 text-green-700">+{it.serverNames.length - 2}</span>
+                        ) : null}
+                      </div>
+                    )}
                   </div>
                   <div className="mt-1 px-0.5 text-xs text-gray-700 truncate">{it.title}</div>
                   <div className="text-[10px] text-gray-400 px-0.5">{it.year || "-"}</div>

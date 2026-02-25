@@ -21,7 +21,7 @@ type RecentItem = {
   type: "MOVIE" | "TV";
   year: string;
   imageUrl: string | null;
-  serverName: string;
+  serverNames: string[];
   ts: number;
 };
 
@@ -90,7 +90,7 @@ async function fetchServerRecent(baseUrl: string, apiKey: string, serverName: st
           type: "TV" as const,
           year,
           imageUrl,
-          serverName,
+          serverNames: [serverName],
           ts: Number.isFinite(ts) ? ts : 0,
         };
       }
@@ -101,12 +101,33 @@ async function fetchServerRecent(baseUrl: string, apiKey: string, serverName: st
         type: x.Type === "Movie" ? ("MOVIE" as const) : ("TV" as const),
         year,
         imageUrl,
-        serverName,
+        serverNames: [serverName],
         ts: Number.isFinite(ts) ? ts : 0,
       };
     });
 
   return rows.filter((x, idx, list) => list.findIndex((k) => `${k.type}:${k.title}` === `${x.type}:${x.title}`) === idx);
+}
+
+
+
+function mergeRecentByTitle(items: RecentItem[]): RecentItem[] {
+  const map = new Map<string, RecentItem>();
+  for (const it of items) {
+    const key = `${it.type}:${it.title.trim().toLowerCase()}`;
+    const prev = map.get(key);
+    if (!prev) {
+      map.set(key, { ...it, serverNames: [...it.serverNames] });
+      continue;
+    }
+    const mergedServers = Array.from(new Set([...(prev.serverNames || []), ...(it.serverNames || [])]));
+    if (it.ts > prev.ts) {
+      map.set(key, { ...it, serverNames: mergedServers });
+    } else {
+      map.set(key, { ...prev, serverNames: mergedServers });
+    }
+  }
+  return Array.from(map.values()).sort((a, b) => b.ts - a.ts);
 }
 
 async function enrichRecentWithTmdb(items: RecentItem[]): Promise<RecentItem[]> {
@@ -198,10 +219,7 @@ export async function GET() {
     })
   );
 
-  const mergedRecent = recentFromServers
-    .flat()
-    .sort((a, b) => b.ts - a.ts)
-    .filter((x, idx, arr) => arr.findIndex((k) => `${k.serverName}:${k.id}` === `${x.serverName}:${x.id}`) === idx);
+  const mergedRecent = mergeRecentByTitle(recentFromServers.flat());
 
   const enrichedRecent = await enrichRecentWithTmdb(mergedRecent);
   const recentUpdatesTv = enrichedRecent.filter((x) => x.type === "TV").slice(0, 18);
