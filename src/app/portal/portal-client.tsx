@@ -142,8 +142,6 @@ export function PortalClient() {
       </div>
 
       <div className="border rounded-lg p-2 space-y-4">
-        <div className="text-base font-semibold text-gray-800">最近添加和更新</div>
-
         {(() => {
           const tv = data?.recentUpdatesTv ?? data?.recentUpdates?.filter((x) => x.type === "TV") ?? [];
           const movie = data?.recentUpdatesMovie ?? data?.recentUpdates?.filter((x) => x.type === "MOVIE") ?? [];
