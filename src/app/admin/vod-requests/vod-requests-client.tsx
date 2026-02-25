@@ -40,7 +40,7 @@ function deriveBizStatus(r: Row): BizStatus {
   if (note.includes("无资源")) return "NO_RESOURCE";
   if (note.includes("无法更新")) return "CANNOT_UPDATE";
   if (note.includes("已完成")) return "COMPLETED";
-  return "CANNOT_UPDATE";
+  return "NO_RESOURCE";
 }
 
 function statusText(v: BizStatus) {

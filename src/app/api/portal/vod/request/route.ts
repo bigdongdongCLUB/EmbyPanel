@@ -29,7 +29,7 @@ function deriveBizStatus(row: { status: "PENDING" | "APPROVED" | "REJECTED" | "C
   if (row.status === "PENDING") return note.includes("进行中") ? "PROCESSING" as const : "PENDING" as const;
   if (note.includes("无资源")) return "NO_RESOURCE" as const;
   if (note.includes("无法更新")) return "CANNOT_UPDATE" as const;
-  return "CANNOT_UPDATE" as const;
+  return "NO_RESOURCE" as const;
 }
 
 export async function POST(req: Request) {
