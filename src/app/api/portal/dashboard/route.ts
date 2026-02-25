@@ -74,15 +74,8 @@ async function fetchServerRecent(baseUrl: string, apiKey: string, serverName: st
   const arr = await fetchLatestLike();
   if (!arr.length) return [];
 
-  const since72h = Date.now() - 72 * 60 * 60 * 1000;
-
   const rows = arr
     .filter((x) => x && x.Id && (x.Type === "Movie" || x.Type === "Series" || x.Type === "Episode"))
-    .filter((x) => {
-      const tsRaw = x.DateCreated || x.PremiereDate || x.DateLastMediaAdded || null;
-      const ts = tsRaw ? new Date(tsRaw).getTime() : 0;
-      return Number.isFinite(ts) && ts > 0 && ts >= since72h;
-    })
     .map((x) => {
       const tsRaw = x.DateCreated || x.PremiereDate || x.DateLastMediaAdded || null;
       const ts = tsRaw ? new Date(tsRaw).getTime() : 0;
