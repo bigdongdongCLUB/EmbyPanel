@@ -25,36 +25,100 @@ type RecentItem = {
   ts: number;
 };
 
+type EmbyLatestItem = {
+  Id?: string;
+  Name?: string;
+  Type?: string;
+  SeriesName?: string;
+  ParentIndexNumber?: number;
+  IndexNumber?: number;
+  DateCreated?: string;
+  PremiereDate?: string;
+  DateLastMediaAdded?: string;
+  ProductionYear?: number;
+  ImageTags?: { Primary?: string };
+};
+
 async function fetchServerRecent(baseUrl: string, apiKey: string, serverName: string): Promise<RecentItem[]> {
   const base = normalizeBaseUrl(baseUrl);
   const u = new URL(base + "/Items/Latest");
   u.searchParams.set("api_key", apiKey);
-  u.searchParams.set("Limit", "30");
-  u.searchParams.set("Fields", "DateCreated,PremiereDate,ProductionYear,ImageTags,Type");
+  u.searchParams.set("Limit", "50");
+  // 关键：包含 Episode，这样“最后一集添加”的剧也能被抓到
+  u.searchParams.set("IncludeItemTypes", "Movie,Series,Episode");
+  u.searchParams.set("Fields", "DateCreated,PremiereDate,ProductionYear,ImageTags,Type,SeriesName,ParentIndexNumber,IndexNumber");
 
   const res = await fetch(u.toString(), { cache: "no-store", signal: AbortSignal.timeout(7000) });
   if (!res.ok) return [];
-  const arr = (await res.json().catch(() => [])) as any[];
+  const arr = (await res.json().catch(() => [])) as EmbyLatestItem[];
   if (!Array.isArray(arr)) return [];
 
-  return arr
-    .filter((x) => x && x.Id && (x.Type === "Movie" || x.Type === "Series"))
+  const rows = arr
+    .filter((x) => x && x.Id && (x.Type === "Movie" || x.Type === "Series" || x.Type === "Episode"))
     .map((x) => {
       const tsRaw = x.DateCreated || x.PremiereDate || x.DateLastMediaAdded || null;
       const ts = tsRaw ? new Date(tsRaw).getTime() : 0;
       const imageTag = x.ImageTags?.Primary;
       const imageUrl = imageTag ? `${base}/Items/${x.Id}/Images/Primary?fillHeight=420&fillWidth=280&quality=90&tag=${imageTag}` : null;
       const year = String(x.ProductionYear || "");
+
+      if (x.Type === "Episode") {
+        return {
+          id: String(x.Id),
+          title: String(x.SeriesName || x.Name || ""),
+          type: "TV" as const,
+          year,
+          imageUrl,
+          serverName,
+          ts: Number.isFinite(ts) ? ts : 0,
+        };
+      }
+
       return {
         id: String(x.Id),
         title: String(x.Name || ""),
-        type: x.Type === "Movie" ? "MOVIE" : "TV",
+        type: x.Type === "Movie" ? ("MOVIE" as const) : ("TV" as const),
         year,
         imageUrl,
         serverName,
         ts: Number.isFinite(ts) ? ts : 0,
-      } as RecentItem;
+      };
     });
+
+  // 服务器内去重（同一标题+类型）
+  return rows.filter((x, idx, list) => list.findIndex((k) => `${k.type}:${k.title}` === `${x.type}:${x.title}`) === idx);
+}
+
+async function enrichRecentWithTmdb(items: RecentItem[]): Promise<RecentItem[]> {
+  if (!items.length) return items;
+
+  const settingRow = await prisma.appSetting.findUnique({ where: { key: "vod_settings" } });
+  const tmdbKey = String((settingRow?.valueJson as any)?.tmdbApiKey || "").trim();
+  if (!tmdbKey) return items;
+
+  const TMDB = "https://api.themoviedb.org/3";
+
+  const out = await Promise.all(
+    items.map(async (it) => {
+      try {
+        const q = encodeURIComponent(it.title);
+        const kind = it.type === "MOVIE" ? "movie" : "tv";
+        const url = `${TMDB}/search/${kind}?query=${q}&page=1&api_key=${tmdbKey}&language=zh-CN`;
+        const res = await fetch(url, { signal: AbortSignal.timeout(6000), cache: "no-store" });
+        if (!res.ok) return it;
+        const json = await res.json().catch(() => null as any);
+        const hit = (json?.results || [])[0];
+        if (!hit) return it;
+        const poster = hit.poster_path ? `https://image.tmdb.org/t/p/w342${hit.poster_path}` : null;
+        const year = String((hit.release_date || hit.first_air_date || "").slice(0, 4) || it.year || "");
+        return { ...it, imageUrl: poster || it.imageUrl, year };
+      } catch {
+        return it;
+      }
+    })
+  );
+
+  return out;
 }
 
 export async function GET() {
@@ -120,6 +184,8 @@ export async function GET() {
     .filter((x, idx, arr) => arr.findIndex((k) => `${k.serverName}:${k.id}` === `${x.serverName}:${x.id}`) === idx)
     .slice(0, 18);
 
+  const enrichedRecent = await enrichRecentWithTmdb(mergedRecent);
+
   return NextResponse.json({
     ok: true,
     dashboard: {
@@ -129,6 +195,6 @@ export async function GET() {
       remainingDays: daysLeft(endAt),
     },
     announcements,
-    recentUpdates: mergedRecent,
+    recentUpdates: enrichedRecent,
   });
 }
