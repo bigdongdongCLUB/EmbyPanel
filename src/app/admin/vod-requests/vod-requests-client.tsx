@@ -21,7 +21,18 @@ type Row = {
 
 type Resp = {
   ok: boolean;
-  summary: { total: number; pending: number; noResource: number; processing: number; cannotUpdate: number; completed: number };
+  summary: {
+    total: number;
+    pending: number;
+    noResource: number;
+    processing: number;
+    cannotUpdate: number;
+    completed: number;
+    recentTvCount: number;
+    recentMovieCount: number;
+    recentTopUser: string;
+    recentTopUserCount: number;
+  };
   pagination: { page: number; pageSize: number; total: number; totalPages: number };
   rows: Row[];
 };
@@ -58,7 +69,7 @@ export function VodRequestsAdminClient() {
   const [bizStatus, setBizStatus] = useState("");
   const [mediaType, setMediaType] = useState("");
   const [rows, setRows] = useState<Row[]>([]);
-  const [summary, setSummary] = useState({ total: 0, pending: 0, noResource: 0, processing: 0, cannotUpdate: 0, completed: 0 });
+  const [summary, setSummary] = useState({ total: 0, pending: 0, noResource: 0, processing: 0, cannotUpdate: 0, completed: 0, recentTvCount: 0, recentMovieCount: 0, recentTopUser: "-", recentTopUserCount: 0 });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
@@ -84,7 +95,7 @@ export function VodRequestsAdminClient() {
       const json: Resp = await res.json().catch(() => null as any);
       if (!res.ok) throw new Error((json as any)?.error || `HTTP ${res.status}`);
       setRows(Array.isArray(json.rows) ? json.rows : []);
-      setSummary(json.summary || { total: 0, pending: 0, noResource: 0, processing: 0, cannotUpdate: 0, completed: 0 });
+      setSummary(json.summary || { total: 0, pending: 0, noResource: 0, processing: 0, cannotUpdate: 0, completed: 0, recentTvCount: 0, recentMovieCount: 0, recentTopUser: "-", recentTopUserCount: 0 });
       setPage(json.pagination?.page || 1);
       setPageSize(json.pagination?.pageSize || nextPageSize);
       setTotal(json.pagination?.total || 0);
@@ -263,6 +274,22 @@ export function VodRequestsAdminClient() {
             ) : null}
           </tbody>
         </table>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="border rounded p-3 bg-white">
+          <div className="text-xs text-gray-500">近30日电视剧点播数量</div>
+          <div className="text-2xl text-purple-700">{summary.recentTvCount}</div>
+        </div>
+        <div className="border rounded p-3 bg-white">
+          <div className="text-xs text-gray-500">近30日电影点播数量</div>
+          <div className="text-2xl text-blue-700">{summary.recentMovieCount}</div>
+        </div>
+        <div className="border rounded p-3 bg-white">
+          <div className="text-xs text-gray-500">近30日提交最多用户</div>
+          <div className="text-base font-medium text-gray-800 truncate">{summary.recentTopUser}</div>
+          <div className="text-xs text-gray-500 mt-1">{summary.recentTopUserCount} 条</div>
+        </div>
       </div>
 
       <div className="flex items-center gap-2 text-sm">

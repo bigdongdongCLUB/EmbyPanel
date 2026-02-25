@@ -42,13 +42,18 @@ export async function GET(req: Request) {
 
   const where: any = andWhere.length ? { AND: andWhere } : {};
 
-  const [total, pending, noResource, processing, cannotUpdate, completed, rows] = await Promise.all([
+  const since30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+  const [total, pending, noResource, processing, cannotUpdate, completed, recentTvCount, recentMovieCount, recentTopUserGroup, rows] = await Promise.all([
     prisma.vodRequest.count({ where }),
     prisma.vodRequest.count({ where: { ...where, bizStatus: "PENDING" } }),
     prisma.vodRequest.count({ where: { ...where, bizStatus: "NO_RESOURCE" } }),
     prisma.vodRequest.count({ where: { ...where, bizStatus: "PROCESSING" } }),
     prisma.vodRequest.count({ where: { ...where, bizStatus: "CANNOT_UPDATE" } }),
     prisma.vodRequest.count({ where: { ...where, bizStatus: "COMPLETED" } }),
+    prisma.vodRequest.count({ where: { createdAt: { gte: since30 }, mediaType: "TV" } }),
+    prisma.vodRequest.count({ where: { createdAt: { gte: since30 }, mediaType: "MOVIE" } }),
+    prisma.vodRequest.groupBy({ by: ["userId"], where: { createdAt: { gte: since30 } }, _count: { _all: true }, orderBy: { _count: { userId: "desc" } }, take: 1 }),
     prisma.vodRequest.findMany({
       where,
       include: { user: { select: { id: true, username: true, email: true } } },
@@ -58,9 +63,26 @@ export async function GET(req: Request) {
     }),
   ]);
 
+  const topUserId = recentTopUserGroup?.[0]?.userId;
+  const topUserCount = recentTopUserGroup?.[0]?._count?._all || 0;
+  const topUser = topUserId
+    ? await prisma.user.findUnique({ where: { id: topUserId }, select: { username: true, email: true } })
+    : null;
+
   return NextResponse.json({
     ok: true,
-    summary: { total, pending, noResource, processing, cannotUpdate, completed },
+    summary: {
+      total,
+      pending,
+      noResource,
+      processing,
+      cannotUpdate,
+      completed,
+      recentTvCount,
+      recentMovieCount,
+      recentTopUser: topUser ? (topUser.username || topUser.email || "-") : "-",
+      recentTopUserCount: topUserCount,
+    },
     pagination: { page, pageSize, total, totalPages: Math.max(1, Math.ceil(total / pageSize)) },
     rows: rows.map((r) => ({
       id: r.id,
