@@ -27,6 +27,31 @@ async function fetchItemCounts(baseUrl: string, apiKey: string) {
   }
 }
 
+async function fetchServerVersion(baseUrl: string, apiKey: string) {
+  const base = normalizeBaseUrl(baseUrl);
+  try {
+    const u = new URL(base + "/System/Info");
+    u.searchParams.set("api_key", apiKey);
+    const res = await fetch(u.toString(), { cache: "no-store", headers: { Accept: "application/json" } });
+    if (res.ok) {
+      const json = await res.json().catch(() => null as any);
+      const v = String(json?.Version || "").trim();
+      if (v) return v;
+    }
+  } catch {}
+
+  try {
+    const res = await fetch(base + "/System/Info/Public", { cache: "no-store", headers: { Accept: "application/json" } });
+    if (res.ok) {
+      const json = await res.json().catch(() => null as any);
+      const v = String(json?.Version || "").trim();
+      if (v) return v;
+    }
+  } catch {}
+
+  return "";
+}
+
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -73,14 +98,17 @@ export async function GET() {
   const list = await Promise.all(
     servers.map(async (s) => {
       const apiKey = getEmbyApiKeyForServer(s as any);
-      const counts = apiKey ? await fetchItemCounts(s.baseUrl, apiKey) : null;
+      const [counts, version] = await Promise.all([
+        apiKey ? fetchItemCounts(s.baseUrl, apiKey) : Promise.resolve(null),
+        apiKey ? fetchServerVersion(s.baseUrl, apiKey) : Promise.resolve(""),
+      ]);
 
       return {
         id: s.id,
         name: s.name,
         enabled: s.enabled,
         online: s.lastHealthOk === true,
-        version: "",
+        version,
         baseUrl: s.baseUrl,
         embyUserId: linkMap.get(s.id) ?? null,
         counts: counts ?? { movieCount: 0, seriesCount: 0, episodeCount: 0, songCount: 0 },
