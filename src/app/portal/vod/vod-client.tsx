@@ -286,12 +286,12 @@ function DetailModal({
             <textarea
               className="w-full border rounded-lg px-3 py-2 text-sm resize-none"
               rows={3}
-              maxLength={500}
-              placeholder="您可以添加备注信息，如特定的版本要求、字幕语言等..."
+              maxLength={20}
+              placeholder="可填写简短备注（最多20字）"
               value={note}
-              onChange={(e) => setNote(e.target.value)}
+              onChange={(e) => setNote(e.target.value.slice(0, 20))}
             />
-            <div className="text-right text-xs text-gray-400">{note.length} / 500</div>
+            <div className="text-right text-xs text-gray-400">{note.length} / 20</div>
           </div>
 
           {submitError && <div className="text-sm text-red-600 mb-3">{submitError}</div>}
