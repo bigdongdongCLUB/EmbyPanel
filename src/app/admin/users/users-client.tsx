@@ -984,12 +984,24 @@ export function UsersClient() {
                 <>
                   <div>
                     <label className="text-sm">订阅开始日期 *</label>
-                    <input className="mt-1 w-full border rounded px-3 py-2" type="date" value={importStartAt} onChange={(e) => setImportStartAt(e.target.value)} />
+                    <input
+                      className="mt-1 w-full border rounded px-3 py-2"
+                      type="text"
+                      placeholder="YYYY-MM-DD"
+                      value={importStartAt}
+                      onChange={(e) => setImportStartAt(e.target.value.trim())}
+                    />
                   </div>
 
                   <div>
                     <label className="text-sm">订阅结束日期 *</label>
-                    <input className="mt-1 w-full border rounded px-3 py-2" type="date" value={importEndAt} onChange={(e) => setImportEndAt(e.target.value)} />
+                    <input
+                      className="mt-1 w-full border rounded px-3 py-2"
+                      type="text"
+                      placeholder="YYYY-MM-DD"
+                      value={importEndAt}
+                      onChange={(e) => setImportEndAt(e.target.value.trim())}
+                    />
                   </div>
 
                   {importStartAt && importEndAt && importStartAt >= importEndAt ? (
