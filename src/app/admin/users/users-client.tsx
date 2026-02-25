@@ -236,6 +236,24 @@ export function UsersClient() {
     };
   }, [edit.open]);
 
+  useEffect(() => {
+    function onDocMouseDown(e: MouseEvent) {
+      if (!openServerDetailUserId) return;
+      const target = e.target as HTMLElement | null;
+      if (target?.closest?.("[data-server-popover-root='1']")) return;
+      setOpenServerDetailUserId(null);
+    }
+    function onEsc(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpenServerDetailUserId(null);
+    }
+    document.addEventListener("mousedown", onDocMouseDown);
+    document.addEventListener("keydown", onEsc);
+    return () => {
+      document.removeEventListener("mousedown", onDocMouseDown);
+      document.removeEventListener("keydown", onEsc);
+    };
+  }, [openServerDetailUserId]);
+
   async function openImportModal() {
     setImportOpen(true);
     setImportError(null);
@@ -477,7 +495,7 @@ export function UsersClient() {
                 <td className="py-2 px-3">{dash(r.planName)}</td>
                 <td className="py-2 px-3">
                   {r.servers?.length ? (
-                    <div className="relative inline-block">
+                    <div className="relative inline-block" data-server-popover-root="1">
                       <button
                         type="button"
                         className={
