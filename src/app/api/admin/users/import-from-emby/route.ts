@@ -74,8 +74,8 @@ export async function POST(req: Request) {
   );
 
   // When planId is provided, startAt/endAt must be provided too (UI enforces).
+  const finalPayCycle = (payCycle ?? "YEARLY") as "MONTHLY" | "QUARTERLY" | "HALF_YEARLY" | "YEARLY" | "TWO_YEARLY";
   if (planId) {
-    if (!payCycle) return NextResponse.json({ error: "missing_pay_cycle" }, { status: 400 });
     if (!startAt || !endAt) return NextResponse.json({ error: "missing_subscription_dates" }, { status: 400 });
     if (new Date(startAt).getTime() >= new Date(endAt).getTime()) {
       return NextResponse.json({ error: "subscription_date_invalid" }, { status: 400 });
@@ -120,7 +120,7 @@ export async function POST(req: Request) {
 
       // optional: assign plan to existing panel user
       if (user && planId) {
-        const cycle = payCycle ?? "YEARLY";
+        const cycle = finalPayCycle;
         const start = new Date(startAt as string);
         const end = new Date(endAt as string);
 
@@ -164,7 +164,7 @@ export async function POST(req: Request) {
     await prisma.embyUserLink.create({ data: { userId: created.id, embyServerId, embyUserId } });
 
     if (planId) {
-      const cycle = payCycle ?? "YEARLY";
+      const cycle = finalPayCycle;
       const start = new Date(startAt as string);
       const end = new Date(endAt as string);
 

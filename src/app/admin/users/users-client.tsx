@@ -1146,7 +1146,7 @@ export function UsersClient() {
                         embyServerId: importServerId,
                         defaultPassword: importDefaultPassword,
                         planId: importPlanId || null,
-                        payCycle: null,
+                        payCycle: importPlanId ? "YEARLY" : null,
                         startAt: importPlanId ? new Date(importStartAt + "T00:00:00.000Z").toISOString() : null,
                         endAt: importPlanId ? new Date(importEndAt + "T00:00:00.000Z").toISOString() : null,
                         mode: importMode,
