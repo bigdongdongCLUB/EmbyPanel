@@ -24,13 +24,11 @@ function Item({ href, label, icon, collapsed }: { href: string; label: string; i
 }
 
 export function AdminSidebarClient({
-  username,
   siteName,
   siteLogoDataUrl,
   collapsed,
   className,
 }: {
-  username: string;
   siteName: string;
   siteLogoDataUrl: string | null;
   collapsed?: boolean;
@@ -77,18 +75,8 @@ export function AdminSidebarClient({
         <div className="sidebar-divider my-3 border-t border-[rgb(41,41,41)]" />
       </nav>
 
-      <div className="sidebar-divider p-3 border-t border-[rgb(41,41,41)] text-xs text-white/65">
-        {collapsed ? (
-          <div className="text-center space-y-1">
-            <div>v</div>
-            <div>{(username || "U").slice(0, 1)}</div>
-          </div>
-        ) : (
-          <div className="text-center space-y-1">
-            <div>版本：{appVersion}</div>
-            <div>{username}</div>
-          </div>
-        )}
+      <div className="sidebar-divider p-3 border-t border-[rgb(41,41,41)] text-xs text-white/65 text-center">
+        {collapsed ? "v" : `版本：${appVersion}`}
       </div>
     </aside>
   );

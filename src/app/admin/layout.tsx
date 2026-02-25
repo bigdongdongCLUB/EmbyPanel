@@ -10,7 +10,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const role = (session as any)?.role;
   if (role !== "ADMIN") redirect("/portal");
 
-  const username = (session as any)?.user?.name ?? (session as any)?.user?.email ?? (session as any)?.username ?? "admin";
+  const username = (session as any)?.username ?? (session as any)?.user?.name ?? "admin";
 
   const row = await prisma.appSetting.findUnique({ where: { key: "site_basic" } });
   const value = (row?.valueJson as any) ?? {};
