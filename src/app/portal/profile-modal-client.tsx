@@ -54,7 +54,7 @@ export function PortalProfileModalClient() {
           <div className="font-semibold">账户信息</div>
           <div>
             <label className="text-xs">电子邮箱</label>
-            <input className="mt-1 w-full border rounded px-2.5 py-1.5" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="请输入邮箱" />
+            <input className="mt-1 w-full border border-gray-200 rounded px-2.5 py-1.5 bg-white text-gray-800 focus:outline-none focus:border-gray-300" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="请输入邮箱" />
           </div>
           <div>
             <div className="text-xs font-medium flex items-center gap-2">
@@ -84,15 +84,15 @@ export function PortalProfileModalClient() {
           <div className="font-semibold">密码设置</div>
           <div>
             <label className="text-xs">当前密码</label>
-            <input type="password" className="mt-1 w-full border rounded px-2.5 py-1.5" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="请输入当前密码" />
+            <input type="password" className="mt-1 w-full border border-gray-200 rounded px-2.5 py-1.5 bg-white text-gray-800 focus:outline-none focus:border-gray-300" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="请输入当前密码" />
           </div>
           <div>
             <label className="text-xs">新密码</label>
-            <input type="password" className="mt-1 w-full border rounded px-2.5 py-1.5" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="请输入新密码（至少6位）" />
+            <input type="password" className="mt-1 w-full border border-gray-200 rounded px-2.5 py-1.5 bg-white text-gray-800 focus:outline-none focus:border-gray-300" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="请输入新密码（至少6位）" />
           </div>
           <div>
             <label className="text-xs">确认新密码</label>
-            <input type="password" className="mt-1 w-full border rounded px-2.5 py-1.5" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="请再次输入新密码" />
+            <input type="password" className="mt-1 w-full border border-gray-200 rounded px-2.5 py-1.5 bg-white text-gray-800 focus:outline-none focus:border-gray-300" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="请再次输入新密码" />
           </div>
         </div>
 
