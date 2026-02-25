@@ -24,16 +24,8 @@ export async function GET(req: Request) {
   const andWhere: any[] = [];
   if (["MOVIE", "TV"].includes(mediaType)) andWhere.push({ mediaType });
 
-  if (bizStatus === "PENDING") {
-    andWhere.push({ status: "PENDING", NOT: { adminNote: { contains: "进行中", mode: "insensitive" } } });
-  } else if (bizStatus === "NO_RESOURCE") {
-    andWhere.push({ status: "REJECTED", adminNote: { contains: "无资源", mode: "insensitive" } });
-  } else if (bizStatus === "PROCESSING") {
-    andWhere.push({ OR: [{ status: "CANCELLED" }, { status: "PENDING", adminNote: { contains: "进行中", mode: "insensitive" } }] });
-  } else if (bizStatus === "CANNOT_UPDATE") {
-    andWhere.push({ status: "REJECTED", adminNote: { contains: "无法更新", mode: "insensitive" } });
-  } else if (bizStatus === "COMPLETED") {
-    andWhere.push({ status: "APPROVED" });
+  if (["PENDING", "NO_RESOURCE", "PROCESSING", "CANNOT_UPDATE", "COMPLETED"].includes(bizStatus)) {
+    andWhere.push({ bizStatus });
   }
 
   if (q) {
@@ -52,11 +44,11 @@ export async function GET(req: Request) {
 
   const [total, pending, noResource, processing, cannotUpdate, completed, rows] = await Promise.all([
     prisma.vodRequest.count({ where }),
-    prisma.vodRequest.count({ where: { ...where, status: "PENDING", NOT: { adminNote: { contains: "进行中", mode: "insensitive" } } } }),
-    prisma.vodRequest.count({ where: { ...where, status: "REJECTED", adminNote: { contains: "无资源", mode: "insensitive" } } }),
-    prisma.vodRequest.count({ where: { ...where, OR: [{ status: "CANCELLED" }, { status: "PENDING", adminNote: { contains: "进行中", mode: "insensitive" } }] } }),
-    prisma.vodRequest.count({ where: { ...where, status: "REJECTED", adminNote: { contains: "无法更新", mode: "insensitive" } } }),
-    prisma.vodRequest.count({ where: { ...where, status: "APPROVED" } }),
+    prisma.vodRequest.count({ where: { ...where, bizStatus: "PENDING" } }),
+    prisma.vodRequest.count({ where: { ...where, bizStatus: "NO_RESOURCE" } }),
+    prisma.vodRequest.count({ where: { ...where, bizStatus: "PROCESSING" } }),
+    prisma.vodRequest.count({ where: { ...where, bizStatus: "CANNOT_UPDATE" } }),
+    prisma.vodRequest.count({ where: { ...where, bizStatus: "COMPLETED" } }),
     prisma.vodRequest.findMany({
       where,
       include: { user: { select: { id: true, username: true, email: true } } },
@@ -80,6 +72,7 @@ export async function GET(req: Request) {
       year: r.year,
       season: r.season,
       status: r.status,
+      bizStatus: (r as any).bizStatus,
       note: r.note,
       adminNote: r.adminNote,
       createdAt: r.createdAt,

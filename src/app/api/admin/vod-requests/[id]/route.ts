@@ -8,6 +8,7 @@ import { prisma } from "@/lib/db";
 
 const PatchSchema = z.object({
   status: z.enum(["PENDING", "APPROVED", "REJECTED", "CANCELLED"]).optional(),
+  bizStatus: z.enum(["PENDING", "NO_RESOURCE", "PROCESSING", "CANNOT_UPDATE", "COMPLETED"]).optional(),
   adminNote: z.string().max(20).optional(),
 });
 
@@ -24,12 +25,13 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
   const data: any = {};
   if (parsed.data.status) data.status = parsed.data.status;
+  if (parsed.data.bizStatus) data.bizStatus = parsed.data.bizStatus;
   if (parsed.data.adminNote !== undefined) data.adminNote = parsed.data.adminNote || null;
 
   const updated = await prisma.vodRequest.update({
     where: { id },
     data,
-    select: { id: true, status: true, adminNote: true, updatedAt: true },
+    select: { id: true, status: true, bizStatus: true, adminNote: true, updatedAt: true },
   }).catch(() => null);
 
   if (!updated) return NextResponse.json({ error: "not_found" }, { status: 404 });

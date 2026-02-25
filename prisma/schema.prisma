@@ -302,6 +302,14 @@ enum VodRequestStatus {
   CANCELLED
 }
 
+enum VodBizStatus {
+  PENDING
+  NO_RESOURCE
+  PROCESSING
+  CANNOT_UPDATE
+  COMPLETED
+}
+
 model VodRequest {
   id            String           @id @default(cuid())
   userId        String
@@ -314,6 +322,7 @@ model VodRequest {
   season        Int?
   note          String?
   status        VodRequestStatus @default(PENDING)
+  bizStatus     VodBizStatus     @default(PENDING)
   adminNote     String?
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
@@ -321,5 +330,6 @@ model VodRequest {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, status, createdAt])
+  @@index([userId, bizStatus, createdAt])
   @@index([tmdbId, mediaType])
 }

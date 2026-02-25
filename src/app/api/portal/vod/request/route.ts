@@ -22,12 +22,12 @@ function shanghaiDayStart(now = new Date()) {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - 8 * 3600 * 1000);
 }
 
-function deriveBizStatus(row: { status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED"; adminNote?: string | null }) {
+function deriveBizStatus(row: { status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED"; bizStatus?: "PENDING" | "NO_RESOURCE" | "PROCESSING" | "CANNOT_UPDATE" | "COMPLETED" | null; adminNote?: string | null }) {
+  if (row.bizStatus) return row.bizStatus;
   const note = (row.adminNote || "").trim();
   if (row.status === "APPROVED") return "COMPLETED" as const;
   if (row.status === "CANCELLED") return "PROCESSING" as const;
-  if (row.status === "PENDING") return note.includes("进行中") ? "PROCESSING" as const : "PENDING" as const;
-  if (note.includes("无资源")) return "NO_RESOURCE" as const;
+  if (row.status === "PENDING") return "PENDING" as const;
   if (note.includes("无法更新")) return "CANNOT_UPDATE" as const;
   return "NO_RESOURCE" as const;
 }
@@ -69,7 +69,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "quota_exceeded", message: "今日电视剧点播配额已用完" }, { status: 429 });
 
   const request = await prisma.vodRequest.create({
-    data: { userId, tmdbId, mediaType, title, titleOriginal, posterPath: posterPath ?? null, year: year ?? null, season: season ?? null, note: note ?? null },
+    data: { userId, tmdbId, mediaType, title, titleOriginal, posterPath: posterPath ?? null, year: year ?? null, season: season ?? null, note: note ?? null, bizStatus: "PENDING" },
   });
 
   return NextResponse.json({ ok: true, id: request.id });
@@ -96,7 +96,7 @@ export async function GET(req: Request) {
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * pageSize,
       take: pageSize,
-      select: { id: true, title: true, titleOriginal: true, mediaType: true, season: true, status: true, createdAt: true, adminNote: true, posterPath: true, year: true },
+      select: { id: true, title: true, titleOriginal: true, mediaType: true, season: true, status: true, bizStatus: true, createdAt: true, adminNote: true, posterPath: true, year: true },
     }),
   ]);
 
@@ -104,7 +104,7 @@ export async function GET(req: Request) {
     ok: true,
     rows: rows.map((r) => ({
       ...r,
-      bizStatus: deriveBizStatus({ status: r.status, adminNote: r.adminNote }),
+      bizStatus: deriveBizStatus({ status: r.status, bizStatus: (r as any).bizStatus, adminNote: r.adminNote }),
     })),
     pagination: { page, pageSize, total, totalPages: Math.max(1, Math.ceil(total / pageSize)) },
   });
@@ -119,7 +119,7 @@ export async function DELETE() {
   if (!dbUser) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const result = await prisma.vodRequest.deleteMany({
-    where: { userId: dbUser.id, status: "APPROVED" },
+    where: { userId: dbUser.id, OR: [{ bizStatus: "COMPLETED" }, { status: "APPROVED" }] },
   });
 
   return NextResponse.json({ ok: true, deleted: result.count });

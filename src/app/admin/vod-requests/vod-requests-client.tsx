@@ -12,6 +12,7 @@ type Row = {
   year: string | null;
   season: number | null;
   status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
+  bizStatus: "PENDING" | "NO_RESOURCE" | "PROCESSING" | "CANNOT_UPDATE" | "COMPLETED";
   note: string | null;
   adminNote: string | null;
   createdAt: string;
@@ -33,14 +34,7 @@ function fmt(v?: string | null) {
 type BizStatus = "PENDING" | "NO_RESOURCE" | "PROCESSING" | "CANNOT_UPDATE" | "COMPLETED";
 
 function deriveBizStatus(r: Row): BizStatus {
-  const note = (r.adminNote || "").trim();
-  if (r.status === "APPROVED") return "COMPLETED";
-  if (r.status === "CANCELLED") return "PROCESSING";
-  if (r.status === "PENDING") return note.includes("进行中") ? "PROCESSING" : "PENDING";
-  if (note.includes("无资源")) return "NO_RESOURCE";
-  if (note.includes("无法更新")) return "CANNOT_UPDATE";
-  if (note.includes("已完成")) return "COMPLETED";
-  return "NO_RESOURCE";
+  return r.bizStatus;
 }
 
 function statusText(v: BizStatus) {
@@ -122,7 +116,7 @@ export function VodRequestsAdminClient() {
     };
   }, []);
 
-  async function patchRow(id: string, body: { status?: Row["status"]; adminNote?: string }) {
+  async function patchRow(id: string, body: { status?: Row["status"]; bizStatus?: BizStatus; adminNote?: string }) {
     const res = await fetch(`/api/admin/vod-requests/${id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
@@ -134,12 +128,12 @@ export function VodRequestsAdminClient() {
 
   async function applyQuickAction(row: Row, action: "PENDING" | "NO_RESOURCE" | "PROCESSING" | "CANNOT_UPDATE" | "COMPLETED") {
     if (!action) return;
-    const nextStatus: Row["status"] = action === "COMPLETED" ? "APPROVED" : action === "PENDING" ? "PENDING" : action === "PROCESSING" ? "CANCELLED" : "REJECTED";
+    const nextStatus: Row["status"] = action === "COMPLETED" ? "APPROVED" : action === "PENDING" || action === "PROCESSING" ? "PENDING" : "REJECTED";
 
     // 状态切换不自动写入管理员回复；仅保留手动输入内容
     const manualReply = (replyMap[row.id] || "").trim().slice(0, 20);
 
-    await patchRow(row.id, { status: nextStatus, adminNote: manualReply || undefined });
+    await patchRow(row.id, { status: nextStatus, bizStatus: action as any, adminNote: manualReply || undefined });
     setReplyMap((m) => ({ ...m, [row.id]: manualReply }));
     await refresh(page, pageSize);
   }
