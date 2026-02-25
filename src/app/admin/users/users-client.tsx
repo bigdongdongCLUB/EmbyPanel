@@ -1176,7 +1176,7 @@ export function UsersClient() {
                     const json = await res.json().catch(() => null);
                     if (!res.ok) throw new Error(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
 
-                    alert(`导入完成：imported=${json.imported}, skipped=${json.skipped}`);
+                    alert(`导入完成：导入=${json.imported}, 跳过=${json.skipped}`);
                     setImportOpen(false);
                     await refresh();
                   } catch (e: any) {
