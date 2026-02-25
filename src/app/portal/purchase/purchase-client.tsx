@@ -8,7 +8,7 @@ type Plan = {
   description: string | null;
   prices: {
     trialYuan: number | null;
-    trialDays: number | null;
+    trialHours: number | null;
     monthlyYuan: number | null;
     quarterlyYuan: number | null;
     halfYearlyYuan: number | null;
@@ -17,7 +17,7 @@ type Plan = {
   };
 };
 
-type Cycle = { key: string; label: string; priceYuan: number | null; days: number; available: boolean };
+type Cycle = { key: string; label: string; priceYuan: number | null; days: number; hours?: number; available: boolean };
 
 type PlanDetail = {
   plan: { id: string; name: string; description: string | null };
@@ -30,6 +30,7 @@ type OrderDetail = {
     status: "PENDING" | "PAID" | "CANCELED";
     payCycle: string;
     days: number;
+    trialHours?: number | null;
     amountCents: number;
     createdAt: string;
     plan: { id: string; name: string };
@@ -208,10 +209,10 @@ export function PortalPurchaseClient() {
                             <div>
                               <div className="text-2xl font-semibold">
                                 {c.label}
-                                {c.key === "TRIAL" ? `${c.days || 1}天` : ""}
+                                {c.key === "TRIAL" ? `${c.hours || 1}小时` : ""}
                                 {unavailable ? <span className="ml-2 text-sm border px-2 py-0.5 rounded">不可用</span> : null}
                               </div>
-                              <div className="text-sm text-gray-500">服务期限：{c.days} 天</div>
+                              <div className="text-sm text-gray-500">服务期限：{c.key === "TRIAL" ? `${c.hours || 1} 小时` : `${c.days} 天`}</div>
                             </div>
                             <div className="text-4xl font-bold">¥{c.priceYuan ?? 0}</div>
                           </button>
@@ -234,6 +235,7 @@ export function PortalPurchaseClient() {
                             planId: planDetail?.plan.id,
                             payCycle: currentCycle?.key,
                             days: currentCycle?.days,
+                            trialHours: currentCycle?.key === "TRIAL" ? currentCycle?.hours : undefined,
                             amountYuan: currentCycle?.priceYuan ?? 0,
                           }),
                         });
@@ -269,7 +271,7 @@ export function PortalPurchaseClient() {
                         <div><div className="text-gray-500">订单状态</div><div className="mt-1">{order.order.status === "PENDING" ? "待支付" : order.order.status === "PAID" ? "已支付" : "已取消"}</div></div>
                         <div><div className="text-gray-500">服务计划</div><div className="mt-1 text-2xl font-semibold">{order.order.plan.name}</div></div>
                         <div><div className="text-gray-500">支付周期</div><div className="mt-1">{cycleLabel(order.order.payCycle)}</div></div>
-                        <div><div className="text-gray-500">服务时长</div><div className="mt-1 text-2xl font-semibold">{order.order.days} 天</div></div>
+                        <div><div className="text-gray-500">服务时长</div><div className="mt-1 text-2xl font-semibold">{order.order.payCycle === "TRIAL" ? `${order.order.trialHours || (order.order.days * 24)} 小时` : `${order.order.days} 天`}</div></div>
                         <div><div className="text-gray-500">订单金额</div><div className="mt-1 text-3xl font-semibold text-blue-600">¥{orderAmountYuan.toFixed(2)}</div></div>
                         <div><div className="text-gray-500">创建时间</div><div className="mt-1">{fmtTime(order.order.createdAt)}</div></div>
                       </div>

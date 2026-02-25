@@ -94,7 +94,7 @@ model Plan {
   visible     Boolean  @default(true) // 显示状态：前端是否展示
 
   // Pricing is flexible; store as JSON:
-  // { trial: { priceCents, days }, monthly: { priceCents }, ... }
+  // { trial: { priceCents, hours }, monthly: { priceCents }, ... }
   pricingJson Json?
 
   // server assignment strategy (set once; UI can lock later)
@@ -262,6 +262,7 @@ model ServiceOrder {
   planId    String
   payCycle  PayCycle
   days      Int
+  trialHours Int?
   amountCents Int
   status    ServiceOrderStatus @default(PENDING)
   createdAt DateTime           @default(now())

@@ -34,7 +34,7 @@ type EditState =
       serverAssignStrategy: "ALL" | "LOAD_BALANCE";
       // pricing (yuan string)
       trialPrice: string;
-      trialDays: string;
+      trialHours: string;
       monthlyPrice: string;
       quarterlyPrice: string;
       halfYearlyPrice: string;
@@ -125,7 +125,7 @@ export function SubscriptionsClient() {
       enabled: true,
       serverAssignStrategy: "LOAD_BALANCE",
       trialPrice: "",
-      trialDays: "",
+      trialHours: "",
       monthlyPrice: "",
       quarterlyPrice: "",
       halfYearlyPrice: "",
@@ -149,7 +149,7 @@ export function SubscriptionsClient() {
       enabled: p.enabled,
       serverAssignStrategy: p.serverAssignStrategy,
       trialPrice: centsToYuanInt(pricing?.trial?.priceCents),
-      trialDays: pricing?.trial?.days ? String(pricing.trial.days) : "",
+      trialHours: (pricing?.trial?.hours ?? (typeof pricing?.trial?.days === "number" ? pricing.trial.days * 24 : null)) ? String(pricing?.trial?.hours ?? pricing?.trial?.days * 24) : "",
       monthlyPrice: centsToYuanInt(pricing?.monthly?.priceCents),
       quarterlyPrice: centsToYuanInt(pricing?.quarterly?.priceCents),
       halfYearlyPrice: centsToYuanInt(pricing?.halfYearly?.priceCents),
@@ -187,15 +187,15 @@ export function SubscriptionsClient() {
     // - 天数=0 表示关闭试用（可单独设置，不要求价格）
     // - 其他情况仍需“价格+天数”同时填写才启用
     const trialPriceFilled = edit.trialPrice.trim().length > 0;
-    const trialDaysRaw = edit.trialDays.trim();
-    const trialDaysFilled = trialDaysRaw.length > 0;
-    const trialDaysIsNumber = !trialDaysFilled || /^[0-9]+$/.test(trialDaysRaw);
-    if (!trialDaysIsNumber) return false;
-    const trialDaysNum = trialDaysFilled ? Number(trialDaysRaw) : null;
-    const trialDisableByZero = trialDaysFilled && Number.isFinite(trialDaysNum) && trialDaysNum === 0;
+    const trialHoursRaw = edit.trialHours.trim();
+    const trialHoursFilled = trialHoursRaw.length > 0;
+    const trialHoursIsNumber = !trialHoursFilled || /^[0-9]+$/.test(trialHoursRaw);
+    if (!trialHoursIsNumber) return false;
+    const trialHoursNum = trialHoursFilled ? Number(trialHoursRaw) : null;
+    const trialDisableByZero = trialHoursFilled && Number.isFinite(trialHoursNum) && trialHoursNum === 0;
 
-    const trialEnabled = trialPriceFilled || trialDaysFilled;
-    if (!trialDisableByZero && trialEnabled && !(trialPriceFilled && trialDaysFilled)) return false;
+    const trialEnabled = trialPriceFilled || trialHoursFilled;
+    if (!trialDisableByZero && trialEnabled && !(trialPriceFilled && trialHoursFilled)) return false;
 
     // Paid prices: required on create; optional on edit.
     if (isCreate && !hasAnyPrice) return false;
@@ -211,9 +211,10 @@ export function SubscriptionsClient() {
       if (Number.isNaN(c)) return false;
     }
 
-    if (trialDaysFilled) {
-      const d = Number(trialDaysRaw);
-      if (!Number.isFinite(d) || d < 0) return false;
+    if (trialHoursFilled) {
+      const h = Number(trialHoursRaw);
+      if (!Number.isFinite(h) || h < 0) return false;
+      if (h !== 0 && (h < 1 || h > 168)) return false;
     }
 
     return true;
@@ -231,19 +232,19 @@ export function SubscriptionsClient() {
     try {
       const pricing: any = {};
 
-      const trialDaysRaw = cur.trialDays.trim();
-      const trialD = trialDaysRaw ? Number(trialDaysRaw) : null;
-      const trialDisableByZero = trialDaysRaw.length > 0 && Number.isFinite(trialD) && trialD === 0;
-      const trialEnabledInput = cur.trialPrice.trim() || trialDaysRaw;
+      const trialHoursRaw = cur.trialHours.trim();
+      const trialH = trialHoursRaw ? Number(trialHoursRaw) : null;
+      const trialDisableByZero = trialHoursRaw.length > 0 && Number.isFinite(trialH) && trialH === 0;
+      const trialEnabledInput = cur.trialPrice.trim() || trialHoursRaw;
 
       if (trialEnabledInput) {
-        if (trialDaysRaw.length > 0 && !/^[0-9]+$/.test(trialDaysRaw)) throw new Error("trial_days_invalid");
+        if (trialHoursRaw.length > 0 && !/^[0-9]+$/.test(trialHoursRaw)) throw new Error("trial_hours_invalid");
 
         if (!trialDisableByZero) {
           const trialC = yuanIntToCents(cur.trialPrice);
           if (trialC === null || Number.isNaN(trialC)) throw new Error("trial_price_invalid");
-          if (trialD === null || !Number.isFinite(trialD) || trialD <= 0) throw new Error("trial_days_invalid");
-          pricing.trial = { priceCents: trialC, days: trialD };
+          if (trialH === null || !Number.isFinite(trialH) || trialH < 1 || trialH > 168) throw new Error("trial_hours_invalid");
+          pricing.trial = { priceCents: trialC, hours: trialH };
         }
       }
 
@@ -260,7 +261,7 @@ export function SubscriptionsClient() {
       setPrice("twoYearly", cur.twoYearlyPrice);
 
       const hasAnyPaidPrice = [cur.monthlyPrice, cur.quarterlyPrice, cur.halfYearlyPrice, cur.yearlyPrice, cur.twoYearlyPrice].some((v) => v.trim().length > 0);
-      const hasAnyTrial = cur.trialPrice.trim().length > 0 || cur.trialDays.trim().length > 0;
+      const hasAnyTrial = cur.trialPrice.trim().length > 0 || cur.trialHours.trim().length > 0;
       const shouldSendPricing = !cur.id || hasAnyPaidPrice || hasAnyTrial;
       const shouldSendServers = !cur.id || cur.servers.length > 0;
 
@@ -486,17 +487,17 @@ export function SubscriptionsClient() {
                   />
                 </div>
                 <div>
-                  <label className="text-sm">试用天数（可选）</label>
+                  <label className="text-sm">试用时间（小时，可选）</label>
                   <input
                     className="mt-1 w-full border rounded px-3 py-2"
-                    value={edit.trialDays}
+                    value={edit.trialHours}
                     onChange={(e) =>
                       setEditSafe((prev) => {
                         if (!prev.open) return prev;
-                        return { ...prev, trialDays: e.target.value };
+                        return { ...prev, trialHours: e.target.value };
                       })
                     }
-                    placeholder="例如 3"
+                    placeholder="1-168，填0表示关闭试用"
                   />
                 </div>
                 <div>

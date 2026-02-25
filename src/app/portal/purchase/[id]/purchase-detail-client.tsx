@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
-type Cycle = { key: string; label: string; priceYuan: number | null; days: number; available: boolean };
+type Cycle = { key: string; label: string; priceYuan: number | null; days: number; hours?: number; available: boolean };
 
 type Data = {
   plan: { id: string; name: string; description: string | null };
@@ -70,8 +70,8 @@ export function PortalPurchaseDetailClient({ planId }: { planId: string }) {
                   }
                 >
                   <div>
-                    <div className="text-2xl font-semibold">{c.label}{c.key === "TRIAL" ? `${c.days || 1}天` : ""} {unavailable ? <span className="ml-2 text-sm border px-2 py-0.5 rounded">不可用</span> : null}</div>
-                    <div className="text-sm text-gray-500">服务期限：{c.days} 天</div>
+                    <div className="text-2xl font-semibold">{c.label}{c.key === "TRIAL" ? `${c.hours || 1}小时` : ""} {unavailable ? <span className="ml-2 text-sm border px-2 py-0.5 rounded">不可用</span> : null}</div>
+                    <div className="text-sm text-gray-500">服务期限：{c.key === "TRIAL" ? `${c.hours || 1} 小时` : `${c.days} 天`}</div>
                   </div>
                   <div className="text-4xl font-bold">¥{c.priceYuan ?? 0}</div>
                 </button>
@@ -94,6 +94,7 @@ export function PortalPurchaseDetailClient({ planId }: { planId: string }) {
                   planId,
                   payCycle: selectedCycle?.key,
                   days: selectedCycle?.days,
+                  trialHours: selectedCycle?.key === "TRIAL" ? selectedCycle?.hours : undefined,
                   amountYuan: selectedCycle?.priceYuan ?? 0,
                 }),
               });

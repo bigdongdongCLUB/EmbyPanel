@@ -11,6 +11,7 @@ const BodySchema = z.object({
   planId: z.string().min(1),
   payCycle: z.enum(["TRIAL", "MONTHLY", "QUARTERLY", "HALF_YEARLY", "YEARLY", "TWO_YEARLY"]),
   days: z.number().int().min(1),
+  trialHours: z.number().int().min(1).max(168).optional(),
   amountYuan: z.number().int().min(0),
 });
 
@@ -40,6 +41,13 @@ export async function POST(req: Request) {
     }
   }
 
+  const trialHours = parsed.data.payCycle === "TRIAL" ? (parsed.data.trialHours ?? parsed.data.days * 24) : null;
+  if (parsed.data.payCycle === "TRIAL") {
+    if (!trialHours || !Number.isFinite(trialHours) || trialHours < 1 || trialHours > 168) {
+      return NextResponse.json({ error: "trial_hours_invalid" }, { status: 400 });
+    }
+  }
+
   const order = await prisma.serviceOrder.create({
     data: {
       userId: user.id,
@@ -47,6 +55,7 @@ export async function POST(req: Request) {
       payCycle: parsed.data.payCycle,
       days: parsed.data.days,
       amountCents: parsed.data.amountYuan * 100,
+      trialHours,
       status: "PENDING",
     },
     select: { id: true },

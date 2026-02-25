@@ -108,7 +108,10 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
 
       let activeSubId = "";
       if (!active) {
-        const endAt = new Date(now.getTime() + order.days * 24 * 3600 * 1000);
+        const durationMs = order.payCycle === "TRIAL"
+          ? ((order.trialHours ?? order.days * 24) * 3600 * 1000)
+          : (order.days * 24 * 3600 * 1000);
+        const endAt = new Date(now.getTime() + durationMs);
         const created = await tx.subscription.create({
           data: {
             userId: user.id,
@@ -123,7 +126,10 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
         activeSubId = created.id;
       } else {
         const base = active.endAt.getTime() > now.getTime() ? active.endAt : now;
-        const newEnd = new Date(base.getTime() + order.days * 24 * 3600 * 1000);
+        const durationMs = order.payCycle === "TRIAL"
+          ? ((order.trialHours ?? order.days * 24) * 3600 * 1000)
+          : (order.days * 24 * 3600 * 1000);
+        const newEnd = new Date(base.getTime() + durationMs);
         await tx.subscription.update({
           where: { id: active.id },
           data: {

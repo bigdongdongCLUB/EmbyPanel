@@ -11,6 +11,7 @@ const PricingSchema = z
     trial: z
       .object({
         priceCents: z.number().int().nonnegative().optional(),
+        hours: z.number().int().nonnegative().optional(),
         days: z.number().int().nonnegative().optional(),
       })
       .optional(),

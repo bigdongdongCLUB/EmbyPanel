@@ -12,10 +12,8 @@ function centsToYuan(v: any) {
   return Math.round(v / 100);
 }
 
-function cycleDays(cycle: string, trialDays?: number | null) {
+function cycleDays(cycle: string) {
   switch (cycle) {
-    case "TRIAL":
-      return trialDays && trialDays > 0 ? trialDays : 0;
     case "MONTHLY":
       return 30;
     case "QUARTERLY":
@@ -48,8 +46,9 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   if (!plan || !plan.enabled || !plan.visible) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
   const pr: any = plan.pricingJson ?? {};
+  const trialHours = typeof pr?.trial?.hours === "number" ? pr.trial.hours : (typeof pr?.trial?.days === "number" ? pr.trial.days * 24 : 0);
   const trialHasPrice = typeof pr?.trial?.priceCents === "number";
-  const trialHasDays = typeof pr?.trial?.days === "number" && pr.trial.days > 0;
+  const trialHasHours = typeof trialHours === "number" && trialHours >= 1 && trialHours <= 168;
 
   const [trialPaidCount, trialSubCount] = await Promise.all([
     prisma.serviceOrder.count({ where: { userId: user.id, payCycle: "TRIAL", status: "PAID" } }),
@@ -62,15 +61,16 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
       key: "TRIAL",
       label: "试用",
       priceYuan: centsToYuan(pr?.trial?.priceCents),
-      days: cycleDays("TRIAL", pr?.trial?.days),
-      available: trialHasPrice && trialHasDays && !trialUsed,
+      days: Math.max(1, Math.ceil(trialHours / 24)),
+      hours: trialHours,
+      available: trialHasPrice && trialHasHours && !trialUsed,
       reason: trialUsed ? "每个用户仅可试用一次" : null,
     },
-    { key: "MONTHLY", label: "月付", priceYuan: centsToYuan(pr?.monthly?.priceCents), days: 30, available: typeof pr?.monthly?.priceCents === "number" },
-    { key: "QUARTERLY", label: "季付", priceYuan: centsToYuan(pr?.quarterly?.priceCents), days: 90, available: typeof pr?.quarterly?.priceCents === "number" },
-    { key: "HALF_YEARLY", label: "半年付", priceYuan: centsToYuan(pr?.halfYearly?.priceCents), days: 180, available: typeof pr?.halfYearly?.priceCents === "number" },
-    { key: "YEARLY", label: "年付", priceYuan: centsToYuan(pr?.yearly?.priceCents), days: 365, available: typeof pr?.yearly?.priceCents === "number" },
-    { key: "TWO_YEARLY", label: "两年付", priceYuan: centsToYuan(pr?.twoYearly?.priceCents), days: 730, available: typeof pr?.twoYearly?.priceCents === "number" },
+    { key: "MONTHLY", label: "月付", priceYuan: centsToYuan(pr?.monthly?.priceCents), days: cycleDays("MONTHLY"), available: typeof pr?.monthly?.priceCents === "number" },
+    { key: "QUARTERLY", label: "季付", priceYuan: centsToYuan(pr?.quarterly?.priceCents), days: cycleDays("QUARTERLY"), available: typeof pr?.quarterly?.priceCents === "number" },
+    { key: "HALF_YEARLY", label: "半年付", priceYuan: centsToYuan(pr?.halfYearly?.priceCents), days: cycleDays("HALF_YEARLY"), available: typeof pr?.halfYearly?.priceCents === "number" },
+    { key: "YEARLY", label: "年付", priceYuan: centsToYuan(pr?.yearly?.priceCents), days: cycleDays("YEARLY"), available: typeof pr?.yearly?.priceCents === "number" },
+    { key: "TWO_YEARLY", label: "两年付", priceYuan: centsToYuan(pr?.twoYearly?.priceCents), days: cycleDays("TWO_YEARLY"), available: typeof pr?.twoYearly?.priceCents === "number" },
   ];
 
   return NextResponse.json({ ok: true, plan: { id: plan.id, name: plan.name, description: plan.description }, cycles });

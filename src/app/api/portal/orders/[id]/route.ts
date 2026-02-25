@@ -23,6 +23,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
       status: true,
       payCycle: true,
       days: true,
+      trialHours: true,
       amountCents: true,
       createdAt: true,
       paidAt: true,
