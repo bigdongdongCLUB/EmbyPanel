@@ -66,8 +66,27 @@ prepare_repo() {
 init_env() {
   cd "$APP_DIR"
   if [ ! -f .env ]; then
-    cp .env.example .env
-    log "Created .env from .env.example"
+    if [ -f .env.example ]; then
+      cp .env.example .env
+      log "Created .env from .env.example"
+    else
+      cat > .env <<'EOF'
+WEB_PORT=3000
+POSTGRES_USER=embypanel
+POSTGRES_PASSWORD=change_me
+POSTGRES_DB=embypanel
+POSTGRES_PORT=5432
+REDIS_PASSWORD=change_me
+REDIS_PORT=6379
+DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
+NEXTAUTH_URL=http://localhost:${WEB_PORT}
+NEXTAUTH_SECRET=change_me_base64_32bytes
+EMBYPANEL_ENCRYPTION_KEY=change_me_base64_32bytes
+INTERNAL_JOBS_SECRET=change_me
+EOF
+      log "Created .env from built-in template (no .env.example found)"
+    fi
   fi
 
   local host_ip
