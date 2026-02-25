@@ -11,11 +11,16 @@ const allowedDevOrigins = [
 function resolveAppVersion() {
   try {
     const count = Number(execSync("git rev-list --count HEAD", { encoding: "utf8" }).trim());
-    if (Number.isFinite(count) && count > 0) return `v00.00.${count}`;
+    if (Number.isFinite(count) && count >= 0) {
+      const major = Math.floor(count / 10000);
+      const minor = Math.floor((count % 10000) / 100);
+      const patch = count % 100;
+      return `v${String(major).padStart(2, "0")}.${String(minor).padStart(2, "0")}.${String(patch).padStart(2, "0")}`;
+    }
   } catch {
     // ignore
   }
-  return "v00.00.0";
+  return "v00.00.00";
 }
 
 const nextConfig: NextConfig = {

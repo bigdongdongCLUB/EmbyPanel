@@ -43,7 +43,7 @@ export function PortalSidebarClient({ collapsed, siteName, siteLogoDataUrl, clas
         </div>
       </nav>
 
-      <div className={"sidebar-divider p-3 border-t border-[rgb(41,41,41)] text-xs text-white/65 " + (collapsed ? "text-center" : "text-left")}>
+      <div className="sidebar-divider p-3 border-t border-[rgb(41,41,41)] text-xs text-white/65 text-center">
         {collapsed ? "v" : `版本：${appVersion}`}
       </div>
     </aside>

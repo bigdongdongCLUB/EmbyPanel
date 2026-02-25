@@ -84,9 +84,9 @@ export function AdminSidebarClient({
             <div>{(username || "U").slice(0, 1)}</div>
           </div>
         ) : (
-          <div className="space-y-1">
-            <div className="text-left">版本：{appVersion}</div>
-            <div className="text-center">{username}</div>
+          <div className="text-center space-y-1">
+            <div>版本：{appVersion}</div>
+            <div>{username}</div>
           </div>
         )}
       </div>
