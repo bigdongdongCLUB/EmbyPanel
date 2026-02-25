@@ -208,7 +208,7 @@ export default function LoginPage() {
 
         {mode === "login" ? (
           <form className="mt-3 max-w-3xl mx-auto px-10 space-y-2" onSubmit={doLogin}>
-            <div className="border rounded-xl px-3 py-1.5 flex items-center gap-2">
+            <div className="border border-gray-200 rounded-xl px-3 py-1.5 flex items-center gap-2">
               <span className="text-gray-400 text-sm">👤</span>
               <input
                 name="username"
@@ -221,7 +221,7 @@ export default function LoginPage() {
               />
             </div>
 
-            <div className="border rounded-xl px-3 py-1.5 flex items-center gap-2">
+            <div className="border border-gray-200 rounded-xl px-3 py-1.5 flex items-center gap-2">
               <span className="text-gray-400 text-sm">🔒</span>
               <input
                 name="password"
@@ -262,7 +262,7 @@ export default function LoginPage() {
           </form>
         ) : (
           <form className="mt-3 max-w-3xl mx-auto px-10 space-y-1.5" onSubmit={doRegister}>
-            <div className={`border rounded-xl px-3 py-1.5 flex items-center gap-2 ${username && usernameErrors.length ? "border-red-300 bg-red-50" : ""}`}>
+            <div className={`border border-gray-200 rounded-xl px-3 py-1.5 flex items-center gap-2 ${username && usernameErrors.length ? "border-red-300 bg-red-50" : ""}`}>
               <span className="text-gray-400 text-sm">👤</span>
               <input className="w-full text-sm outline-none bg-transparent" placeholder="用户名（5位以上字母或字母+数字）" value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" />
             </div>
@@ -282,12 +282,12 @@ export default function LoginPage() {
               </div>
             ) : null}
 
-            <div className="border rounded-xl px-3 py-1.5 flex items-center gap-2">
+            <div className="border border-gray-200 rounded-xl px-3 py-1.5 flex items-center gap-2">
               <span className="text-gray-400 text-sm">✉️</span>
               <input className="w-full text-sm outline-none" placeholder="邮箱" value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
 
-            <div className={`border rounded-xl px-3 py-1.5 flex items-center gap-2 ${passwordErrors.length ? "border-red-300" : ""}`}>
+            <div className={`border border-gray-200 rounded-xl px-3 py-1.5 flex items-center gap-2 ${passwordErrors.length ? "border-red-300" : ""}`}>
               <span className="text-gray-400 text-sm">🔒</span>
               <input
                 className="w-full text-sm outline-none"
@@ -305,7 +305,7 @@ export default function LoginPage() {
             ))}
             <div className="text-gray-500 text-[11px]">ⓘ {strongPassword ? "10-32个字符，且包含大小写字母、数字和特殊字符" : "8-24个字符, 包含至少一个字母和一个数字"}</div>
 
-            <div className={`border rounded-xl px-3 py-1.5 flex items-center gap-2 ${confirmError ? "border-red-300" : ""}`}>
+            <div className={`border border-gray-200 rounded-xl px-3 py-1.5 flex items-center gap-2 ${confirmError ? "border-red-300" : ""}`}>
               <span className="text-gray-400 text-sm">🔒</span>
               <input
                 className="w-full text-sm outline-none"
@@ -320,7 +320,7 @@ export default function LoginPage() {
             </div>
             {confirmError ? <div className="text-red-500 text-[11px]">{confirmError}</div> : null}
 
-            <div className="border rounded-xl px-3 py-1.5 flex items-center gap-2">
+            <div className="border border-gray-200 rounded-xl px-3 py-1.5 flex items-center gap-2">
               <input
                 className="w-full text-sm outline-none"
                 placeholder={inviteOnly ? "邀请码（必填）" : "邀请码（选填）"}
@@ -330,7 +330,7 @@ export default function LoginPage() {
             </div>
 
             {requireEmailVerification ? (
-              <div className="border rounded-xl px-3 py-1.5 flex items-center gap-2">
+              <div className="border border-gray-200 rounded-xl px-3 py-1.5 flex items-center gap-2">
                 <input className="w-full text-sm outline-none" placeholder="邮箱验证码" value={emailCode} onChange={(e) => setEmailCode(e.target.value)} />
                 <button
                   type="button"
