@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { SettingsTabs } from "./tabs";
+import { ToggleSwitch } from "./toggle-switch";
 
 type Form = {
   enabled: boolean;
@@ -77,10 +78,10 @@ export function InviteRebateClient() {
         </div>
 
         <div className="space-y-4">
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={form.enabled} onChange={(e) => setForm((s) => ({ ...s, enabled: e.target.checked }))} />
-            启用返利系统
-          </label>
+          <div className="space-y-1.5">
+            <div className="text-sm">启用返利系统</div>
+            <ToggleSwitch checked={form.enabled} onChange={(next) => setForm((s) => ({ ...s, enabled: next }))} />
+          </div>
 
           <div>
             <div className="text-sm mb-2">返利模式</div>

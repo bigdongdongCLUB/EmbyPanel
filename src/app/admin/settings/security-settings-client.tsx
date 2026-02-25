@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { SettingsTabs } from "./tabs";
+import { ToggleSwitch } from "./toggle-switch";
 
 type Form = {
   openRegistration: boolean;
@@ -53,24 +54,20 @@ export function SecuritySettingsClient() {
       <div className="border rounded-lg bg-white p-6 space-y-5">
         <div className="text-lg font-semibold">安全设置</div>
 
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={form.openRegistration} onChange={(e) => setForm((s) => ({ ...s, openRegistration: e.target.checked }))} />
-          开放注册
-        </label>
+        <div className="space-y-1.5">
+          <div className="text-sm">开放注册</div>
+          <ToggleSwitch checked={form.openRegistration} onChange={(next) => setForm((s) => ({ ...s, openRegistration: next }))} />
+        </div>
 
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={form.requireEmailVerification}
-            onChange={(e) => setForm((s) => ({ ...s, requireEmailVerification: e.target.checked }))}
-          />
-          邮箱验证（注册需输入邮箱验证码）
-        </label>
+        <div className="space-y-1.5">
+          <div className="text-sm">邮箱验证（注册需输入邮箱验证码）</div>
+          <ToggleSwitch checked={form.requireEmailVerification} onChange={(next) => setForm((s) => ({ ...s, requireEmailVerification: next }))} />
+        </div>
 
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={form.inviteOnly} onChange={(e) => setForm((s) => ({ ...s, inviteOnly: e.target.checked }))} />
-          仅限邀请注册
-        </label>
+        <div className="space-y-1.5">
+          <div className="text-sm">仅限邀请注册</div>
+          <ToggleSwitch checked={form.inviteOnly} onChange={(next) => setForm((s) => ({ ...s, inviteOnly: next }))} />
+        </div>
 
         <div>
           <label className="text-sm">系统保留用户名（逗号分隔）</label>
@@ -81,10 +78,10 @@ export function SecuritySettingsClient() {
           />
         </div>
 
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={form.strongPassword} onChange={(e) => setForm((s) => ({ ...s, strongPassword: e.target.checked }))} />
-          启用复杂密码（10-32位，含大小写、数字、特殊字符）
-        </label>
+        <div className="space-y-1.5">
+          <div className="text-sm">启用复杂密码（10-32位，含大小写、数字、特殊字符）</div>
+          <ToggleSwitch checked={form.strongPassword} onChange={(next) => setForm((s) => ({ ...s, strongPassword: next }))} />
+        </div>
 
         <div className="pt-2">
           <button

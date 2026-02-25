@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { SettingsTabs } from "./tabs";
+import { ToggleSwitch } from "./toggle-switch";
 
 type FormState = {
   enabled: boolean;
@@ -71,16 +72,9 @@ export function MailSettingsClient() {
       <div className="border rounded-lg bg-white p-6 space-y-5">
         <div className="text-lg font-semibold">邮件设置</div>
 
-        <div className="flex items-center gap-3">
-          <span className="text-sm">启用邮件通知</span>
-          <button
-            className={
-              "px-3 py-1 rounded-full text-xs " + (form.enabled ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700")
-            }
-            onClick={() => setForm((s) => ({ ...s, enabled: !s.enabled }))}
-          >
-            {form.enabled ? "已启用" : "已禁用"}
-          </button>
+        <div className="space-y-1.5">
+          <div className="text-sm">启用邮件通知</div>
+          <ToggleSwitch checked={form.enabled} onChange={(next) => setForm((s) => ({ ...s, enabled: next }))} textOn="已启用" textOff="已禁用" />
         </div>
 
         <div>

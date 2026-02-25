@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { SettingsTabs } from "./tabs";
+import { ToggleSwitch } from "./toggle-switch";
 
 type Settings = {
   enabled: boolean;
@@ -83,19 +84,7 @@ export function VodSettingsClient() {
       {/* 启用开关 */}
       <div className="space-y-1.5">
         <div className="text-sm font-medium text-gray-700">启用点播功能</div>
-        <label className="inline-flex items-center cursor-pointer gap-3">
-          <div
-            className={`relative w-11 h-6 rounded-full transition-colors ${settings.enabled ? "bg-cyan-500" : "bg-gray-300"}`}
-            onClick={() => setSettings((s) => ({ ...s, enabled: !s.enabled }))}
-          >
-            <span
-              className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${settings.enabled ? "translate-x-5" : ""}`}
-            />
-          </div>
-          <span className="text-sm text-gray-500">
-            {settings.enabled ? "已开启" : "已关闭"}
-          </span>
-        </label>
+        <ToggleSwitch checked={settings.enabled} onChange={(next) => setSettings((s) => ({ ...s, enabled: next }))} />
         <p className="text-xs text-gray-400">
           开启后，需要在订阅管理中也开启点播功能才能生效。关闭后，用户端将不显示点播菜单
         </p>
