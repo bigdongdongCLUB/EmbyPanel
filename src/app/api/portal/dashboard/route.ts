@@ -201,10 +201,11 @@ export async function GET() {
   const mergedRecent = recentFromServers
     .flat()
     .sort((a, b) => b.ts - a.ts)
-    .filter((x, idx, arr) => arr.findIndex((k) => `${k.serverName}:${k.id}` === `${x.serverName}:${x.id}`) === idx)
-    .slice(0, 18);
+    .filter((x, idx, arr) => arr.findIndex((k) => `${k.serverName}:${k.id}` === `${x.serverName}:${x.id}`) === idx);
 
   const enrichedRecent = await enrichRecentWithTmdb(mergedRecent);
+  const recentUpdatesTv = enrichedRecent.filter((x) => x.type === "TV").slice(0, 18);
+  const recentUpdatesMovie = enrichedRecent.filter((x) => x.type === "MOVIE").slice(0, 18);
 
   return NextResponse.json({
     ok: true,
@@ -215,6 +216,8 @@ export async function GET() {
       remainingDays: daysLeft(endAt),
     },
     announcements,
-    recentUpdates: enrichedRecent,
+    recentUpdates: enrichedRecent.slice(0, 18),
+    recentUpdatesTv,
+    recentUpdatesMovie,
   });
 }
