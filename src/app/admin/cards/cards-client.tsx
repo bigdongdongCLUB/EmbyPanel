@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type Row = {
   id: string;
@@ -63,6 +63,8 @@ export function CardCodesClient() {
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement | null>(null);
 
   const [count, setCount] = useState("10");
   const [createType, setCreateType] = useState<"BALANCE" | "SUBSCRIPTION">("BALANCE");
@@ -139,6 +141,23 @@ export function CardCodesClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, type, status]);
 
+  useEffect(() => {
+    function onDocMouseDown(e: MouseEvent) {
+      if (!moreOpen) return;
+      const target = e.target as Node;
+      if (!moreRef.current?.contains(target)) setMoreOpen(false);
+    }
+    function onEsc(e: KeyboardEvent) {
+      if (e.key === "Escape") setMoreOpen(false);
+    }
+    document.addEventListener("mousedown", onDocMouseDown);
+    document.addEventListener("keydown", onEsc);
+    return () => {
+      document.removeEventListener("mousedown", onDocMouseDown);
+      document.removeEventListener("keydown", onEsc);
+    };
+  }, [moreOpen]);
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -165,37 +184,41 @@ export function CardCodesClient() {
         </select>
         <button className="h-7 border rounded px-3 text-xs" onClick={refresh} disabled={loading}>刷新</button>
         <button className="h-7 bg-blue-600 text-white rounded px-3 text-xs ml-auto" onClick={() => setOpen(true)}>创建卡密</button>
-        <details className="relative">
-          <summary className="list-none h-7 border rounded px-3 text-xs cursor-pointer select-none flex items-center">更多</summary>
-          <div className="absolute right-0 mt-2 w-44 bg-white border rounded shadow z-20 p-1 text-sm">
-            <button
-              className="w-full text-left px-2 py-1.5 hover:bg-gray-50 disabled:opacity-50"
-              disabled={!selectedIds.length}
-              onClick={async () => {
-                const codes = rows.filter((r) => selected[r.id]).map((r) => r.code).join("\n");
-                const ok = await copyTextSafe(codes);
-                if (!ok) alert("复制失败，请手动复制");
-                else showToast(`已复制 ${selectedIds.length} 个卡密`);
-              }}
-            >
-              复制选中卡密
-            </button>
-            <button
-              className="w-full text-left px-2 py-1.5 hover:bg-gray-50 text-red-600 disabled:opacity-50"
-              disabled={!selectedIds.length}
-              onClick={async () => {
-                if (!(await (window as any).showConfirm(`确认批量删除 ${selectedIds.length} 个卡密？`))) return;
-                for (const id of selectedIds) {
-                  await fetch(`/api/admin/card-codes?id=${encodeURIComponent(id)}`, { method: "DELETE" });
-                }
-                setSelected({});
-                await refresh();
-              }}
-            >
-              批量删除
-            </button>
-          </div>
-        </details>
+        <div ref={moreRef} className="relative">
+          <button className="h-7 border rounded px-3 text-xs cursor-pointer select-none flex items-center" onClick={() => setMoreOpen((v) => !v)}>更多</button>
+          {moreOpen ? (
+            <div className="absolute right-0 mt-2 w-44 bg-white border rounded shadow z-20 p-1 text-sm">
+              <button
+                className="w-full text-left px-2 py-1.5 hover:bg-gray-50 disabled:opacity-50"
+                disabled={!selectedIds.length}
+                onClick={async () => {
+                  const codes = rows.filter((r) => selected[r.id]).map((r) => r.code).join("\n");
+                  const ok = await copyTextSafe(codes);
+                  if (!ok) alert("复制失败，请手动复制");
+                  else showToast(`已复制 ${selectedIds.length} 个卡密`);
+                  setMoreOpen(false);
+                }}
+              >
+                复制选中卡密
+              </button>
+              <button
+                className="w-full text-left px-2 py-1.5 hover:bg-gray-50 text-red-600 disabled:opacity-50"
+                disabled={!selectedIds.length}
+                onClick={async () => {
+                  if (!(await (window as any).showConfirm(`确认批量删除 ${selectedIds.length} 个卡密？`))) return;
+                  for (const id of selectedIds) {
+                    await fetch(`/api/admin/card-codes?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+                  }
+                  setSelected({});
+                  setMoreOpen(false);
+                  await refresh();
+                }}
+              >
+                批量删除
+              </button>
+            </div>
+          ) : null}
+        </div>
       </div>
 
       <div className="border rounded overflow-auto">
