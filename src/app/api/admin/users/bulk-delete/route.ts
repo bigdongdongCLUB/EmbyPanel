@@ -24,7 +24,10 @@ export async function POST(req: Request) {
     try {
       const res = await fetch(new URL(`/api/admin/users/${id}/delete`, req.url).toString(), {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          cookie: req.headers.get("cookie") ?? "",
+        },
         body: JSON.stringify({ syncDeleteEmby: parsed.data.syncDeleteEmby }),
       });
       const txt = await res.text();
