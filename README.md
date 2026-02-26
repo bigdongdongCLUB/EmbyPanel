@@ -2,7 +2,7 @@
 
 # EmbyPanel
 
-**🎯 专业的 Emby 管理系统**
+**🎯 一般专业的 Emby 管理系统**
 
 基于 Next.js 打造 · 用户门户 + 管理后台双界面架构 · 高效管理订阅、用户与运维流程
 
@@ -146,7 +146,6 @@ curl -fsSL https://raw.githubusercontent.com/bigdongdongCLUB/EmbyPanel/main/scri
 
 - ✅ 检测系统环境（Docker、Docker Compose）
 - ✅ 下载所需的配置文件
-- ✅ 自动生成安全密钥
 - ✅ 交互式配置访问 URL、端口等参数
 - ✅ 拉取 Docker 镜像
 - ✅ 启动所有服务
