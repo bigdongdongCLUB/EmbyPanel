@@ -61,6 +61,8 @@ export function CardCodesClient() {
   const [createdCodes, setCreatedCodes] = useState<string[]>([]);
   const [toast, setToast] = useState<string | null>(null);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const [count, setCount] = useState("10");
   const [createType, setCreateType] = useState<"BALANCE" | "SUBSCRIPTION">("BALANCE");
@@ -82,12 +84,20 @@ export function CardCodesClient() {
     return !!planId;
   }, [count, createType, amountYuan, planId]);
 
-  const allSelected = rows.length > 0 && rows.every((r) => !!selected[r.id]);
+  const total = rows.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(Math.max(1, page), totalPages);
+  const pageRows = useMemo(() => rows.slice((safePage - 1) * pageSize, (safePage - 1) * pageSize + pageSize), [rows, safePage, pageSize]);
+  const allSelected = pageRows.length > 0 && pageRows.every((r) => !!selected[r.id]);
 
   function showToast(msg: string) {
     setToast(msg);
     window.setTimeout(() => setToast(null), 1800);
   }
+
+  useEffect(() => {
+    if (page !== safePage) setPage(safePage);
+  }, [page, safePage]);
 
   async function refresh() {
     setLoading(true);
@@ -108,6 +118,7 @@ export function CardCodesClient() {
       if (!res.ok) throw new Error(json?.message || json?.error || txt || `HTTP ${res.status}`);
       const nextRows = json.rows || [];
       setRows(nextRows);
+      setPage(1);
       setSelected((m) => {
         const valid = new Set(nextRows.map((r: any) => r.id));
         const out: Record<string, boolean> = {};
@@ -195,13 +206,13 @@ export function CardCodesClient() {
                 const v = e.target.checked;
                 if (!v) { setSelected({}); return; }
                 const next: Record<string, boolean> = {};
-                for (const r of rows) next[r.id] = true;
+                for (const r of pageRows) next[r.id] = true;
                 setSelected(next);
               }} /></th><th className="px-3 py-2">卡密</th><th className="px-3 py-2">类型</th><th className="px-3 py-2">内容</th><th className="px-3 py-2">状态</th><th className="px-3 py-2">使用时间</th><th className="px-3 py-2">创建时间</th><th className="px-3 py-2">操作</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
+            {pageRows.map((r) => (
               <tr key={r.id} className="border-b">
                 <td className="px-3 py-2"><input type="checkbox" checked={!!selected[r.id]} onChange={(e) => setSelected((m) => ({ ...m, [r.id]: e.target.checked }))} /></td>
                 <td className="px-3 py-2 font-mono">{r.code}</td>
@@ -259,9 +270,21 @@ export function CardCodesClient() {
                 </td>
               </tr>
             ))}
-            {!rows.length ? <tr><td className="px-3 py-6 text-gray-500" colSpan={8}>暂无数据</td></tr> : null}
+            {!total ? <tr><td className="px-3 py-6 text-gray-500" colSpan={8}>暂无数据</td></tr> : null}
           </tbody>
         </table>
+      </div>
+
+      <div className="flex items-center gap-2 text-sm">
+        <div className="mr-auto text-gray-600">共 {total} 条 · 第 {safePage}/{totalPages} 页</div>
+        <button className="border rounded px-3 py-1.5 disabled:opacity-50" disabled={safePage <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>上一页</button>
+        <button className="border rounded px-3 py-1.5 disabled:opacity-50" disabled={safePage >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>下一页</button>
+        <select className="h-9 border rounded px-2 text-sm" value={String(pageSize)} onChange={(e) => { setPage(1); setPageSize(Number(e.target.value)); }}>
+          <option value="10">10/页</option>
+          <option value="20">20/页</option>
+          <option value="50">50/页</option>
+          <option value="100">100/页</option>
+        </select>
       </div>
 
       {open ? (

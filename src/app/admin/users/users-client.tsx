@@ -120,6 +120,8 @@ export function UsersClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [rows, setRows] = useState<UserRow[]>([]);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const [edit, setEdit] = useState<EditState>({ open: false });
 
@@ -178,6 +180,15 @@ export function UsersClient() {
     return true;
   }, [newUsername, newPassword, newBalance]);
 
+  const total = rows.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(Math.max(1, page), totalPages);
+  const pageRows = useMemo(() => rows.slice((safePage - 1) * pageSize, (safePage - 1) * pageSize + pageSize), [rows, safePage, pageSize]);
+
+  useEffect(() => {
+    if (page !== safePage) setPage(safePage);
+  }, [page, safePage]);
+
   async function refresh() {
     setLoading(true);
     setError(null);
@@ -191,6 +202,7 @@ export function UsersClient() {
       const json = await res.json().catch(() => null);
       if (!res.ok) throw new Error(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
       setRows(json.users ?? []);
+      setPage(1);
       // prune selection after refresh
       setSelected((m) => {
         const next: Record<string, boolean> = {};
@@ -447,7 +459,7 @@ export function UsersClient() {
               <th className="py-2 px-3">
                 <input
                   type="checkbox"
-                  checked={rows.length > 0 && selectedIds.length === rows.length}
+                  checked={pageRows.length > 0 && pageRows.every((r) => !!selected[r.id])}
                   onChange={(e) => {
                     const on = e.target.checked;
                     if (!on) {
@@ -455,7 +467,7 @@ export function UsersClient() {
                       return;
                     }
                     const next: Record<string, boolean> = {};
-                    for (const r of rows) next[r.id] = true;
+                    for (const r of pageRows) next[r.id] = true;
                     setSelected(next);
                   }}
                 />
@@ -473,7 +485,7 @@ export function UsersClient() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
+            {pageRows.map((r) => (
               <tr key={r.id} className="border-b last:border-b-0">
                 <td className="py-2 px-3">
                   <input
@@ -613,7 +625,7 @@ export function UsersClient() {
                 </td>
               </tr>
             ))}
-            {!loading && rows.length === 0 ? (
+            {!loading && total === 0 ? (
               <tr>
                 <td className="py-6 px-3 text-gray-500" colSpan={11}>
                   无数据
@@ -622,6 +634,18 @@ export function UsersClient() {
             ) : null}
           </tbody>
         </table>
+      </div>
+
+      <div className="flex items-center gap-2 text-sm">
+        <div className="mr-auto text-gray-600">共 {total} 条 · 第 {safePage}/{totalPages} 页</div>
+        <button className="border rounded px-3 py-1.5 disabled:opacity-50" disabled={safePage <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>上一页</button>
+        <button className="border rounded px-3 py-1.5 disabled:opacity-50" disabled={safePage >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>下一页</button>
+        <select className="h-9 border rounded px-2 text-sm" value={String(pageSize)} onChange={(e) => { setPage(1); setPageSize(Number(e.target.value)); }}>
+          <option value="10">10/页</option>
+          <option value="20">20/页</option>
+          <option value="50">50/页</option>
+          <option value="100">100/页</option>
+        </select>
       </div>
 
       {edit.open ? (
