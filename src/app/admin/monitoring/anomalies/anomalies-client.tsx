@@ -156,7 +156,7 @@ export function MonitoringAnomaliesClient() {
           <option value="30">最近 30 天</option>
         </select>
 
-        <select className="border rounded px-3 py-2" value={String(pageSize)} onChange={(e) => setPageSize(Number(e.target.value))}>
+        <select className="h-9 border rounded px-2 text-sm" value={String(pageSize)} onChange={(e) => setPageSize(Number(e.target.value))}>
           <option value="10">10/页</option>
           <option value="20">20/页</option>
           <option value="50">50/页</option>

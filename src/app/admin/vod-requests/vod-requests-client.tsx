@@ -297,10 +297,10 @@ export function VodRequestsAdminClient() {
         <button className="border rounded px-2 py-1 disabled:opacity-40" disabled={!canPrev || loading} onClick={() => refresh(page - 1, pageSize)}>‹</button>
         <span className="border rounded px-2 py-1 text-blue-600">{page}</span>
         <button className="border rounded px-2 py-1 disabled:opacity-40" disabled={!canNext || loading} onClick={() => refresh(page + 1, pageSize)}>›</button>
-        <select className="h-8 border rounded px-2" value={String(pageSize)} onChange={(e) => { const n = Number(e.target.value) || 10; setPageSize(n); refresh(1, n); }}>
-          <option value="10">10 / page</option>
-          <option value="20">20 / page</option>
-          <option value="30">30 / page</option>
+        <select className="h-9 border rounded px-2 text-sm" value={String(pageSize)} onChange={(e) => { const n = Number(e.target.value) || 10; setPageSize(n); refresh(1, n); }}>
+          <option value="10">10/页</option>
+          <option value="20">20/页</option>
+          <option value="30">30/页</option>
         </select>
       </div>
     </div>

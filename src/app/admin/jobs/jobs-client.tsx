@@ -86,10 +86,10 @@ export function JobsClient() {
           <option value="cache-cleanup">缓存清理</option>
         </select>
 
-        <select className="border rounded px-3 py-2" value={String(pageSize)} onChange={(e) => { setPage(1); setPageSize(Number(e.target.value)); }}>
-          <option value="20">20 / page</option>
-          <option value="50">50 / page</option>
-          <option value="100">100 / page</option>
+        <select className="h-9 border rounded px-2 text-sm" value={String(pageSize)} onChange={(e) => { setPage(1); setPageSize(Number(e.target.value)); }}>
+          <option value="20">20/页</option>
+          <option value="50">50/页</option>
+          <option value="100">100/页</option>
         </select>
 
         <button className="border rounded px-3 py-2" onClick={refresh} disabled={loading}>刷新</button>

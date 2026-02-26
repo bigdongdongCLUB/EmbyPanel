@@ -103,7 +103,7 @@ export function RealtimeMonitorClient() {
   }, [data, q]);
 
   const total = filtered.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const totalPages = Math.max(1, Math.ceil(total/ pageSize));
   const safePage = Math.min(Math.max(1, page), totalPages);
   const start = (safePage - 1) * pageSize;
   const pageRows = filtered.slice(start, start + pageSize);
@@ -171,17 +171,17 @@ export function RealtimeMonitorClient() {
 
           <div className="flex items-center gap-2">
             <select
-              className="border rounded px-2 py-2"
+              className="h-9 border rounded px-2 text-sm"
               value={String(pageSize)}
               onChange={(e) => {
                 setPageSize(Number(e.target.value));
                 setPage(1);
               }}
             >
-              <option value="10">10 / page</option>
-              <option value="20">20 / page</option>
-              <option value="50">50 / page</option>
-              <option value="100">100 / page</option>
+              <option value="10">10/页</option>
+              <option value="20">20/页</option>
+              <option value="50">50/页</option>
+              <option value="100">100/页</option>
             </select>
           </div>
         </div>

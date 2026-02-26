@@ -77,7 +77,7 @@ export function MonitoringPenaltiesClient() {
   }, [rows, q]);
 
   const total = filteredRows.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const totalPages = Math.max(1, Math.ceil(total/ pageSize));
   const safePage = Math.min(Math.max(1, page), totalPages);
   const pageRows = useMemo(() => filteredRows.slice((safePage - 1) * pageSize, (safePage - 1) * pageSize + pageSize), [filteredRows, safePage, pageSize]);
 
@@ -128,11 +128,11 @@ export function MonitoringPenaltiesClient() {
         <div className="flex items-center justify-between gap-2">
           <div className="font-medium text-sm">处罚记录</div>
           <div className="flex items-center gap-2">
-            <select className="border rounded px-2 py-1.5 text-sm" value={String(pageSize)} onChange={(e) => { setPage(1); setPageSize(Number(e.target.value)); }}>
-              <option value="10">10 / page</option>
-              <option value="20">20 / page</option>
-              <option value="50">50 / page</option>
-              <option value="100">100 / page</option>
+            <select className="h-9 border rounded px-2 text-sm" value={String(pageSize)} onChange={(e) => { setPage(1); setPageSize(Number(e.target.value)); }}>
+              <option value="10">10/页</option>
+              <option value="20">20/页</option>
+              <option value="50">50/页</option>
+              <option value="100">100/页</option>
             </select>
             <div className="text-xs text-gray-500">最多显示最近 1000 条</div>
           </div>
