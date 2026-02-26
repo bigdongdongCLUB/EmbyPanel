@@ -36,12 +36,12 @@ export function AdminShellClient({ username }: { username: string }) {
       </button>
 
       {open ? (
-        <div className="absolute right-0 mt-2 w-40 bg-white border rounded-xl shadow-lg p-1 z-30">
-          <Link href="/portal" className="block px-3 py-2 rounded hover:bg-gray-50 text-sm" onClick={() => setOpen(false)}>
+        <div className="absolute right-0 mt-2 w-44 bg-white border rounded-xl shadow-lg p-1 z-30">
+          <Link href="/portal" className="block px-3 py-2 rounded hover:bg-gray-50 text-sm font-normal leading-5" onClick={() => setOpen(false)}>
             用户中心
           </Link>
           <button
-            className="w-full text-left px-3 py-2 rounded hover:bg-gray-50 text-sm text-red-600"
+            className="w-full text-left px-3 py-2 rounded hover:bg-gray-50 text-sm font-normal leading-5 text-red-600"
             onClick={() => {
               setOpen(false);
               signOut({ callbackUrl: "/login" });
