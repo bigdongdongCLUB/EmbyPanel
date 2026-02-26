@@ -8,6 +8,7 @@ APP_URL="${APP_URL:-}"
 WEB_PORT="${WEB_PORT:-3000}"
 POSTGRES_PORT="${POSTGRES_PORT:-5432}"
 REDIS_PORT="${REDIS_PORT:-6379}"
+INSTALL_CACHE_FILE="${INSTALL_CACHE_FILE:-/var/lib/embypanel-installer/install.env}"
 
 log() { printf "\033[1;34m[EmbyPanel]\033[0m %s\n" "$*"; }
 warn() { printf "\033[1;33m[警告]\033[0m %s\n" "$*"; }
@@ -34,6 +35,16 @@ run_as_root() {
   else
     sudo bash -lc "$*"
   fi
+}
+
+save_install_cache() {
+  local cache_dir
+  cache_dir="$(dirname "$INSTALL_CACHE_FILE")"
+  run_as_root "mkdir -p '$cache_dir'"
+  run_as_root "cat > '$INSTALL_CACHE_FILE' <<'EOF'
+APP_DIR=$APP_DIR
+UPDATED_AT=$(date +%s)
+EOF"
 }
 
 dc() {
@@ -303,11 +314,14 @@ main() {
   log "执行数据库迁移..."
   dc run --rm web npx prisma migrate deploy
 
+  save_install_cache
+
   ok "部署/升级完成"
   dc ps
   echo
   log "访问地址：$(grep -E '^NEXTAUTH_URL=' .env | cut -d= -f2-)"
   log "配置文件：$APP_DIR/.env"
+  log "安装缓存：$INSTALL_CACHE_FILE"
 }
 
 main "$@"
