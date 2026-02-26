@@ -110,12 +110,6 @@ export function MonitoringPenaltiesClient() {
           <option value="30">30 分钟</option>
         </select>
 
-        <select className="border rounded px-3 py-2" value={String(pageSize)} onChange={(e) => { setPage(1); setPageSize(Number(e.target.value)); }}>
-          <option value="10">10 / page</option>
-          <option value="20">20 / page</option>
-          <option value="50">50 / page</option>
-          <option value="100">100 / page</option>
-        </select>
 
         <button className="border rounded px-3 py-2" onClick={savePenaltyConfig} disabled={savingPenalty}>
           {savingPenalty ? "保存中..." : "保存处罚设置"}
@@ -131,9 +125,17 @@ export function MonitoringPenaltiesClient() {
       {error ? <pre className="text-xs text-red-600 whitespace-pre-wrap">{error}</pre> : null}
 
       <div className="bg-white border rounded-lg p-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <div className="font-medium text-sm">处罚记录</div>
-          <div className="text-xs text-gray-500">最多显示最近 1000 条</div>
+          <div className="flex items-center gap-2">
+            <select className="border rounded px-2 py-1.5 text-sm" value={String(pageSize)} onChange={(e) => { setPage(1); setPageSize(Number(e.target.value)); }}>
+              <option value="10">10 / page</option>
+              <option value="20">20 / page</option>
+              <option value="50">50 / page</option>
+              <option value="100">100 / page</option>
+            </select>
+            <div className="text-xs text-gray-500">最多显示最近 1000 条</div>
+          </div>
         </div>
 
         <div className="mt-3 overflow-auto">
