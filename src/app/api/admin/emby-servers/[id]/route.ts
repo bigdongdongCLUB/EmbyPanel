@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin";
 import { normalizeBaseUrl } from "@/lib/emby";
 import { encryptString } from "@/lib/crypto";
+import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
 
 const PatchSchema = z.object({
   name: z.string().min(1).max(100).optional(),
@@ -14,6 +15,38 @@ const PatchSchema = z.object({
   apiKey: z.string().min(10).optional(),
   enabled: z.boolean().optional(),
 });
+
+export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+  const auth = await requireAdmin();
+  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
+  const { id } = await ctx.params;
+  const server = await prisma.embyServer.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      name: true,
+      baseUrl: true,
+      enabled: true,
+      apiKey: true,
+      apiKeyEnc: true,
+      apiKeyIv: true,
+      apiKeyTag: true,
+    },
+  });
+  if (!server) return NextResponse.json({ error: "not_found" }, { status: 404 });
+
+  const apiKey = getEmbyApiKeyForServer(server as any);
+  return NextResponse.json({
+    server: {
+      id: server.id,
+      name: server.name,
+      baseUrl: server.baseUrl,
+      enabled: server.enabled,
+      apiKey,
+    },
+  });
+}
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const auth = await requireAdmin();

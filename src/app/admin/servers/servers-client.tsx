@@ -21,6 +21,8 @@ type ModalState =
       baseUrl: string;
       apiKey: string;
       enabled: boolean;
+      showApiKey: boolean;
+      loadingApiKey: boolean;
     };
 
 type StatsModalState =
@@ -426,7 +428,7 @@ export function ServersClient() {
 
                 <button
                   className="border rounded px-3 py-2"
-                  onClick={() =>
+                  onClick={async () => {
                     setModal({
                       open: true,
                       id: s.id,
@@ -434,8 +436,28 @@ export function ServersClient() {
                       baseUrl: s.baseUrl,
                       apiKey: "",
                       enabled: true,
-                    })
-                  }
+                      showApiKey: false,
+                      loadingApiKey: true,
+                    });
+                    try {
+                      const res = await fetch(`/api/admin/emby-servers/${s.id}`, { cache: "no-store" });
+                      const json = await res.json().catch(() => null);
+                      if (!res.ok) throw new Error(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
+                      setModal({
+                        open: true,
+                        id: s.id,
+                        name: s.name,
+                        baseUrl: s.baseUrl,
+                        apiKey: json?.server?.apiKey || "",
+                        enabled: true,
+                        showApiKey: false,
+                        loadingApiKey: false,
+                      });
+                    } catch (e: any) {
+                      setModal((prev) => (prev.open ? { ...prev, loadingApiKey: false } : prev));
+                      alert(`读取 API Key 失败: ${e?.message ?? "load_failed"}`);
+                    }
+                  }}
                 >
                   编辑
                 </button>
@@ -570,12 +592,25 @@ export function ServersClient() {
                 />
               </div>
               <div>
-                <label className="text-sm">API Key（留空=不修改）</label>
-                <input
-                  className="mt-1 w-full border rounded px-3 py-2"
-                  value={modal.apiKey}
-                  onChange={(e) => setModal({ ...modal, apiKey: e.target.value })}
-                />
+                <label className="text-sm">API Key</label>
+                <div className="mt-1 relative">
+                  <input
+                    type={modal.showApiKey ? "text" : "password"}
+                    className="w-full border rounded px-3 py-2 pr-16"
+                    value={modal.apiKey}
+                    onChange={(e) => setModal({ ...modal, apiKey: e.target.value })}
+                    disabled={modal.loadingApiKey}
+                    placeholder={modal.loadingApiKey ? "API Key 加载中..." : "请输入 API Key"}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-xs border rounded px-2 py-1 bg-white"
+                    onClick={() => setModal({ ...modal, showApiKey: !modal.showApiKey })}
+                    disabled={modal.loadingApiKey}
+                  >
+                    {modal.showApiKey ? "隐藏" : "显示"}
+                  </button>
+                </div>
               </div>
               {/* 服务器始终启用：编辑弹窗不提供启用开关 */}
             </div>
@@ -584,11 +619,16 @@ export function ServersClient() {
               <button
                 className="bg-gray-700 text-white rounded px-3 py-2"
                 onClick={async () => {
+                  if (modal.apiKey.trim().length < 10) {
+                    alert("API Key 长度至少 10 位");
+                    return;
+                  }
+
                   const payload: any = {
                     name: modal.name,
                     baseUrl: modal.baseUrl,
+                    apiKey: modal.apiKey.trim(),
                   };
-                  if (modal.apiKey.trim()) payload.apiKey = modal.apiKey.trim();
 
                   const res = await fetch(`/api/admin/emby-servers/${modal.id}`, {
                     method: "PATCH",
