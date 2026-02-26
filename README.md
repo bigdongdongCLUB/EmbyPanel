@@ -12,7 +12,7 @@
 
 ---
 
-## 🎯 该面板完全仿制于linkEmby项目
+## 🎯 该面板完全仿制于LinkEmby项目
 
 **LinkEmby项目地址**: [LinkEmby](https://github.com/linkemby/linkemby-deploy)
 
