@@ -136,7 +136,7 @@
 
 ## 🚀 快速开始
 
-### 一键安装
+### 一键安装/升级
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/bigdongdongCLUB/EmbyPanel/main/scripts/install.sh | bash
