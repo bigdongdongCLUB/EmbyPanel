@@ -1,8 +1,9 @@
 # EmbyPanel production image
 FROM node:22-alpine AS deps
 WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --no-audit --no-fund
 
 FROM node:22-alpine AS builder
 ARG NEXT_PUBLIC_APP_VERSION=v00.00.00

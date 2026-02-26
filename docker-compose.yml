@@ -23,6 +23,7 @@ services:
       - ./data/redis:/data
 
   web:
+    image: embypanel-app:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -45,11 +46,7 @@ services:
       - redis
 
   worker:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_APP_VERSION: ${NEXT_PUBLIC_APP_VERSION:-v00.00.00}
+    image: embypanel-app:latest
     container_name: embypanel-worker
     restart: unless-stopped
     environment:

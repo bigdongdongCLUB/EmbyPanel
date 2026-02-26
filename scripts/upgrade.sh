@@ -59,8 +59,11 @@ while [ $a -lt 30 ]; do
   sleep 2
 done
 
-log "Rebuilding web and worker..."
-dc up -d --build web worker
+log "Rebuilding web image..."
+dc build web
+
+log "Restarting web and worker (worker reuses web image)..."
+dc up -d web worker
 
 log "Running migrations..."
 dc run --rm web npx prisma migrate deploy
