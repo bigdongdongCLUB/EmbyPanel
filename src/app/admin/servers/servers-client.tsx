@@ -364,7 +364,7 @@ export function ServersClient() {
                     ? "健康检测：-"
                     : s.lastHealthOk
                       ? `✅ ${parseLatencyMs(s.lastHealthMsg) !== null ? `${parseLatencyMs(s.lastHealthMsg)}ms` : "延迟未知"}`
-                      : `❌ ${s.lastHealthMsg || "检测失败"}`}
+                      : "❌ 失败"}
                 </div>
               </div>
               <div className="flex gap-2">
