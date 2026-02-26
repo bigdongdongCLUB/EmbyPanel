@@ -12,15 +12,15 @@
 
 ---
 
-## 🎯 该面板完全仿制于LinkEmby项目
+## 🎯 项目说明
 
-**LinkEmby项目地址**: [LinkEmby](https://github.com/linkemby/linkemby-deploy)
+该面板完全仿制于**LinkEmby项目地址**: [LinkEmby](https://github.com/linkemby/linkemby-deploy)因为原项目更新缓慢，且有一些功能无法达到个人需求，所以萌生借助AI根据需求重新打造，这里依然推荐大家使用原项目！本项目目前虽然已经基本达到使用状态，但仍显简陋，且后期更新维护皆由AI完成。当然如果有大佬帮忙维护自然是更好。
 
-> 💡 由[openclaw（ChatGPT-codx）](https://openclaw.ai/)完成全部代码
+> 💡 由[openclaw（ChatGPT-5.3-codx）](https://openclaw.ai/)完成全部代码
 
 ---
 
-## 📞 联系我们
+## 📞 联系我
 
 <table>
 <tr>
@@ -37,7 +37,7 @@
 </tr>
 </table>
 
-💡 **注意 本人提供不了一点技术支持，但欢迎联系！**
+💡 **注意 本人提供不了一点技术支持，但欢迎提交新需求和BUG！**
 
 ---
 
