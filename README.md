@@ -8,12 +8,6 @@
 
 <img width="3060" height="1570" alt="ScreenShot_2026-02-26_140841_827" src="https://github.com/user-attachments/assets/d2edef28-0868-4510-8229-62ee292433c0" />
 
-
-[![License](https://img.shields.io/badge/License-Commercial-blue.svg)](https://t.me/berlin_lab)
-[![Docker](https://img.shields.io/badge/Docker-20.10+-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-336791?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![Next.js](https://img.shields.io/badge/Next.js-14-000000?logo=next.js&logoColor=white)](https://nextjs.org/)
-
 </div>
 
 ---
