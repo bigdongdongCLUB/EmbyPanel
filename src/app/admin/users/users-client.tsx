@@ -1342,7 +1342,7 @@ export function UsersClient() {
                 <button
                   className="w-[130px] h-10 border bg-white rounded px-3 inline-flex items-center justify-center gap-1.5 text-sm"
                   onClick={() => {
-                    const tpl = "用户名,面板密码,订阅计划,开始时间,结束时间\n" +
+                    const tpl = "\uFEFF用户名,面板密码,订阅计划,开始时间,结束时间\n" +
                       "testuser1,Xxxx1234,BestEmby,2025/1/15,2026/1/15\n" +
                       "testuser2,Xxxx1234,BestEmby,2025/1/15,2026/1/15\n";
                     const blob = new Blob([tpl], { type: "text/csv;charset=utf-8;" });
