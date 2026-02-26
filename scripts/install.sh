@@ -156,6 +156,29 @@ format_version_from_count() {
   printf 'v%02d.%02d.%02d' "$major" "$minor" "$patch"
 }
 
+version_to_int() {
+  local v="$1"
+  v="${v#v}"
+  IFS='.' read -r a b c <<< "$v"
+  a="${a:-0}"; b="${b:-0}"; c="${c:-0}"
+  printf "%d" $((10#$a * 10000 + 10#$b * 100 + 10#$c))
+}
+
+compare_versions() {
+  local va="${1:-v00.00.00}"
+  local vb="${2:-v00.00.00}"
+  local ia ib
+  ia="$(version_to_int "$va")"
+  ib="$(version_to_int "$vb")"
+  if [ "$ia" -lt "$ib" ]; then
+    printf -- "-1"
+  elif [ "$ia" -gt "$ib" ]; then
+    printf -- "1"
+  else
+    printf -- "0"
+  fi
+}
+
 detect_public_ip() {
   local ip=""
   ip="$(curl -fsSL --max-time 3 https://api.ipify.org 2>/dev/null || true)"
@@ -285,14 +308,30 @@ wait_for_postgres() {
 }
 
 run_integrity_checks() {
-  log "执行完整性与功能性检查..."
-  dc ps >/dev/null 2>&1 || warn "docker compose 状态读取失败（将继续）"
+  log "执行完整性/功能性（健康）检查..."
+
+  if ! dc ps >/dev/null 2>&1; then
+    warn "docker compose 状态读取失败（将继续）"
+  else
+    ok "docker compose 状态读取正常"
+  fi
+
   if [ -f "$APP_DIR/.env" ]; then
     for k in NEXTAUTH_URL NEXTAUTH_SECRET EMBYPANEL_ENCRYPTION_KEY POSTGRES_PASSWORD REDIS_PASSWORD; do
       if ! grep -q "^${k}=" "$APP_DIR/.env"; then
         warn "缺少关键配置：${k}"
       fi
     done
+
+    local check_url
+    check_url="$(read_env_value "$APP_DIR/.env" "NEXTAUTH_URL")"
+    if [ -n "$check_url" ]; then
+      if curl -fsSL --max-time 8 "${check_url%/}/api/public/security-settings" >/dev/null 2>&1; then
+        ok "Web 健康检查通过：${check_url%/}/api/public/security-settings"
+      else
+        warn "Web 健康检查失败：${check_url%/}/api/public/security-settings"
+      fi
+    fi
   fi
 }
 
@@ -307,21 +346,45 @@ main() {
   interactive_config
   install_docker_if_needed
 
-  local installed_before=0
+  local installed_before=0 current_version="v00.00.00"
   if [ -d "$APP_DIR/.git" ] || [ -f "$APP_DIR/.env" ]; then
     installed_before=1
-    log "检测到已安装过 EmbyPanel，将执行升级流程。"
+    current_version="$(read_env_value "$APP_DIR/.env" "NEXT_PUBLIC_APP_VERSION")"
+    [ -n "$current_version" ] || current_version="v00.00.00"
+    log "检测到已安装 EmbyPanel，当前版本：${current_version}"
   else
     log "未检测到历史安装，将执行首次安装流程。"
   fi
 
   prepare_repo
   cd "$APP_DIR"
-  init_env
+
+  local commit_count target_version
+  commit_count="$(git rev-list --count HEAD 2>/dev/null || echo 0)"
+  target_version="$(format_version_from_count "${commit_count:-0}")"
 
   if [ "$installed_before" -eq 1 ]; then
-    run_integrity_checks
+    local cmp
+    cmp="$(compare_versions "$current_version" "$target_version")"
+
+    if [ "$cmp" = "0" ]; then
+      log "版本校对：${current_version} → ${target_version}（版本一致）"
+      run_integrity_checks
+      save_install_cache
+      ok "当前已是最新版本，仅完成健康检查。"
+      exit 0
+    elif [ "$cmp" = "-1" ]; then
+      log "版本校对：${current_version} → ${target_version}（检测到新版本，执行升级）"
+    else
+      warn "版本校对：${current_version} → ${target_version}（当前版本高于仓库版本，跳过升级）"
+      run_integrity_checks
+      save_install_cache
+      ok "已完成健康检查。"
+      exit 0
+    fi
   fi
+
+  init_env
 
   log "启动数据库与 Redis..."
   dc up -d db redis
@@ -334,6 +397,7 @@ main() {
   log "执行数据库迁移..."
   dc run --rm web npx prisma migrate deploy
 
+  run_integrity_checks
   save_install_cache
 
   ok "部署/升级完成"
