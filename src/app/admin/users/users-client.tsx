@@ -1284,6 +1284,33 @@ export function UsersClient() {
             {csvImportError ? <pre className="mt-2 text-xs text-red-600 whitespace-pre-wrap">{csvImportError}</pre> : null}
 
             <div className="mt-4 space-y-4">
+              <div className="rounded-xl border border-sky-200 bg-sky-50 p-4">
+                <div className="flex items-center gap-2 text-sky-900 font-semibold">
+                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-sky-500 text-white text-xs">i</span>
+                  <span>操作说明</span>
+                </div>
+                <ol className="mt-2 list-decimal pl-6 text-sm text-sky-900 space-y-1">
+                  <li>先下载 CSV 模板，并按模板填写：用户名、面板密码、订阅计划、开始时间、结束时间。</li>
+                  <li>上传 CSV 后点击“开始导入”，系统将按行批量创建面板用户。</li>
+                  <li>若“订阅计划”为空，将仅创建用户；若填写计划但开始/结束时间缺失，则按无订阅处理。</li>
+                  <li>导入完成会返回成功/跳过/失败数量，并显示失败行位置（如 A3）。</li>
+                </ol>
+                <div className="mt-3 text-sm font-semibold text-red-600">注意：单次最多导入 1000 行（不含表头）。</div>
+              </div>
+
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <div className="flex items-center gap-2 text-amber-900 font-semibold">
+                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-white text-xs">!</span>
+                  <span>重要提示</span>
+                </div>
+                <ul className="mt-2 list-disc pl-6 text-sm text-amber-900 space-y-1">
+                  <li>导入用户会按订阅计划同步到对应 Emby 服务器。</li>
+                  <li>若 Emby 已存在同名用户，仅做链接（link），不会重置该 Emby 用户密码。</li>
+                  <li>只有管理员后续在面板中手动修改该用户密码时，才会同步 Emby 密码。</li>
+                  <li>若面板中已存在同名用户，该行会直接跳过。</li>
+                </ul>
+              </div>
+
               <div>
                 <label className="text-sm">分配订阅计划（可选）</label>
                 <select className="mt-1 w-full border rounded px-3 py-2" disabled={csvImportLoading}>
