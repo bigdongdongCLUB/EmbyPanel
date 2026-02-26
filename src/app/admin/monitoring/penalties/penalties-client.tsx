@@ -128,12 +128,6 @@ export function MonitoringPenaltiesClient() {
         <div className="flex items-center justify-between gap-2">
           <div className="font-medium text-sm">处罚记录</div>
           <div className="flex items-center gap-2">
-            <select className="h-9 border rounded px-2 text-sm" value={String(pageSize)} onChange={(e) => { setPage(1); setPageSize(Number(e.target.value)); }}>
-              <option value="10">10/页</option>
-              <option value="20">20/页</option>
-              <option value="50">50/页</option>
-              <option value="100">100/页</option>
-            </select>
             <div className="text-xs text-gray-500">最多显示最近 1000 条</div>
           </div>
         </div>
@@ -171,10 +165,17 @@ export function MonitoringPenaltiesClient() {
           </table>
         </div>
 
-        <div className="mt-3 flex items-center justify-end gap-2 text-sm border-t pt-3">
-          <div className="mr-auto text-gray-600">共 {total} 条 · 第 {safePage}/{totalPages} 页</div>
-          <button className="border rounded px-3 py-1.5 disabled:opacity-50" disabled={safePage <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>上一页</button>
-          <button className="border rounded px-3 py-1.5 disabled:opacity-50" disabled={safePage >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>下一页</button>
+        <div className="mt-3 flex items-center gap-2 text-sm border-t pt-3">
+          <div className="mr-auto text-gray-600">第 {total ? (safePage - 1) * pageSize + 1 : 0}-{Math.min(safePage * pageSize, total)} 条，共 {total} 条记录</div>
+          <button className="border rounded px-2 py-1 disabled:opacity-40" disabled={safePage <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>‹</button>
+          <span className="border rounded px-2 py-1 text-blue-600">{safePage}</span>
+          <button className="border rounded px-2 py-1 disabled:opacity-40" disabled={safePage >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>›</button>
+          <select className="h-9 border rounded px-2 text-sm" value={String(pageSize)} onChange={(e) => { setPage(1); setPageSize(Number(e.target.value)); }}>
+            <option value="10">10/页</option>
+            <option value="20">20/页</option>
+            <option value="50">50/页</option>
+            <option value="100">100/页</option>
+          </select>
         </div>
       </div>
     </div>

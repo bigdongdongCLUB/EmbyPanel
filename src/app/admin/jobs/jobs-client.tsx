@@ -40,7 +40,7 @@ export function JobsClient() {
   const [data, setData] = useState<Data | null>(null);
   const [jobName, setJobName] = useState("");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(10);
 
   async function refresh() {
     setLoading(true);
@@ -84,12 +84,6 @@ export function JobsClient() {
           <option value="anomaly-scan">播放异常检测</option>
           <option value="anomaly-unban">处罚自动解禁</option>
           <option value="cache-cleanup">缓存清理</option>
-        </select>
-
-        <select className="h-9 border rounded px-2 text-sm" value={String(pageSize)} onChange={(e) => { setPage(1); setPageSize(Number(e.target.value)); }}>
-          <option value="20">20/页</option>
-          <option value="50">50/页</option>
-          <option value="100">100/页</option>
         </select>
 
         <button className="border rounded px-3 py-2" onClick={refresh} disabled={loading}>刷新</button>
@@ -151,10 +145,17 @@ export function JobsClient() {
         </table>
       </div>
 
-      <div className="flex items-center justify-end gap-2 text-sm">
-        <button className="border rounded px-3 py-1.5 disabled:opacity-50" disabled={(data?.page ?? 1) <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>上一页</button>
-        <span className="text-gray-600">第 {data?.page ?? 1} / {data?.totalPages ?? 1} 页</span>
-        <button className="border rounded px-3 py-1.5 disabled:opacity-50" disabled={(data?.page ?? 1) >= (data?.totalPages ?? 1)} onClick={() => setPage((p) => p + 1)}>下一页</button>
+      <div className="mt-3 flex items-center gap-2 text-sm border-t pt-3">
+        <div className="mr-auto text-gray-600">第 {data?.total ? ((data?.page ?? 1) - 1) * pageSize + 1 : 0}-{Math.min((data?.page ?? 1) * pageSize, data?.total ?? 0)} 条，共 {data?.total ?? 0} 条记录</div>
+        <button className="border rounded px-2 py-1 disabled:opacity-40" disabled={(data?.page ?? 1) <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>‹</button>
+        <span className="border rounded px-2 py-1 text-blue-600">{data?.page ?? 1}</span>
+        <button className="border rounded px-2 py-1 disabled:opacity-40" disabled={(data?.page ?? 1) >= (data?.totalPages ?? 1)} onClick={() => setPage((p) => p + 1)}>›</button>
+        <select className="h-9 border rounded px-2 text-sm" value={String(pageSize)} onChange={(e) => { setPage(1); setPageSize(Number(e.target.value)); }}>
+          <option value="10">10/页</option>
+          <option value="20">20/页</option>
+          <option value="50">50/页</option>
+          <option value="100">100/页</option>
+        </select>
       </div>
     </div>
   );

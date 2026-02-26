@@ -47,15 +47,15 @@ export function OrdersAdminClient() {
   const [summary, setSummary] = useState({ totalOrders: 0, totalIncomeYuan: "0.00", paidOrders: 0, pendingOrders: 0 });
   const [rows, setRows] = useState<Row[]>([]);
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
 
-  async function refresh(nextDays = days, nextPage = page) {
+  async function refresh(nextDays = days, nextPage = page, nextPageSize = pageSize) {
     setLoading(true);
     setError(null);
     try {
-      const qs = new URLSearchParams({ days: String(nextDays), page: String(nextPage), pageSize: String(pageSize) });
+      const qs = new URLSearchParams({ days: String(nextDays), page: String(nextPage), pageSize: String(nextPageSize) });
       const res = await fetch(`/api/admin/orders?${qs.toString()}`, { cache: "no-store" });
       const json: Resp = await res.json().catch(() => null as any);
       if (!res.ok) throw new Error((json as any)?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
@@ -150,10 +150,17 @@ export function OrdersAdminClient() {
         </table>
       </div>
 
-      <div className="flex items-center justify-end gap-2 text-sm">
-        <div className="mr-auto text-gray-600">共 {total} 条 · 第 {page}/{totalPages} 页</div>
-        <button className="border rounded px-3 py-1.5 disabled:opacity-50" disabled={page <= 1} onClick={() => refresh(days, page - 1)}>上一页</button>
-        <button className="border rounded px-3 py-1.5 disabled:opacity-50" disabled={page >= totalPages} onClick={() => refresh(days, page + 1)}>下一页</button>
+      <div className="mt-3 flex items-center gap-2 text-sm border-t pt-3">
+        <div className="mr-auto text-gray-600">第 {total ? (page - 1) * pageSize + 1 : 0}-{Math.min(page * pageSize, total)} 条，共 {total} 条记录</div>
+        <button className="border rounded px-2 py-1 disabled:opacity-40" disabled={page <= 1} onClick={() => refresh(days, page - 1, pageSize)}>‹</button>
+        <span className="border rounded px-2 py-1 text-blue-600">{page}</span>
+        <button className="border rounded px-2 py-1 disabled:opacity-40" disabled={page >= totalPages} onClick={() => refresh(days, page + 1, pageSize)}>›</button>
+        <select className="h-9 border rounded px-2 text-sm" value={String(pageSize)} onChange={(e) => { const n = Number(e.target.value) || 10; setPageSize(n); refresh(days, 1, n); }}>
+          <option value="10">10/页</option>
+          <option value="20">20/页</option>
+          <option value="50">50/页</option>
+          <option value="100">100/页</option>
+        </select>
       </div>
     </div>
   );
