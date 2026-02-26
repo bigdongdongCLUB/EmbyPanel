@@ -170,16 +170,15 @@ export async function POST(req: Request) {
           const s = parseDateLike(startRaw);
           const e = parseDateLike(endRaw);
           if (s && e) {
-            if (s.getTime() >= e.getTime()) {
-              failed++;
-              failures.push({ cell, username, reason: "invalid_date_range" });
-              continue;
+            const now = new Date();
+            // 规则：开始时间晚于结束时间，或结束时间已过期 -> 按无订阅处理
+            if (s.getTime() < e.getTime() && e.getTime() > now.getTime()) {
+              planId = plan.id;
+              startAt = s;
+              endAt = e;
             }
-            planId = plan.id;
-            startAt = s;
-            endAt = e;
           }
-          // if plan filled but start/end missing => treat as no plan
+          // if plan filled but start/end missing/非法/过期/范围错误 => treat as no plan
         }
       }
 
