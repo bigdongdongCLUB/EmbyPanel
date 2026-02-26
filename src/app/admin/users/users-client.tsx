@@ -141,6 +141,13 @@ export function UsersClient() {
   const [importError, setImportError] = useState<string | null>(null);
   const [importServers, setImportServers] = useState<EmbyServerOption[]>([]);
   const [importPlans, setImportPlans] = useState<PlanOption[]>([]);
+
+  const [csvImportOpen, setCsvImportOpen] = useState(false);
+  const [csvImportLoading, setCsvImportLoading] = useState(false);
+  const [csvImportError, setCsvImportError] = useState<string | null>(null);
+  const [csvImportPlans, setCsvImportPlans] = useState<PlanOption[]>([]);
+  const [csvFileName, setCsvFileName] = useState("");
+  const [csvText, setCsvText] = useState("");
   const [importServerId, setImportServerId] = useState("");
   const [importDefaultPassword, setImportDefaultPassword] = useState("");
   const [importPlanId, setImportPlanId] = useState("");
@@ -286,6 +293,24 @@ export function UsersClient() {
     }
   }
 
+  async function openCsvImportModal() {
+    setCsvImportOpen(true);
+    setCsvImportError(null);
+    setCsvImportLoading(true);
+    setCsvText("");
+    setCsvFileName("");
+    try {
+      const res = await fetch("/api/admin/plans", { cache: "no-store" });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
+      setCsvImportPlans((json?.plans ?? []).map((p: any) => ({ id: p.id, name: p.name })));
+    } catch (e: any) {
+      setCsvImportError(e?.message ?? "load_failed");
+    } finally {
+      setCsvImportLoading(false);
+    }
+  }
+
   const importSelectedIds = useMemo(() => Object.keys(importSelectedEmbyUsers).filter((id) => importSelectedEmbyUsers[id]), [importSelectedEmbyUsers]);
 
   async function loadEmbyUserListForImport() {
@@ -365,6 +390,16 @@ export function UsersClient() {
                   }}
                 >
                   从 Emby 导入用户
+                </button>
+
+                <button
+                  className="w-full text-left px-2 py-2 hover:bg-gray-50 rounded"
+                  onClick={() => {
+                    setMoreOpen(false);
+                    openCsvImportModal().catch((err) => alert(err?.message ?? String(err)));
+                  }}
+                >
+                  从 CSV 模板导入用户
                 </button>
 
                 <button
@@ -1183,6 +1218,106 @@ export function UsersClient() {
                     setImportError(e?.message ?? "import_failed");
                   } finally {
                     setImportLoading(false);
+                  }
+                }}
+              >
+                开始导入
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {csvImportOpen ? (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 overflow-y-auto z-50">
+          <div className="bg-white rounded-lg w-full max-w-[760px] p-4 max-h-[90vh] overflow-y-auto">
+            <div className="text-lg font-semibold">从 CSV 模板导入用户</div>
+            {csvImportError ? <pre className="mt-2 text-xs text-red-600 whitespace-pre-wrap">{csvImportError}</pre> : null}
+
+            <div className="mt-4 space-y-4">
+              <div>
+                <label className="text-sm">分配订阅计划（可选）</label>
+                <select className="mt-1 w-full border rounded px-3 py-2" disabled={csvImportLoading}>
+                  <option value="">不分配（按 CSV 每行计划名称匹配）</option>
+                  {csvImportPlans.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <label className="border bg-white rounded px-4 py-2 cursor-pointer inline-flex items-center gap-2">
+                  <span>⤴</span>
+                  <span>选择 CSV 文件</span>
+                  <input
+                    type="file"
+                    accept=".csv,text/csv"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const f = e.target.files?.[0];
+                      if (!f) return;
+                      const txt = await f.text();
+                      setCsvFileName(f.name);
+                      setCsvText(txt);
+                    }}
+                  />
+                </label>
+
+                <button
+                  className="border bg-white rounded px-4 py-2"
+                  onClick={() => {
+                    const tpl = "用户名,面板密码,订阅计划,开始时间,结束时间\n" +
+                      "testuser1,Xxxx1234,BestEmby,2025/1/15,2026/1/15\n" +
+                      "testuser2,Xxxx1234,BestEmby,2025/1/15,2026/1/15\n";
+                    const blob = new Blob([tpl], { type: "text/csv;charset=utf-8;" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = "embypanel-users-template.csv";
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    URL.revokeObjectURL(url);
+                  }}
+                >
+                  ⤓ 下载 CSV 模板
+                </button>
+              </div>
+
+              <div className="text-xs text-gray-600">{csvFileName ? `已选择：${csvFileName}` : "未选择文件"}</div>
+
+              <div className="text-xs text-gray-600 bg-gray-50 border rounded p-2">
+                列格式：用户名,面板密码,订阅计划,开始时间,结束时间。最多 1000 行（不含表头）。
+              </div>
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button className="border bg-white rounded px-3 py-2" onClick={() => setCsvImportOpen(false)}>
+                取消
+              </button>
+              <button
+                className="bg-gray-700 text-white rounded px-3 py-2 disabled:opacity-50"
+                disabled={!csvText.trim() || csvImportLoading}
+                onClick={async () => {
+                  setCsvImportLoading(true);
+                  setCsvImportError(null);
+                  try {
+                    const res = await fetch("/api/admin/users/import-from-csv", {
+                      method: "POST",
+                      headers: { "content-type": "application/json" },
+                      body: JSON.stringify({ csv: csvText }),
+                    });
+                    const json = await res.json().catch(() => null);
+                    if (!res.ok) throw new Error(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
+
+                    const failRows = (json.failures ?? []).map((x: any) => x.cell).join(", ");
+                    alert(`导入完成：成功${json.success} 跳过${json.skipped} 失败${json.failed}${failRows ? `\n失败位置：${failRows}` : ""}`);
+                    setCsvImportOpen(false);
+                    await refresh();
+                  } catch (e: any) {
+                    setCsvImportError(e?.message ?? "import_failed");
+                  } finally {
+                    setCsvImportLoading(false);
                   }
                 }}
               >
