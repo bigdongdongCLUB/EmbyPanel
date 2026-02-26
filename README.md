@@ -31,11 +31,11 @@
 <table>
 <tr>
 <td width="120"><b>🔹 TG </b></td>
-<td><a href="https://t.me/bigdongdong">@linkemby</a></td>
+<td><a href="https://t.me/bigdongdong">@bigdongdong</a></td>
 </tr>
 <tr>
 <td width="120"><b>🔹 TG 群组</b></td>
-<td><a href="https://t.me/bigdongdongGroup">@linkemby_chat</a></td>
+<td><a href="https://t.me/bigdongdongGroup">@BDD@Tech</a></td>
 </tr>
 <tr>
 <td><b>🔹 邮箱</b></td>
