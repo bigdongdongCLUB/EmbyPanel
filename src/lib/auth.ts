@@ -19,7 +19,7 @@ export const authOptions: NextAuthOptions = {
         const password = credentials?.password?.toString() ?? "";
         if (!username || !password) return null;
 
-        const user = await prisma.user.findUnique({ where: { username } });
+        const user = await prisma.user.findFirst({ where: { username: { equals: username, mode: "insensitive" } } });
         if (!user) return null;
 
         const ok = await verifyPassword(password, user.passwordHash);

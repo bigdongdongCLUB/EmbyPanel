@@ -132,6 +132,7 @@ export async function POST(req: Request) {
     const cols = parseCsvLine(lines[i]);
 
     const username = String(cols[0] ?? "").trim();
+    const usernameKey = username.toLowerCase();
     const panelPassword = String(cols[1] ?? "").trim();
     const planName = String(cols[2] ?? "").trim();
     const startRaw = String(cols[3] ?? "").trim();
@@ -154,7 +155,14 @@ export async function POST(req: Request) {
         continue;
       }
 
-      if (existingPanelUsernames.has(username.toLowerCase())) {
+      if (existingPanelUsernames.has(usernameKey)) {
+        skipped++;
+        continue;
+      }
+
+      const existsNow = await prisma.user.findFirst({ where: { username: { equals: username, mode: "insensitive" } }, select: { id: true } });
+      if (existsNow) {
+        existingPanelUsernames.add(usernameKey);
         skipped++;
         continue;
       }
@@ -199,7 +207,7 @@ export async function POST(req: Request) {
         select: { id: true },
       });
 
-      existingPanelUsernames.add(username.toLowerCase());
+      existingPanelUsernames.add(usernameKey);
 
       if (planId && startAt && endAt) {
         const sub = await prisma.subscription.create({
