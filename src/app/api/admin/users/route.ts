@@ -180,6 +180,9 @@ export async function POST(req: Request) {
   const parsed = CreateSchema.safeParse(json);
   if (!parsed.success) return NextResponse.json({ error: "invalid_payload" }, { status: 400 });
 
+  const exists = await prisma.user.findFirst({ where: { username: { equals: parsed.data.username.trim(), mode: "insensitive" } }, select: { id: true } });
+  if (exists) return NextResponse.json({ error: "username_taken" }, { status: 409 });
+
   const passwordHash = await hashPassword(parsed.data.password);
 
   let enc;

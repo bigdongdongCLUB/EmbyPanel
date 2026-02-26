@@ -104,7 +104,7 @@ export async function POST(req: Request) {
 
     if (missingOnly && existingUsernames.has(name.toLowerCase())) {
       // ensure link exists
-      const user = await prisma.user.findUnique({ where: { username: name }, select: { id: true } });
+      const user = await prisma.user.findFirst({ where: { username: { equals: name, mode: "insensitive" } }, select: { id: true } });
       if (user && !existingLinks.has(embyUserId)) {
         await prisma.embyUserLink.upsert({
           where: { userId_embyServerId: { userId: user.id, embyServerId } },

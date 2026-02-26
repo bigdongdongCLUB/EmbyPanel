@@ -86,7 +86,7 @@ export async function POST(req: Request) {
     });
   }
 
-  const existingUsername = await prisma.user.findUnique({ where: { username } });
+  const existingUsername = await prisma.user.findFirst({ where: { username: { equals: username, mode: "insensitive" } }, select: { id: true } });
   if (existingUsername) {
     return NextResponse.json({ error: "username_taken" }, { status: 409 });
   }
