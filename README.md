@@ -6,7 +6,7 @@
 
 基于 Next.js 打造 · 用户门户 + 管理后台双界面架构 · 高效管理订阅、用户与运维流程
 
-![LinkEmby Main Interface]<img width="3060" height="1570" alt="ScreenShot_2026-02-26_140841_827" src="https://github.com/user-attachments/assets/d2edef28-0868-4510-8229-62ee292433c0" />
+<img width="3060" height="1570" alt="ScreenShot_2026-02-26_140841_827" src="https://github.com/user-attachments/assets/d2edef28-0868-4510-8229-62ee292433c0" />
 
 
 [![License](https://img.shields.io/badge/License-Commercial-blue.svg)](https://t.me/berlin_lab)
