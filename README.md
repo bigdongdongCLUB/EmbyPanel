@@ -164,18 +164,8 @@ curl -fsSL https://raw.githubusercontent.com/bigdongdongCLUB/EmbyPanel/main/scri
 运行卸载脚本：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/linkemby/linkemby-deploy/main/uninstall.sh | bash
+curl -fsSL https://raw.githubusercontent.com/bigdongdongCLUB/EmbyPanel/main/scripts/uninstall.sh | bash
 ```
-
-<details>
-<summary>🌏 国内用户加速（点击展开）</summary>
-
-```bash
-curl -fsSL "https://ghfast.top/https://raw.githubusercontent.com/linkemby/linkemby-deploy/main/uninstall.sh" | bash
-```
-
-</details>
-
 <details>
 <summary>📋 卸载选项说明（点击展开）</summary>
 
