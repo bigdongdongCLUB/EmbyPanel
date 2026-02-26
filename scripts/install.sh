@@ -86,12 +86,12 @@ interactive_config() {
   default_url="http://${host_ip}:${WEB_PORT}"
   APP_URL="$(prompt_with_default '请输入对外访问地址 NEXTAUTH_URL（可用域名）' "${APP_URL:-$default_url}")"
 
-  printf "\n已确认参数：\n" > /dev/tty
-  printf "- 安装目录: %s\n" "$APP_DIR" > /dev/tty
-  printf "- Web端口: %s\n" "$WEB_PORT" > /dev/tty
-  printf "- PostgreSQL端口: %s\n" "$POSTGRES_PORT" > /dev/tty
-  printf "- Redis端口: %s\n" "$REDIS_PORT" > /dev/tty
-  printf "- NEXTAUTH_URL: %s\n\n" "$APP_URL" > /dev/tty
+  printf -- "\n已确认参数：\n" > /dev/tty
+  printf -- "- 安装目录: %s\n" "$APP_DIR" > /dev/tty
+  printf -- "- Web端口: %s\n" "$WEB_PORT" > /dev/tty
+  printf -- "- PostgreSQL端口: %s\n" "$POSTGRES_PORT" > /dev/tty
+  printf -- "- Redis端口: %s\n" "$REDIS_PORT" > /dev/tty
+  printf -- "- NEXTAUTH_URL: %s\n\n" "$APP_URL" > /dev/tty
 }
 
 format_version_from_count() {
