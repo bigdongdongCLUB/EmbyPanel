@@ -52,7 +52,7 @@ export async function POST(req: Request) {
       const ms = Date.now() - t0;
       if (r.ok) {
         okCount += 1;
-        await prisma.embyServer.update({ where: { id: s.id }, data: { lastHealthAt: now, lastHealthOk: true, lastHealthMsg: `OK ${ms}ms` } });
+        await prisma.embyServer.update({ where: { id: s.id }, data: { lastHealthAt: now, lastHealthOk: true, lastHealthMsg: `${ms}ms` } });
       } else {
         failCount += 1;
         await prisma.embyServer.update({ where: { id: s.id }, data: { lastHealthAt: now, lastHealthOk: false, lastHealthMsg: errText((r as any).error || (r as any).status || "health_check_failed") } });

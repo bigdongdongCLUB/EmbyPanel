@@ -44,7 +44,7 @@ function resultText(ok: boolean | null, message?: string | null) {
       const j = JSON.parse(message);
       if (typeof j?.createdEvents === "number") return `成功：异常${j.createdEvents}，扫描${j.scannedSessions ?? 0}`;
       if (typeof j?.unbanned === "number") return `成功：解禁${j.unbanned}，跳过${j.skipped ?? 0}`;
-      if (typeof j?.okCount === "number") return `成功：健康OK ${j.okCount}，失败${j.failCount ?? 0}`;
+      if (typeof j?.okCount === "number") return `成功：健康 ${j.okCount}，失败${j.failCount ?? 0}`;
       if (typeof j?.linksDisabled === "number") return `成功：禁用${j.linksDisabled}，告警${j.apiWarnings ?? 0}`;
       if (typeof j?.sent === "number") return `成功：已发送${j.sent}`;
       if (typeof j?.snapshotsDeleted === "number") return `成功：快照清理${j.snapshotsDeleted}，任务日志清理${j.jobRunsDeleted ?? 0}`;
