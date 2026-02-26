@@ -127,6 +127,10 @@ export function UsersClient() {
 
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const selectedIds = useMemo(() => Object.keys(selected).filter((id) => selected[id]), [selected]);
+  const hasSelectedAdmin = useMemo(() => {
+    const selectedSet = new Set(selectedIds);
+    return rows.some((r) => selectedSet.has(r.id) && r.role === "ADMIN");
+  }, [rows, selectedIds]);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -999,6 +1003,7 @@ export function UsersClient() {
             <div className="mt-2 text-sm font-medium">确定要批量删除所选用户吗？</div>
             <div className="mt-2 text-lg text-red-500 font-semibold">此操作将永久删除用户，不可恢复！</div>
             <div className="mt-1 text-sm text-gray-600">数量：{selectedIds.length}</div>
+            {hasSelectedAdmin ? <div className="mt-1 text-sm text-gray-400">已包含管理员账号，批量删除不可执行</div> : null}
 
             <label className="mt-3 flex items-center gap-2 text-sm">
               <input
@@ -1015,8 +1020,8 @@ export function UsersClient() {
                 取消
               </button>
               <button
-                className="bg-gray-700 text-white rounded px-3 py-1 text-sm disabled:opacity-60"
-                disabled={bulkDeleteLoading || !selectedIds.length}
+                className="bg-gray-700 text-white rounded px-3 py-1 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                disabled={bulkDeleteLoading || !selectedIds.length || hasSelectedAdmin}
                 onClick={async () => {
                   setBulkDeleteLoading(true);
                   try {
