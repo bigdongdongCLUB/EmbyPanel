@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { ToggleSwitch } from "../../settings/toggle-switch";
 
 type PenaltyConfig = { enabled: boolean; durationMinutes: number };
 type PenaltyRecord = {
@@ -100,7 +101,7 @@ export function MonitoringPenaltiesClient() {
 
         <label className="flex items-center gap-2 text-sm text-gray-700">
           启用处罚
-          <input type="checkbox" checked={penaltyEnabled} onChange={(e) => setPenaltyEnabled(e.target.checked)} />
+          <ToggleSwitch checked={penaltyEnabled} onChange={setPenaltyEnabled} textOn="已启用" textOff="已禁用" />
         </label>
 
         <select className="border rounded px-3 py-2" value={String(penaltyDuration)} onChange={(e) => setPenaltyDuration(Number(e.target.value))}>

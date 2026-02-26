@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { ToggleSwitch } from "../settings/toggle-switch";
 
 type ServerOption = { id: string; name: string; enabled: boolean };
 
@@ -131,7 +132,7 @@ export function RealtimeMonitorClient() {
 
         <label className="flex items-center gap-2 text-sm text-gray-700 ml-2">
           自动刷新（{intervalSec}秒）
-          <input type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} />
+          <ToggleSwitch checked={autoRefresh} onChange={setAutoRefresh} textOn="已启用" textOff="已禁用" />
         </label>
 
         {loading ? <div className="text-sm text-gray-500">加载中…</div> : null}
