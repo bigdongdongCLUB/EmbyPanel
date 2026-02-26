@@ -6,8 +6,8 @@
 
 基于 Next.js 打造 · 用户门户 + 管理后台双界面架构 · 高效管理订阅、用户与运维流程
 
-![LinkEmby Main Interface](<img width="3060" height="1570" alt="ScreenShot_2026-02-26_140841_827" src="https://github.com/user-attachments/assets/f0f6a333-ef16-4dd4-9d2c-42ae89f0bddf" />
-)
+![LinkEmby Main Interface]<img width="3060" height="1570" alt="ScreenShot_2026-02-26_140841_827" src="https://github.com/user-attachments/assets/d2edef28-0868-4510-8229-62ee292433c0" />
+
 
 [![License](https://img.shields.io/badge/License-Commercial-blue.svg)](https://t.me/berlin_lab)
 [![Docker](https://img.shields.io/badge/Docker-20.10+-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
