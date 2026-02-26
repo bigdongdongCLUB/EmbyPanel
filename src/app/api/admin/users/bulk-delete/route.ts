@@ -7,6 +7,7 @@ import { requireAdmin } from "@/lib/admin";
 
 const Schema = z.object({
   ids: z.array(z.string().min(1)).min(1),
+  syncDeleteEmby: z.boolean().optional().default(true),
 });
 
 export async function POST(req: Request) {
@@ -21,7 +22,11 @@ export async function POST(req: Request) {
 
   for (const id of parsed.data.ids) {
     try {
-      const res = await fetch(new URL(`/api/admin/users/${id}/delete`, req.url).toString(), { method: "POST" });
+      const res = await fetch(new URL(`/api/admin/users/${id}/delete`, req.url).toString(), {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ syncDeleteEmby: parsed.data.syncDeleteEmby }),
+      });
       const txt = await res.text();
       if (!res.ok) {
         results.push({ id, ok: false, status: res.status, error: txt });

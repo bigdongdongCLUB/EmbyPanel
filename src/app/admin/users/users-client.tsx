@@ -136,6 +136,10 @@ export function UsersClient() {
   const [deleteSyncEmby, setDeleteSyncEmby] = useState(true);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
+  const [bulkDeleteSyncEmby, setBulkDeleteSyncEmby] = useState(true);
+  const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
+
   const [importOpen, setImportOpen] = useState(false);
   const [importLoading, setImportLoading] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
@@ -417,32 +421,10 @@ export function UsersClient() {
                 <button
                   className="w-full text-left px-2 py-2 hover:bg-red-50 text-red-600 rounded disabled:opacity-50"
                   disabled={!selectedIds.length}
-                  onClick={async () => {
+                  onClick={() => {
                     setMoreOpen(false);
-                    if (!(await (window as any).showConfirm(`确定批量删除所选用户？
-将同步删除 Emby 服务器对应用户。
-数量：${selectedIds.length}`))) return;
-
-                    const res = await fetch("/api/admin/users/bulk-delete", {
-                      method: "POST",
-                      headers: { "content-type": "application/json" },
-                      body: JSON.stringify({ ids: selectedIds }),
-                    });
-                    const json = await res.json().catch(() => null);
-                    if (!res.ok) {
-                      alert(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
-                      return;
-                    }
-
-                    const failed = (json.results ?? []).filter((r: any) => !r.ok);
-                    if (failed.length) {
-                      alert(`批量删除完成，但有失败：${failed.length} 个。\n` + failed.map((x: any) => `${x.id}: ${x.status ?? ""} ${x.error ?? ""}`).join("\n"));
-                    } else {
-                      alert("批量删除成功");
-                    }
-
-                    setSelected({});
-                    await refresh();
+                    setBulkDeleteSyncEmby(true);
+                    setBulkDeleteConfirmOpen(true);
                   }}
                 >
                   批量删除
@@ -973,6 +955,73 @@ export function UsersClient() {
               </button>
               <button className="border bg-white rounded px-3 py-2" disabled={bulkAddLoading} onClick={() => setBulkAddOpen(false)}>
                 取消
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {bulkDeleteConfirmOpen ? (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-2 z-[60]">
+          <div className="bg-white rounded-lg w-full max-w-md p-2 border shadow-lg">
+            <div className="flex items-center justify-between">
+              <div className="text-lg font-semibold">删除用户</div>
+              <button className="text-lg text-gray-400 hover:text-gray-700" onClick={() => setBulkDeleteConfirmOpen(false)}>
+                ×
+              </button>
+            </div>
+
+            <div className="mt-2 text-sm font-medium">确定要批量删除所选用户吗？</div>
+            <div className="mt-2 text-lg text-red-500 font-semibold">此操作将永久删除用户，不可恢复！</div>
+            <div className="mt-1 text-sm text-gray-600">数量：{selectedIds.length}</div>
+
+            <label className="mt-3 flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="h-4 w-4"
+                checked={bulkDeleteSyncEmby}
+                onChange={(e) => setBulkDeleteSyncEmby(e.target.checked)}
+              />
+              同步删除所有Emby服务器上的对应用户
+            </label>
+
+            <div className="mt-3 flex justify-end gap-2">
+              <button className="border bg-white rounded px-3 py-1 text-sm" disabled={bulkDeleteLoading} onClick={() => setBulkDeleteConfirmOpen(false)}>
+                取消
+              </button>
+              <button
+                className="bg-gray-700 text-white rounded px-3 py-1 text-sm disabled:opacity-60"
+                disabled={bulkDeleteLoading || !selectedIds.length}
+                onClick={async () => {
+                  setBulkDeleteLoading(true);
+                  try {
+                    const res = await fetch("/api/admin/users/bulk-delete", {
+                      method: "POST",
+                      headers: { "content-type": "application/json" },
+                      body: JSON.stringify({ ids: selectedIds, syncDeleteEmby: bulkDeleteSyncEmby }),
+                    });
+                    const json = await res.json().catch(() => null);
+                    if (!res.ok) {
+                      alert(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
+                      return;
+                    }
+
+                    const failed = (json.results ?? []).filter((r: any) => !r.ok);
+                    if (failed.length) {
+                      alert(`批量删除完成，但有失败：${failed.length} 个。\n` + failed.map((x: any) => `${x.id}: ${x.status ?? ""} ${x.error ?? ""}`).join("\n"));
+                    } else {
+                      alert("批量删除成功");
+                    }
+
+                    setBulkDeleteConfirmOpen(false);
+                    setSelected({});
+                    await refresh();
+                  } finally {
+                    setBulkDeleteLoading(false);
+                  }
+                }}
+              >
+                确定删除
               </button>
             </div>
           </div>
