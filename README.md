@@ -20,7 +20,7 @@
 
 ## 🎯 该面板完全仿制于linkEmby项目
 
-**linkEmby项目地址**: [LinkEmby](https://github.com/linkemby/linkemby-deploy)
+**LinkEmby项目地址**: [LinkEmby](https://github.com/linkemby/linkemby-deploy)
 
 > 💡 由[openclaw（ChatGPT-codx）](https://openclaw.ai/)完成全部代码
 
