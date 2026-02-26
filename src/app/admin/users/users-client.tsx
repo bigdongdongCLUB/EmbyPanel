@@ -1246,7 +1246,7 @@ export function UsersClient() {
               </div>
 
               <div className="flex flex-wrap gap-3">
-                <label className="w-[130px] h-10 border bg-white rounded px-3 cursor-pointer inline-flex items-center justify-center gap-1.5 text-sm">
+                <label className="w-[130px] h-10 border bg-white rounded px-2 cursor-pointer inline-flex items-center justify-center gap-1 text-xs whitespace-nowrap">
                   <img src="/icons/csv-select.svg" alt="选择CSV文件" className="h-4 w-4" />
                   <span>选择 CSV 文件</span>
                   <input
