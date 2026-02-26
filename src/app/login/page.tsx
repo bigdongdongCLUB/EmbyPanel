@@ -196,11 +196,7 @@ export default function LoginPage() {
       >
         <div className="flex flex-col items-center text-center">
           <div className="flex items-center gap-2">
-            {siteLogoDataUrl ? (
-              <img src={siteLogoDataUrl} alt="logo" className="h-10 w-10 rounded-full object-cover" />
-            ) : (
-              <div className="h-9 w-9 rounded-full bg-red-600 text-white text-[10px] flex items-center justify-center font-bold">BigTv</div>
-            )}
+            <img src={siteLogoDataUrl || "/logo.png"} alt="logo" className="h-10 w-10 rounded-full object-cover" />
             <div className="text-2xl font-semibold tracking-tight">{siteName}</div>
           </div>
           <p className="text-gray-500 mt-1 text-sm">{siteDescription}</p>
