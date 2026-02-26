@@ -81,8 +81,7 @@ interactive_config() {
 
   local default_url=""
   local host_ip
-  host_ip="$(hostname -I 2>/dev/null | awk '{print $1}')"
-  [ -n "$host_ip" ] || host_ip="127.0.0.1"
+  host_ip="$(detect_default_host_ip)"
   default_url="http://${host_ip}:${WEB_PORT}"
   APP_URL="$(prompt_with_default '请输入对外访问地址 NEXTAUTH_URL（可用域名）' "${APP_URL:-$default_url}")"
 
@@ -100,6 +99,26 @@ format_version_from_count() {
   local minor=$(((count % 10000) / 100))
   local patch=$((count % 100))
   printf 'v%02d.%02d.%02d' "$major" "$minor" "$patch"
+}
+
+detect_public_ip() {
+  local ip=""
+  ip="$(curl -fsSL --max-time 3 https://api.ipify.org 2>/dev/null || true)"
+  if [ -z "$ip" ]; then ip="$(curl -fsSL --max-time 3 https://ifconfig.me/ip 2>/dev/null || true)"; fi
+  if [ -z "$ip" ]; then ip="$(curl -fsSL --max-time 3 https://ipinfo.io/ip 2>/dev/null || true)"; fi
+  printf "%s" "$ip"
+}
+
+detect_default_host_ip() {
+  local ip=""
+  ip="$(detect_public_ip)"
+  if [ -n "$ip" ]; then
+    printf "%s" "$ip"
+    return 0
+  fi
+  ip="$(hostname -I 2>/dev/null | awk '{print $1}')"
+  [ -n "$ip" ] || ip="127.0.0.1"
+  printf "%s" "$ip"
 }
 
 install_docker_if_needed() {
@@ -158,8 +177,7 @@ EOF
   fi
 
   local host_ip
-  host_ip="$(hostname -I 2>/dev/null | awk '{print $1}')"
-  [ -n "$host_ip" ] || host_ip="127.0.0.1"
+  host_ip="$(detect_default_host_ip)"
 
   local nextauth_url="${APP_URL:-http://${host_ip}:${WEB_PORT}}"
   local nextauth_secret encryption_key jobs_secret pg_pass redis_pass app_version commit_count
