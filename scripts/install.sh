@@ -85,6 +85,25 @@ read_env_value() {
   grep -E "^${key}=" "$file" | tail -n1 | cut -d= -f2-
 }
 
+preload_app_dir_from_cache() {
+  if [ -f "$INSTALL_CACHE_FILE" ]; then
+    local cached
+    cached="$(read_env_value "$INSTALL_CACHE_FILE" "APP_DIR")"
+    if [ -n "$cached" ]; then
+      APP_DIR="$cached"
+      return 0
+    fi
+  fi
+
+  # 兜底：自动探测常见目录
+  for d in /home/docker/embypanel /opt/embypanel; do
+    if [ -f "$d/docker-compose.yml" ] && [ -f "$d/.env" ]; then
+      APP_DIR="$d"
+      return 0
+    fi
+  done
+}
+
 load_defaults_from_existing_env() {
   local env_file="$APP_DIR/.env"
   [ -f "$env_file" ] || return 0
@@ -284,6 +303,7 @@ main() {
   need_cmd git
   need_cmd openssl
 
+  preload_app_dir_from_cache
   interactive_config
   install_docker_if_needed
 
