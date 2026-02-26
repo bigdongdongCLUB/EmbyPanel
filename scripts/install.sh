@@ -67,6 +67,27 @@ prompt_with_default() {
   printf "%s" "$ans"
 }
 
+read_env_value() {
+  local file="$1"
+  local key="$2"
+  [ -f "$file" ] || return 0
+  grep -E "^${key}=" "$file" | tail -n1 | cut -d= -f2-
+}
+
+load_defaults_from_existing_env() {
+  local env_file="$APP_DIR/.env"
+  [ -f "$env_file" ] || return 0
+
+  WEB_PORT="$(read_env_value "$env_file" "WEB_PORT")"
+  POSTGRES_PORT="$(read_env_value "$env_file" "POSTGRES_PORT")"
+  REDIS_PORT="$(read_env_value "$env_file" "REDIS_PORT")"
+  APP_URL="$(read_env_value "$env_file" "NEXTAUTH_URL")"
+
+  [ -n "$WEB_PORT" ] || WEB_PORT="3000"
+  [ -n "$POSTGRES_PORT" ] || POSTGRES_PORT="5432"
+  [ -n "$REDIS_PORT" ] || REDIS_PORT="6379"
+}
+
 interactive_config() {
   if ! has_tty; then
     log "未检测到交互终端，使用默认参数。"
@@ -75,6 +96,10 @@ interactive_config() {
 
   printf "\n==== 安装参数配置 ====\n" > /dev/tty
   APP_DIR="$(prompt_with_default '请输入安装目录' "$APP_DIR")"
+
+  # 如果该目录已安装过，端口/NEXTAUTH_URL 默认值采用已有配置
+  load_defaults_from_existing_env
+
   WEB_PORT="$(prompt_with_default '请输入 Web 端口' "$WEB_PORT")"
   POSTGRES_PORT="$(prompt_with_default '请输入 PostgreSQL 端口' "$POSTGRES_PORT")"
   REDIS_PORT="$(prompt_with_default '请输入 Redis 端口' "$REDIS_PORT")"
@@ -149,9 +174,21 @@ prepare_repo() {
   fi
 }
 
+ensure_env_key() {
+  local key="$1"
+  local value="$2"
+  if grep -q "^${key}=" .env; then
+    sed -i.bak "s|^${key}=.*|${key}=${value}|" .env
+  else
+    echo "${key}=${value}" >> .env
+  fi
+}
+
 init_env() {
   cd "$APP_DIR"
+  local fresh_install=0
   if [ ! -f .env ]; then
+    fresh_install=1
     if [ -f .env.example ]; then
       cp .env.example .env
       ok "已基于 .env.example 生成 .env"
@@ -180,30 +217,24 @@ EOF
   host_ip="$(detect_default_host_ip)"
 
   local nextauth_url="${APP_URL:-http://${host_ip}:${WEB_PORT}}"
-  local nextauth_secret encryption_key jobs_secret pg_pass redis_pass app_version commit_count
-  nextauth_secret="$(openssl rand -base64 32)"
-  encryption_key="$(openssl rand -base64 32)"
-  jobs_secret="$(openssl rand -hex 24)"
-  pg_pass="$(openssl rand -hex 12)"
-  redis_pass="$(openssl rand -hex 12)"
+  local app_version commit_count
   commit_count="$(git rev-list --count HEAD 2>/dev/null || echo 0)"
   app_version="$(format_version_from_count "${commit_count:-0}")"
 
-  sed -i.bak \
-    -e "s|^WEB_PORT=.*|WEB_PORT=${WEB_PORT}|" \
-    -e "s|^POSTGRES_PORT=.*|POSTGRES_PORT=${POSTGRES_PORT}|" \
-    -e "s|^REDIS_PORT=.*|REDIS_PORT=${REDIS_PORT}|" \
-    -e "s|^NEXTAUTH_URL=.*|NEXTAUTH_URL=${nextauth_url}|" \
-    -e "s|^NEXTAUTH_SECRET=.*|NEXTAUTH_SECRET=${nextauth_secret}|" \
-    -e "s|^EMBYPANEL_ENCRYPTION_KEY=.*|EMBYPANEL_ENCRYPTION_KEY=${encryption_key}|" \
-    -e "s|^INTERNAL_JOBS_SECRET=.*|INTERNAL_JOBS_SECRET=${jobs_secret}|" \
-    -e "s|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=${pg_pass}|" \
-    -e "s|^REDIS_PASSWORD=.*|REDIS_PASSWORD=${redis_pass}|" \
-    -e "s|^NEXT_PUBLIC_APP_VERSION=.*|NEXT_PUBLIC_APP_VERSION=${app_version}|" \
-    .env
+  # 基础可配置项：安装/升级都允许更新
+  ensure_env_key "WEB_PORT" "$WEB_PORT"
+  ensure_env_key "POSTGRES_PORT" "$POSTGRES_PORT"
+  ensure_env_key "REDIS_PORT" "$REDIS_PORT"
+  ensure_env_key "NEXTAUTH_URL" "$nextauth_url"
+  ensure_env_key "NEXT_PUBLIC_APP_VERSION" "$app_version"
 
-  if ! grep -q '^NEXT_PUBLIC_APP_VERSION=' .env; then
-    echo "NEXT_PUBLIC_APP_VERSION=${app_version}" >> .env
+  # 首装才随机生成敏感信息；升级不覆盖已有密钥
+  if [ "$fresh_install" -eq 1 ]; then
+    ensure_env_key "NEXTAUTH_SECRET" "$(openssl rand -base64 32)"
+    ensure_env_key "EMBYPANEL_ENCRYPTION_KEY" "$(openssl rand -base64 32)"
+    ensure_env_key "INTERNAL_JOBS_SECRET" "$(openssl rand -hex 24)"
+    ensure_env_key "POSTGRES_PASSWORD" "$(openssl rand -hex 12)"
+    ensure_env_key "REDIS_PASSWORD" "$(openssl rand -hex 12)"
   fi
 
   rm -f .env.bak
@@ -223,6 +254,18 @@ wait_for_postgres() {
   return 1
 }
 
+run_integrity_checks() {
+  log "执行完整性与功能性检查..."
+  dc ps >/dev/null 2>&1 || warn "docker compose 状态读取失败（将继续）"
+  if [ -f "$APP_DIR/.env" ]; then
+    for k in NEXTAUTH_URL NEXTAUTH_SECRET EMBYPANEL_ENCRYPTION_KEY POSTGRES_PASSWORD REDIS_PASSWORD; do
+      if ! grep -q "^${k}=" "$APP_DIR/.env"; then
+        warn "缺少关键配置：${k}"
+      fi
+    done
+  fi
+}
+
 main() {
   print_banner
 
@@ -232,24 +275,35 @@ main() {
 
   interactive_config
   install_docker_if_needed
+
+  local installed_before=0
+  if [ -d "$APP_DIR/.git" ] || [ -f "$APP_DIR/.env" ]; then
+    installed_before=1
+    log "检测到已安装过 EmbyPanel，将执行升级流程。"
+  else
+    log "未检测到历史安装，将执行首次安装流程。"
+  fi
+
   prepare_repo
   cd "$APP_DIR"
   init_env
+
+  if [ "$installed_before" -eq 1 ]; then
+    run_integrity_checks
+  fi
 
   log "启动数据库与 Redis..."
   dc up -d db redis
   wait_for_postgres
 
-  log "构建并启动 Web 服务..."
-  dc up -d --build web
+  log "构建并启动 Web（Worker 复用同一镜像）..."
+  dc build web
+  dc up -d web worker
 
   log "执行数据库迁移..."
   dc run --rm web npx prisma migrate deploy
 
-  log "启动 Worker..."
-  dc up -d worker
-
-  ok "部署完成"
+  ok "部署/升级完成"
   dc ps
   echo
   log "访问地址：$(grep -E '^NEXTAUTH_URL=' .env | cut -d= -f2-)"
