@@ -368,7 +368,7 @@ export function SubscriptionsClient() {
             {plans.map((p) => (
               <tr key={p.id} className="border-b">
                 <td className="py-2 px-3 font-medium">{p.name}</td>
-                <td className="py-2 px-3">{p.enabled ? "售卖" : "停卖"}</td>
+                <td className="py-2 px-3">{p.enabled ? "售卖" : "停售"}</td>
                 <td className="py-2 px-3">{p.serverConfigs?.length ?? 0}</td>
                 <td className="py-2 px-3">{p.subscriptionCount ?? "-"}</td>
                 <td className="py-2 px-3">{p.serverAssignStrategy === "ALL" ? "全部分配" : "负载均衡"}</td>
