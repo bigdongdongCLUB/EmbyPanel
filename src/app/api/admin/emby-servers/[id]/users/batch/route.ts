@@ -55,6 +55,23 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
             results.push({ id: embyUserId, ok: false, error: "emby_failed" });
             return;
           }
+
+          const linked = await prisma.embyUserLink.findFirst({ where: { embyServerId: server.id, embyUserId }, select: { userId: true } });
+          if (linked?.userId) {
+            const activeSub = await prisma.subscription.findFirst({
+              where: { userId: linked.userId, status: "ACTIVE" },
+              orderBy: { endAt: "desc" },
+              select: { id: true },
+            });
+            if (activeSub) {
+              await prisma.subscriptionServer.deleteMany({ where: { subscriptionId: activeSub.id, embyServerId: server.id } });
+              const remain = await prisma.subscriptionServer.count({ where: { subscriptionId: activeSub.id } });
+              if (remain === 0) {
+                await prisma.subscription.update({ where: { id: activeSub.id }, data: { status: "CANCELED", planId: null } });
+              }
+            }
+          }
+
           await prisma.embyUserLink.deleteMany({ where: { embyServerId: server.id, embyUserId } });
           results.push({ id: embyUserId, ok: true });
           return;
