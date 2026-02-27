@@ -25,6 +25,14 @@ export type CsvImportResult = {
   failures: Array<{ cell: string; username: string; reason: string }>;
 };
 
+function normalizePlanKey(v: string) {
+  return String(v || "")
+    .replace(/[\uFEFF\u200B\u200C\u200D\u00A0]/g, "")
+    .replace(/\s+/g, "")
+    .toLowerCase()
+    .trim();
+}
+
 function parseCsvLine(line: string) {
   const out: string[] = [];
   let cur = "";
@@ -58,9 +66,10 @@ function parseCsvLine(line: string) {
 }
 
 function parseDateLike(s: string): Date | null {
-  const raw = String(s || "").trim();
-  if (!raw) return null;
-  const m = raw.match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})$/);
+  const raw0 = String(s || "").replace(/\u00A0/g, " ").trim();
+  if (!raw0) return null;
+  const raw = raw0.replace(/^'+/, "").split(/[ T]/)[0]; // 兼容 Excel 导出的日期时间与前置单引号
+  const m = raw.match(/^(\d{4})[\/.\-](\d{1,2})[\/.\-](\d{1,2})$/);
   if (!m) return null;
   const y = Number(m[1]);
   const mo = Number(m[2]);
@@ -112,7 +121,7 @@ export async function runAdminCsvImport(
     prisma.user.findMany({ select: { username: true } }),
   ]);
 
-  const planByName = new Map(plans.map((p) => [p.name.trim().toLowerCase(), p] as const));
+  const planByName = new Map(plans.map((p) => [normalizePlanKey(p.name), p] as const));
   const serversByPlanId = new Map<string, string[]>();
   for (const cfg of planConfigs) {
     const arr = serversByPlanId.get(cfg.planId) ?? [];
@@ -167,7 +176,7 @@ export async function runAdminCsvImport(
       let endAt: Date | null = null;
       let expiredOnImport = false;
 
-      const csvPlan = planName ? planByName.get(planName.toLowerCase()) : null;
+      const csvPlan = planName ? planByName.get(normalizePlanKey(planName)) : null;
       const finalPlanId = csvPlan?.id ?? fallbackPlanId ?? null;
       if (finalPlanId) {
         const s = parseDateLike(startRaw);
