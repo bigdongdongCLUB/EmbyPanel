@@ -99,6 +99,9 @@ function UsersTable({
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [moreOpen, setMoreOpen] = useState(false);
   const [batchLoading, setBatchLoading] = useState(false);
+  const [deleteLogOpen, setDeleteLogOpen] = useState(false);
+  const [deleteProgress, setDeleteProgress] = useState({ total: 0, processed: 0, ok: 0, failed: 0, status: "idle" as "idle" | "running" | "done" | "stopped", logs: [] as string[] });
+  const deleteCancelRef = useRef(false);
   const moreRef = useRef<HTMLDivElement | null>(null);
 
   const filtered = useMemo(() => {
@@ -145,9 +148,15 @@ function UsersTable({
     };
   }, []);
 
-  async function runBatch(action: "disable" | "enable" | "delete") {
+  useEffect(() => {
+    return () => {
+      deleteCancelRef.current = true;
+    };
+  }, []);
+
+  async function runBatchToggle(action: "disable" | "enable") {
     if (!selectedIds.length || batchLoading) return;
-    const label = action === "disable" ? "批量禁用" : action === "enable" ? "批量启用" : "批量删除";
+    const label = action === "disable" ? "批量禁用" : "批量启用";
     if (!(await (window as any).showConfirm(`确定${label}已选 ${selectedIds.length} 个 Emby 用户吗？`))) return;
     setBatchLoading(true);
     try {
@@ -162,17 +171,72 @@ function UsersTable({
         return;
       }
       const failed = (json?.results ?? []).filter((x: any) => !x.ok);
-      if (failed.length) {
-        alert(`${label}完成，但失败 ${failed.length} 个`);
-      } else {
-        alert(`${label}成功`);
-      }
+      alert(failed.length ? `${label}完成，但失败 ${failed.length} 个` : `${label}成功`);
       setSelected({});
       setMoreOpen(false);
       onRefresh();
     } finally {
       setBatchLoading(false);
     }
+  }
+
+  async function runBatchDeleteSequential() {
+    if (!selectedIds.length || batchLoading) return;
+    if (!(await (window as any).showConfirm(`确定批量删除已选 ${selectedIds.length} 个 Emby 用户吗？\n\n将逐一删除，关闭日志窗口或刷新页面会中止后续操作。`))) return;
+
+    deleteCancelRef.current = false;
+    setDeleteProgress({ total: selectedIds.length, processed: 0, ok: 0, failed: 0, status: "running", logs: [] });
+    setDeleteLogOpen(true);
+    setBatchLoading(true);
+
+    let ok = 0;
+    let failed = 0;
+    const logs: string[] = [];
+    try {
+      for (let i = 0; i < selectedIds.length; i++) {
+        if (deleteCancelRef.current) break;
+        const uid = selectedIds[i];
+        const name = (users.find((u: any) => u.id === uid)?.name as string) || uid;
+        try {
+          const res = await fetch(`/api/admin/emby-servers/${serverId}/users/${uid}`, { method: "DELETE" });
+          if (res.ok) {
+            ok++;
+            logs.push(`[${i + 1}/${selectedIds.length}] ${name} 删除成功`);
+          } else {
+            failed++;
+            const txt = await res.text();
+            logs.push(`[${i + 1}/${selectedIds.length}] ${name} 删除失败: ${txt || res.status}`);
+          }
+        } catch (e: any) {
+          failed++;
+          logs.push(`[${i + 1}/${selectedIds.length}] ${name} 删除失败: ${e?.message ?? String(e)}`);
+        }
+
+        setDeleteProgress({
+          total: selectedIds.length,
+          processed: i + 1,
+          ok,
+          failed,
+          status: "running",
+          logs: logs.slice(-300),
+        });
+      }
+
+      const stopped = deleteCancelRef.current;
+      setDeleteProgress((p) => ({ ...p, status: stopped ? "stopped" : "done", logs: logs.slice(-300) }));
+      if (!stopped) {
+        setSelected({});
+        setMoreOpen(false);
+        onRefresh();
+      }
+    } finally {
+      setBatchLoading(false);
+    }
+  }
+
+  async function runBatch(action: "disable" | "enable" | "delete") {
+    if (action === "delete") return runBatchDeleteSequential();
+    return runBatchToggle(action);
   }
 
   return (
@@ -353,6 +417,34 @@ function UsersTable({
           </div>
         </div>
       </div>
+
+      {deleteLogOpen ? (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-[80]">
+          <div className="bg-white rounded-lg w-full max-w-[760px] p-4 max-h-[85vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between">
+              <div className="text-lg font-semibold">批量删除进度</div>
+              <button
+                className="text-gray-500 hover:text-gray-700"
+                onClick={() => {
+                  deleteCancelRef.current = true;
+                  setDeleteLogOpen(false);
+                }}
+              >
+                关闭
+              </button>
+            </div>
+            <div className="mt-2 text-sm text-gray-600">关闭日志窗口或刷新页面会停止后续删除操作（不会后台继续）。</div>
+            <div className="mt-3 rounded border p-3 text-sm">
+              <div>状态：{deleteProgress.status === "running" ? "进行中" : deleteProgress.status === "done" ? "已完成" : deleteProgress.status === "stopped" ? "已停止" : "-"}</div>
+              <div className="mt-1">进度：{deleteProgress.processed} / {deleteProgress.total}</div>
+              <div className="mt-1">成功：{deleteProgress.ok}　失败：{deleteProgress.failed}</div>
+            </div>
+            <div className="mt-3 rounded border bg-gray-50 p-3 h-64 overflow-auto text-xs font-mono whitespace-pre-wrap">
+              {deleteProgress.logs.length ? deleteProgress.logs.join("\n") : "等待日志..."}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
