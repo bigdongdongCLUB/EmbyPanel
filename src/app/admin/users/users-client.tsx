@@ -159,6 +159,9 @@ export function UsersClient() {
   const [csvFallbackPlanId, setCsvFallbackPlanId] = useState("");
   const [csvFileName, setCsvFileName] = useState("");
   const [csvText, setCsvText] = useState("");
+  const [csvJobOpen, setCsvJobOpen] = useState(false);
+  const [csvJobId, setCsvJobId] = useState("");
+  const [csvJob, setCsvJob] = useState<any>(null);
   const [importServerId, setImportServerId] = useState("");
   const [importDefaultPassword, setImportDefaultPassword] = useState("");
   const [importPlanId, setImportPlanId] = useState("");
@@ -193,6 +196,33 @@ export function UsersClient() {
   useEffect(() => {
     if (page !== safePage) setPage(safePage);
   }, [page, safePage]);
+
+  useEffect(() => {
+    if (!csvJobOpen || !csvJobId) return;
+    let stop = false;
+
+    const tick = async () => {
+      try {
+        const res = await fetch(`/api/admin/users/import-from-csv/jobs/${csvJobId}`, { cache: "no-store" });
+        const json = await res.json().catch(() => null);
+        if (!res.ok) return;
+        if (stop) return;
+        setCsvJob(json?.job ?? null);
+
+        const status = json?.job?.status;
+        if (status === "done" || status === "failed") {
+          if (status === "done") await refresh();
+          return;
+        }
+      } catch {}
+      if (!stop) setTimeout(tick, 1000);
+    };
+
+    tick();
+    return () => {
+      stop = true;
+    };
+  }, [csvJobOpen, csvJobId]);
 
   async function refresh() {
     setLoading(true);
@@ -1411,7 +1441,7 @@ export function UsersClient() {
                   setCsvImportLoading(true);
                   setCsvImportError(null);
                   try {
-                    const res = await fetch("/api/admin/users/import-from-csv", {
+                    const res = await fetch("/api/admin/users/import-from-csv/start", {
                       method: "POST",
                       headers: { "content-type": "application/json" },
                       body: JSON.stringify({ csv: csvText, fallbackPlanId: csvFallbackPlanId || null }),
@@ -1419,10 +1449,10 @@ export function UsersClient() {
                     const json = await res.json().catch(() => null);
                     if (!res.ok) throw new Error(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
 
-                    const failRows = (json.failures ?? []).map((x: any) => x.cell).join(", ");
-                    alert(`导入完成：成功${json.success} 跳过${json.skipped} 失败${json.failed}${failRows ? `\n失败位置：${failRows}` : ""}`);
+                    setCsvJobId(String(json?.jobId ?? ""));
+                    setCsvJob(null);
+                    setCsvJobOpen(true);
                     setCsvImportOpen(false);
-                    await refresh();
                   } catch (e: any) {
                     setCsvImportError(e?.message ?? "import_failed");
                   } finally {
@@ -1433,6 +1463,36 @@ export function UsersClient() {
                 开始导入
               </button>
             </div>
+          </div>
+        </div>
+      ) : null}
+
+      {csvJobOpen ? (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 overflow-y-auto z-[70]">
+          <div className="bg-white rounded-lg w-full max-w-[760px] p-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <div className="text-lg font-semibold">CSV 导入进度</div>
+              <button className="text-gray-500 hover:text-gray-700" onClick={() => setCsvJobOpen(false)}>关闭</button>
+            </div>
+            <div className="mt-2 text-sm text-gray-600">刷新页面后任务仍会在后台继续执行；此窗口可查看实时进度。</div>
+
+            <div className="mt-4 rounded border p-3 text-sm">
+              <div>任务ID：{csvJobId || "-"}</div>
+              <div className="mt-1">状态：{csvJob?.status === "done" ? "已完成" : csvJob?.status === "failed" ? "失败" : "进行中"}</div>
+              <div className="mt-1">进度：{csvJob?.progress?.processed ?? 0} / {csvJob?.progress?.total ?? 0}</div>
+              <div className="mt-1">成功：{csvJob?.progress?.success ?? 0}　跳过：{csvJob?.progress?.skipped ?? 0}　失败：{csvJob?.progress?.failed ?? 0}</div>
+              {csvJob?.error ? <div className="mt-1 text-red-600">错误：{csvJob.error}</div> : null}
+            </div>
+
+            <div className="mt-3 rounded border bg-gray-50 p-3 h-64 overflow-auto text-xs font-mono whitespace-pre-wrap">
+              {(csvJob?.logs ?? []).length ? (csvJob.logs as string[]).join("\n") : "等待任务日志..."}
+            </div>
+
+            {csvJob?.status === "done" ? (
+              <div className="mt-3 text-sm text-emerald-700">
+                导入完成：成功{csvJob?.result?.success ?? 0} 跳过{csvJob?.result?.skipped ?? 0} 失败{csvJob?.result?.failed ?? 0}
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}
