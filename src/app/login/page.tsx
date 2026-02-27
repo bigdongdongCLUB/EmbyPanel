@@ -204,7 +204,7 @@ export default function LoginPage() {
         </div>
 
         {mode === "login" ? (
-          <form className="mt-3 max-w-3xl mx-auto px-10 space-y-2" onSubmit={doLogin}>
+          <form className="mt-3 max-w-3xl mx-auto px-10" onSubmit={doLogin}>
             <div className="border border-gray-200 rounded-xl px-3 py-1.5 flex items-center gap-2">
               <img src="/icons/user.svg" alt="用户名" className="h-4 w-4 opacity-60" />
               <input
@@ -218,7 +218,7 @@ export default function LoginPage() {
               />
             </div>
 
-            <div className="border border-gray-200 rounded-xl px-3 py-1.5 flex items-center gap-2">
+            <div className="mt-[50px] border border-gray-200 rounded-xl px-3 py-1.5 flex items-center gap-2">
               <img src="/icons/lock.svg" alt="密码" className="h-4 w-4 opacity-60" />
               <input
                 name="password"
@@ -237,7 +237,7 @@ export default function LoginPage() {
 
             {loginError ? <div className="text-red-500 text-xs">{loginError}</div> : null}
 
-            <button className="w-full bg-blue-600 text-white rounded-xl py-2 text-base font-semibold disabled:opacity-60" disabled={loginLoading}>
+            <button className="mt-[50px] w-full bg-blue-600 text-white rounded-xl py-2 text-base font-semibold disabled:opacity-60" disabled={loginLoading}>
               {loginLoading ? "登录中..." : "登 录"}
             </button>
 
