@@ -6,6 +6,11 @@ type Toast = { id: number; text: string; tone: "success" | "error" | "info" };
 
 function pickTone(text: string): Toast["tone"] {
   const t = text.toLowerCase();
+
+  // 导入/汇总类文案中“失败0”应判定为成功态
+  const hasFailedZero = /失败\s*[:：]?\s*0\b/.test(t);
+  if (hasFailedZero && (t.includes("成功") || t.includes("完成"))) return "success";
+
   if (t.includes("失败") || t.includes("error") || t.includes("invalid") || t.includes("not_found") || t.includes("forbidden")) {
     return "error";
   }
