@@ -1543,11 +1543,11 @@ export function UsersClient() {
 
             <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
-                <label className="text-sm">用户名（可空）</label>
+                <label className="text-sm">用户名（选填）</label>
                 <input className="mt-1 w-full border rounded px-3 py-2" placeholder="留空随机生成5位" value={trialUsername} onChange={(e) => setTrialUsername(e.target.value)} />
               </div>
               <div>
-                <label className="text-sm">密码（可空）</label>
+                <label className="text-sm">密码（选填）</label>
                 <input className="mt-1 w-full border rounded px-3 py-2" placeholder="留空随机生成8位纯数字" value={trialPassword} onChange={(e) => setTrialPassword(e.target.value)} />
               </div>
               <div>
