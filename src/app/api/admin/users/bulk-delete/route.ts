@@ -4,6 +4,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { requireAdmin } from "@/lib/admin";
+import { prisma } from "@/lib/db";
+import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
+import { embyDeleteUser } from "@/lib/emby-provision";
 
 const Schema = z.object({
   ids: z.array(z.string().min(1)).min(1),
@@ -22,20 +25,33 @@ export async function POST(req: Request) {
 
   for (const id of parsed.data.ids) {
     try {
-      const res = await fetch(new URL(`/api/admin/users/${id}/delete`, req.url).toString(), {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          cookie: req.headers.get("cookie") ?? "",
-        },
-        body: JSON.stringify({ syncDeleteEmby: parsed.data.syncDeleteEmby }),
-      });
-      const txt = await res.text();
-      if (!res.ok) {
-        results.push({ id, ok: false, status: res.status, error: txt });
-      } else {
-        results.push({ id, ok: true, status: res.status });
+      const user = await prisma.user.findUnique({ where: { id }, select: { id: true, role: true } });
+      if (!user) {
+        results.push({ id, ok: false, status: 404, error: "not_found" });
+        continue;
       }
+      if (user.role === "ADMIN") {
+        results.push({ id, ok: false, status: 400, error: "cannot_delete_admin" });
+        continue;
+      }
+
+      if (parsed.data.syncDeleteEmby) {
+        const links = await prisma.embyUserLink.findMany({
+          where: { userId: id },
+          select: {
+            embyUserId: true,
+            embyServer: { select: { baseUrl: true, apiKey: true, apiKeyEnc: true, apiKeyIv: true, apiKeyTag: true } },
+          },
+        });
+
+        for (const l of links) {
+          const apiKey = getEmbyApiKeyForServer(l.embyServer);
+          await embyDeleteUser(l.embyServer.baseUrl, apiKey, l.embyUserId);
+        }
+      }
+
+      await prisma.user.delete({ where: { id } });
+      results.push({ id, ok: true, status: 200 });
     } catch (e: any) {
       results.push({ id, ok: false, error: e?.message ?? String(e) });
     }
