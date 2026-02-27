@@ -172,6 +172,7 @@ export async function POST(req: Request) {
       let planId: string | null = null;
       let startAt: Date | null = null;
       let endAt: Date | null = null;
+      let expiredOnImport = false;
 
       const csvPlan = planName ? planByName.get(planName.toLowerCase()) : null;
       const finalPlanId = csvPlan?.id ?? fallbackPlanId ?? null;
@@ -179,15 +180,15 @@ export async function POST(req: Request) {
         const s = parseDateLike(startRaw);
         const e = parseDateLike(endRaw);
         if (s && e) {
-          const now = new Date();
-          // 规则：开始时间晚于结束时间，或结束时间已过期 -> 按无订阅处理
-          if (s.getTime() < e.getTime() && e.getTime() > now.getTime()) {
+          // 规则：开始时间晚于结束时间 -> 按无订阅处理
+          if (s.getTime() < e.getTime()) {
             planId = finalPlanId;
             startAt = s;
             endAt = e;
+            expiredOnImport = e.getTime() <= Date.now();
           }
         }
-        // if start/end missing/非法/过期/范围错误 => treat as no plan
+        // if start/end missing/非法/范围错误 => treat as no plan
       }
 
       const passwordHash = await hashPassword(panelPassword);
@@ -214,7 +215,7 @@ export async function POST(req: Request) {
           data: {
             userId: user.id,
             planId,
-            status: "ACTIVE",
+            status: expiredOnImport ? "EXPIRED" : "ACTIVE",
             payCycle: "YEARLY",
             startAt,
             endAt,
@@ -261,10 +262,10 @@ export async function POST(req: Request) {
 
             await prisma.embyUserLink.upsert({
               where: { userId_embyServerId: { userId: user.id, embyServerId: sid } },
-              update: { embyUserId, disabled: false },
-              create: { userId: user.id, embyServerId: sid, embyUserId, disabled: false },
+              update: { embyUserId, disabled: expiredOnImport },
+              create: { userId: user.id, embyServerId: sid, embyUserId, disabled: expiredOnImport },
             });
-            await embySetUserDisabled(server.baseUrl, apiKey, embyUserId, false);
+            await embySetUserDisabled(server.baseUrl, apiKey, embyUserId, expiredOnImport);
           }
         }
       }
