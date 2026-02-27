@@ -81,6 +81,7 @@ export async function GET(req: Request) {
       `;
       const totalRes = await prisma.$queryRaw<any[]>`SELECT COUNT(*)::int as c FROM "CardCode"`;
       const usedRes = await prisma.$queryRaw<any[]>`SELECT COUNT(*)::int as c FROM "CardCode" WHERE "status"='USED'`;
+      const unusedRes = await prisma.$queryRaw<any[]>`SELECT COUNT(*)::int as c FROM "CardCode" WHERE "status"='UNUSED'`;
       const balanceRes = await prisma.$queryRaw<any[]>`SELECT COUNT(*)::int as c FROM "CardCode" WHERE "type"='BALANCE'`;
       const subRes = await prisma.$queryRaw<any[]>`SELECT COUNT(*)::int as c FROM "CardCode" WHERE "type"='SUBSCRIPTION'`;
 
@@ -89,6 +90,7 @@ export async function GET(req: Request) {
         summary: {
           total: Number(totalRes?.[0]?.c ?? 0),
           used: Number(usedRes?.[0]?.c ?? 0),
+          unused: Number(unusedRes?.[0]?.c ?? 0),
           balanceTotal: Number(balanceRes?.[0]?.c ?? 0),
           subTotal: Number(subRes?.[0]?.c ?? 0),
         },
@@ -110,7 +112,7 @@ export async function GET(req: Request) {
       });
     }
 
-    const [rows, total, used, balanceTotal, subTotal] = await Promise.all([
+    const [rows, total, used, unused, balanceTotal, subTotal] = await Promise.all([
       cardCodeModel.findMany({
         where,
         orderBy: { createdAt: "desc" },
@@ -132,11 +134,12 @@ export async function GET(req: Request) {
       }),
       cardCodeModel.count(),
       cardCodeModel.count({ where: { status: "USED" } }),
+      cardCodeModel.count({ where: { status: "UNUSED" } }),
       cardCodeModel.count({ where: { type: "BALANCE" } }),
       cardCodeModel.count({ where: { type: "SUBSCRIPTION" } }),
     ]);
 
-    return NextResponse.json({ ok: true, summary: { total, used, balanceTotal, subTotal }, rows, plans });
+    return NextResponse.json({ ok: true, summary: { total, used, unused, balanceTotal, subTotal }, rows, plans });
   } catch (e: any) {
     return NextResponse.json({ error: "card_codes_query_failed", message: String(e?.message ?? e) }, { status: 500 });
   }

@@ -54,7 +54,7 @@ export function CardCodesClient() {
   const [q, setQ] = useState("");
   const [type, setType] = useState("");
   const [status, setStatus] = useState("");
-  const [summary, setSummary] = useState({ total: 0, used: 0, balanceTotal: 0, subTotal: 0 });
+  const [summary, setSummary] = useState({ total: 0, used: 0, unused: 0, balanceTotal: 0, subTotal: 0 });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -129,7 +129,7 @@ export function CardCodesClient() {
         return out;
       });
       setPlans(json.plans || []);
-      setSummary(json.summary || { total: 0, used: 0, balanceTotal: 0, subTotal: 0 });
+      setSummary(json.summary || { total: 0, used: 0, unused: 0, balanceTotal: 0, subTotal: 0 });
     } catch (e: any) {
       setError(e?.message || "加载失败");
     } finally {
@@ -161,9 +161,10 @@ export function CardCodesClient() {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <div className="border rounded p-3"><div className="text-xs text-gray-500">卡密总数</div><div className="text-2xl text-blue-600">{summary.total}</div></div>
         <div className="border rounded p-3"><div className="text-xs text-gray-500">已使用</div><div className="text-2xl text-red-600">{summary.used}</div></div>
+        <div className="border rounded p-3"><div className="text-xs text-gray-500">未使用</div><div className="text-2xl text-emerald-600">{summary.unused}</div></div>
         <div className="border rounded p-3"><div className="text-xs text-gray-500">余额卡密总数</div><div className="text-2xl text-green-600">{summary.balanceTotal}</div></div>
         <div className="border rounded p-3"><div className="text-xs text-gray-500">订阅卡密总数</div><div className="text-2xl text-purple-600">{summary.subTotal}</div></div>
       </div>
