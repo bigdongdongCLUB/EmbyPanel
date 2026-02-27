@@ -10,7 +10,7 @@ import { embyDeleteUser } from "@/lib/emby-provision";
 
 const Schema = z.object({
   ids: z.array(z.string().min(1)).min(1),
-  syncDeleteEmby: z.boolean().optional().default(true),
+  syncDeleteEmby: z.boolean().optional(),
 });
 
 export async function POST(req: Request) {
@@ -21,6 +21,7 @@ export async function POST(req: Request) {
   const parsed = Schema.safeParse(json);
   if (!parsed.success) return NextResponse.json({ error: "invalid_payload", issues: parsed.error.issues }, { status: 400 });
 
+  const syncDeleteEmby = parsed.data.syncDeleteEmby === true;
   const results: Array<{ id: string; ok: boolean; status?: number; error?: string }> = [];
 
   for (const id of parsed.data.ids) {
@@ -35,7 +36,7 @@ export async function POST(req: Request) {
         continue;
       }
 
-      if (parsed.data.syncDeleteEmby) {
+      if (syncDeleteEmby) {
         const links = await prisma.embyUserLink.findMany({
           where: { userId: id },
           select: {
