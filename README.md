@@ -14,9 +14,15 @@
 
 ## 🎯 项目说明
 
-该面板完全仿制于**LinkEmby项目地址**: [LinkEmby](https://github.com/linkemby/linkemby-deploy)因为原项目更新缓慢，且有一些功能无法达到个人需求，所以萌生借助AI根据需求重新打造，这里依然推荐大家使用原项目！本项目目前虽然已经基本达到使用状态，但仍显简陋，且后期更新维护皆由AI完成。当然如果有大佬帮忙维护自然是更好。
+**EmbyPanel** 是一个面向 Emby 服务器的专业管理面板系统，  
+用于集中管理订阅、账号、服务器与运营流程。
 
-> 💡 由[openclaw（ChatGPT-5.3-codx）](https://openclaw.ai/)完成全部代码
+项目最初基于 [LinkEmby](https://github.com/linkemby/linkemby-deploy) 思路进行重新设计与实现。  
+由于原项目更新节奏较慢，部分功能无法满足个人需求，因此借助 AI 从零重构，形成当前版本。
+
+> ⚠️ 仍然推荐优先了解原项目  
+> 本项目为个人需求驱动版本，持续迭代中。
+
 
 ---
 
@@ -180,6 +186,14 @@ curl -fsSL https://raw.githubusercontent.com/bigdongdongCLUB/EmbyPanel/main/scri
 - **内存**：最低 2GB，推荐 4GB+
 - **磁盘**：最低 10GB 可用空间
 
+# 🧠 技术架构
+
+- **前端框架**：Next.js
+- **数据库**：PostgreSQL
+- **缓存系统**：Redis
+- **任务调度**：Cron 服务
+- **部署方式**：Docker + Docker Compose
+- **AI 协助开发**：openclaw（ChatGPT-5.3-codx）
 ---
 
 ## 📦 包含的服务
