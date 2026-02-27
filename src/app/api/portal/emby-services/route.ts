@@ -104,11 +104,12 @@ export async function GET() {
       ]);
 
       const link = linkMap.get(s.id) ?? null;
+      const onlineNow = !!String(version || "").trim() || s.lastHealthOk === true;
       return {
         id: s.id,
         name: s.name,
         enabled: s.enabled,
-        online: s.lastHealthOk === true,
+        online: onlineNow,
         banned: !!link?.disabled,
         version,
         baseUrl: s.baseUrl,
