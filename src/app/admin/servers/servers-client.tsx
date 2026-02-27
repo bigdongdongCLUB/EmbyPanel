@@ -604,11 +604,13 @@ export function ServersClient() {
                   />
                   <button
                     type="button"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-xs border rounded px-2 py-1 bg-white"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 border rounded p-1 bg-white"
                     onClick={() => setModal({ ...modal, showApiKey: !modal.showApiKey })}
                     disabled={modal.loadingApiKey}
+                    aria-label={modal.showApiKey ? "隐藏 API Key" : "显示 API Key"}
+                    title={modal.showApiKey ? "隐藏 API Key" : "显示 API Key"}
                   >
-                    {modal.showApiKey ? "隐藏" : "显示"}
+                    <img src={modal.showApiKey ? "/icons/invisible.svg" : "/icons/visible.svg"} alt={modal.showApiKey ? "隐藏" : "显示"} className="h-4 w-4 opacity-70" />
                   </button>
                 </div>
               </div>
