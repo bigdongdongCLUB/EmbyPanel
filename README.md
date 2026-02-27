@@ -23,6 +23,22 @@
 > ⚠️ 仍然推荐优先了解原项目  
 > 本项目为个人需求驱动版本，持续迭代中。
 
+---
+
+## 📋 系统要求
+
+- **操作系统**：Linux (Ubuntu 20.04+、Debian 11+、CentOS 8+)
+- **内存**：最低 2GB，推荐 4GB+
+- **磁盘**：最低 10GB 可用空间
+
+## 🧠 技术架构
+
+- **前端框架**：Next.js
+- **数据库**：PostgreSQL
+- **缓存系统**：Redis
+- **任务调度**：Cron 服务
+- **部署方式**：Docker + Docker Compose
+- **AI 协助开发**：openclaw（ChatGPT-5.3-codx）
 
 ---
 
@@ -178,22 +194,6 @@ curl -fsSL https://raw.githubusercontent.com/bigdongdongCLUB/EmbyPanel/main/scri
 
 </details>
 
----
-
-## 📋 系统要求
-
-- **操作系统**：Linux (Ubuntu 20.04+、Debian 11+、CentOS 8+)
-- **内存**：最低 2GB，推荐 4GB+
-- **磁盘**：最低 10GB 可用空间
-
-# 🧠 技术架构
-
-- **前端框架**：Next.js
-- **数据库**：PostgreSQL
-- **缓存系统**：Redis
-- **任务调度**：Cron 服务
-- **部署方式**：Docker + Docker Compose
-- **AI 协助开发**：openclaw（ChatGPT-5.3-codx）
 ---
 
 ## 📦 包含的服务
