@@ -39,74 +39,79 @@ type EmbyLatestItem = {
   ImageTags?: { Primary?: string };
 };
 
-async function fetchServerRecent(baseUrl: string, apiKey: string, serverName: string): Promise<RecentItem[]> {
-  const base = normalizeBaseUrl(baseUrl);
-
-  async function fetchLatestLike(): Promise<EmbyLatestItem[]> {
-    // 1) 优先 /Items/Latest（部分服务端可能不支持）
-    const latestUrl = new URL(base + "/Items/Latest");
-    latestUrl.searchParams.set("api_key", apiKey);
-    latestUrl.searchParams.set("Limit", "50");
-    latestUrl.searchParams.set("IncludeItemTypes", "Movie,Series,Episode");
-    latestUrl.searchParams.set("Fields", "DateCreated,PremiereDate,ProductionYear,ImageTags,Type,SeriesName,ParentIndexNumber,IndexNumber");
-    const latestRes = await fetch(latestUrl.toString(), { cache: "no-store", signal: AbortSignal.timeout(7000) });
-    if (latestRes.ok) {
-      const arr = (await latestRes.json().catch(() => [])) as EmbyLatestItem[];
-      if (Array.isArray(arr)) return arr;
-    }
-
-    // 2) 回退 /Items + DateCreated 排序（兼容 404 的服务端）
-    const itemsUrl = new URL(base + "/Items");
-    itemsUrl.searchParams.set("api_key", apiKey);
-    itemsUrl.searchParams.set("Recursive", "true");
-    itemsUrl.searchParams.set("IncludeItemTypes", "Movie,Series,Episode");
-    itemsUrl.searchParams.set("SortBy", "DateCreated");
-    itemsUrl.searchParams.set("SortOrder", "Descending");
-    itemsUrl.searchParams.set("Limit", "50");
-    itemsUrl.searchParams.set("Fields", "DateCreated,PremiereDate,ProductionYear,ImageTags,Type,SeriesName,ParentIndexNumber,IndexNumber");
-
-    const itemsRes = await fetch(itemsUrl.toString(), { cache: "no-store", signal: AbortSignal.timeout(7000) });
-    if (!itemsRes.ok) return [];
-    const json = await itemsRes.json().catch(() => null as any);
-    return Array.isArray(json?.Items) ? (json.Items as EmbyLatestItem[]) : [];
+async function fetchLatestLike(base: string, apiKey: string, includeItemTypes: string, limit: number): Promise<EmbyLatestItem[]> {
+  // 1) 优先 /Items/Latest（部分服务端可能不支持）
+  const latestUrl = new URL(base + "/Items/Latest");
+  latestUrl.searchParams.set("api_key", apiKey);
+  latestUrl.searchParams.set("Limit", String(limit));
+  latestUrl.searchParams.set("IncludeItemTypes", includeItemTypes);
+  latestUrl.searchParams.set("Fields", "DateCreated,PremiereDate,ProductionYear,ImageTags,Type,SeriesName,ParentIndexNumber,IndexNumber");
+  const latestRes = await fetch(latestUrl.toString(), { cache: "no-store", signal: AbortSignal.timeout(7000) });
+  if (latestRes.ok) {
+    const arr = (await latestRes.json().catch(() => [])) as EmbyLatestItem[];
+    if (Array.isArray(arr)) return arr;
   }
 
-  const arr = await fetchLatestLike();
-  if (!arr.length) return [];
+  // 2) 回退 /Items + DateCreated 排序
+  const itemsUrl = new URL(base + "/Items");
+  itemsUrl.searchParams.set("api_key", apiKey);
+  itemsUrl.searchParams.set("Recursive", "true");
+  itemsUrl.searchParams.set("IncludeItemTypes", includeItemTypes);
+  itemsUrl.searchParams.set("SortBy", "DateCreated");
+  itemsUrl.searchParams.set("SortOrder", "Descending");
+  itemsUrl.searchParams.set("Limit", String(limit));
+  itemsUrl.searchParams.set("Fields", "DateCreated,PremiereDate,ProductionYear,ImageTags,Type,SeriesName,ParentIndexNumber,IndexNumber");
 
-  const rows = arr
-    .filter((x) => x && x.Id && (x.Type === "Movie" || x.Type === "Series" || x.Type === "Episode"))
-    .map((x) => {
-      const tsRaw = x.DateCreated || x.PremiereDate || x.DateLastMediaAdded || null;
-      const ts = tsRaw ? new Date(tsRaw).getTime() : 0;
-      const imageTag = x.ImageTags?.Primary;
-      const imageUrl = imageTag ? `${base}/Items/${x.Id}/Images/Primary?fillHeight=420&fillWidth=280&quality=90&tag=${imageTag}` : null;
-      const year = String(x.ProductionYear || "");
+  const itemsRes = await fetch(itemsUrl.toString(), { cache: "no-store", signal: AbortSignal.timeout(7000) });
+  if (!itemsRes.ok) return [];
+  const json = await itemsRes.json().catch(() => null as any);
+  return Array.isArray(json?.Items) ? (json.Items as EmbyLatestItem[]) : [];
+}
 
-      if (x.Type === "Episode") {
+async function fetchServerRecent(baseUrl: string, apiKey: string, serverName: string): Promise<{ movies: RecentItem[]; tv: RecentItem[] }> {
+  const base = normalizeBaseUrl(baseUrl);
+  const [movieArr, tvArr] = await Promise.all([
+    fetchLatestLike(base, apiKey, "Movie", 180),
+    fetchLatestLike(base, apiKey, "Series,Episode", 220),
+  ]);
+
+  const mapRows = (arr: EmbyLatestItem[]) =>
+    arr
+      .filter((x) => x && x.Id && (x.Type === "Movie" || x.Type === "Series" || x.Type === "Episode"))
+      .map((x) => {
+        const tsRaw = x.DateCreated || x.PremiereDate || x.DateLastMediaAdded || null;
+        const ts = tsRaw ? new Date(tsRaw).getTime() : 0;
+        const imageTag = x.ImageTags?.Primary;
+        const imageUrl = imageTag ? `${base}/Items/${x.Id}/Images/Primary?fillHeight=420&fillWidth=280&quality=90&tag=${imageTag}` : null;
+        const year = String(x.ProductionYear || "");
+
+        if (x.Type === "Episode") {
+          return {
+            id: String(x.Id),
+            title: String(x.SeriesName || x.Name || ""),
+            type: "TV" as const,
+            year,
+            imageUrl,
+            serverNames: [serverName],
+            ts: Number.isFinite(ts) ? ts : 0,
+          };
+        }
+
         return {
           id: String(x.Id),
-          title: String(x.SeriesName || x.Name || ""),
-          type: "TV" as const,
+          title: String(x.Name || ""),
+          type: x.Type === "Movie" ? ("MOVIE" as const) : ("TV" as const),
           year,
           imageUrl,
           serverNames: [serverName],
           ts: Number.isFinite(ts) ? ts : 0,
         };
-      }
+      })
+      .filter((x, idx, list) => list.findIndex((k) => `${k.type}:${k.title}` === `${x.type}:${x.title}`) === idx);
 
-      return {
-        id: String(x.Id),
-        title: String(x.Name || ""),
-        type: x.Type === "Movie" ? ("MOVIE" as const) : ("TV" as const),
-        year,
-        imageUrl,
-        serverNames: [serverName],
-        ts: Number.isFinite(ts) ? ts : 0,
-      };
-    });
-
-  return rows.filter((x, idx, list) => list.findIndex((k) => `${k.type}:${k.title}` === `${x.type}:${x.title}`) === idx);
+  const movies = mapRows(movieArr).filter((x) => x.type === "MOVIE");
+  const tv = mapRows(tvArr).filter((x) => x.type === "TV");
+  return { movies, tv };
 }
 
 
@@ -208,22 +213,25 @@ export async function GET() {
   const recentFromServers = await Promise.all(
     links.map(async (link) => {
       const server = link.embyServer;
-      if (!server?.enabled || !server?.baseUrl) return [] as RecentItem[];
+      if (!server?.enabled || !server?.baseUrl) return { movies: [] as RecentItem[], tv: [] as RecentItem[] };
       try {
         const apiKey = getEmbyApiKeyForServer(server as any);
-        if (!apiKey) return [] as RecentItem[];
+        if (!apiKey) return { movies: [] as RecentItem[], tv: [] as RecentItem[] };
         return await fetchServerRecent(server.baseUrl, apiKey, server.name || "服务器");
       } catch {
-        return [] as RecentItem[];
+        return { movies: [] as RecentItem[], tv: [] as RecentItem[] };
       }
     })
   );
 
-  const mergedRecent = mergeRecentByTitle(recentFromServers.flat());
+  const mergedMovie = mergeRecentByTitle(recentFromServers.flatMap((x) => x.movies));
+  const mergedTv = mergeRecentByTitle(recentFromServers.flatMap((x) => x.tv));
 
-  const enrichedRecent = await enrichRecentWithTmdb(mergedRecent);
-  const recentUpdatesTv = enrichedRecent.filter((x) => x.type === "TV").slice(0, 18);
-  const recentUpdatesMovie = enrichedRecent.filter((x) => x.type === "MOVIE").slice(0, 18);
+  const [recentUpdatesMovie, recentUpdatesTv] = await Promise.all([
+    enrichRecentWithTmdb(mergedMovie).then((x) => x.slice(0, 18)),
+    enrichRecentWithTmdb(mergedTv).then((x) => x.slice(0, 18)),
+  ]);
+  const enrichedRecent = [...recentUpdatesTv, ...recentUpdatesMovie].sort((a, b) => b.ts - a.ts);
 
   return NextResponse.json({
     ok: true,
