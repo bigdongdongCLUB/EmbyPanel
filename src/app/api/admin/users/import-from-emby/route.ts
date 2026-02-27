@@ -67,11 +67,9 @@ export async function POST(req: Request) {
     ).map((u) => u.username.toLowerCase()),
   );
 
-  const existingLinks = new Set(
-    (
-      await prisma.embyUserLink.findMany({ where: { embyServerId }, select: { embyUserId: true } })
-    ).map((l) => l.embyUserId),
-  );
+  const existingLinks = await prisma.embyUserLink.findMany({ where: { embyServerId }, select: { userId: true, embyUserId: true } });
+  const existingEmbyUserIdSet = new Set(existingLinks.map((l) => l.embyUserId));
+  const existingLinkByUserId = new Map(existingLinks.map((l) => [l.userId, l.embyUserId] as const));
 
   // When planId is provided, startAt/endAt must be provided too (UI enforces).
   const finalPayCycle = (payCycle ?? "YEARLY") as "MONTHLY" | "QUARTERLY" | "HALF_YEARLY" | "YEARLY" | "TWO_YEARLY";
@@ -103,14 +101,21 @@ export async function POST(req: Request) {
     }
 
     if (missingOnly && existingUsernames.has(name.toLowerCase())) {
-      // ensure link exists
+      // user already exists in panel: skip create, ensure EmbyUserLink exists
       const user = await prisma.user.findFirst({ where: { username: { equals: name, mode: "insensitive" } }, select: { id: true } });
-      if (user && !existingLinks.has(embyUserId)) {
+      const currentLinkedEmbyUserId = user ? existingLinkByUserId.get(user.id) : undefined;
+
+      if (user && currentLinkedEmbyUserId === embyUserId) {
+        skipped++;
+        details.push({ name, embyUserId, action: "skip", reason: "already_linked" });
+      } else if (user && !currentLinkedEmbyUserId && !existingEmbyUserIdSet.has(embyUserId)) {
         await prisma.embyUserLink.upsert({
           where: { userId_embyServerId: { userId: user.id, embyServerId } },
           update: { embyUserId },
           create: { userId: user.id, embyServerId, embyUserId },
         });
+        existingLinkByUserId.set(user.id, embyUserId);
+        existingEmbyUserIdSet.add(embyUserId);
         imported++;
         details.push({ name, embyUserId, action: "link_only" });
       } else {
@@ -162,6 +167,8 @@ export async function POST(req: Request) {
     });
 
     await prisma.embyUserLink.create({ data: { userId: created.id, embyServerId, embyUserId } });
+    existingLinkByUserId.set(created.id, embyUserId);
+    existingEmbyUserIdSet.add(embyUserId);
 
     if (planId) {
       const cycle = finalPayCycle;
