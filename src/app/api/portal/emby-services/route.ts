@@ -75,7 +75,7 @@ export async function GET() {
           servers: { select: { embyServerId: true } },
         },
       },
-      embyLinks: { select: { embyServerId: true, embyUserId: true } },
+      embyLinks: { select: { embyServerId: true, embyUserId: true, disabled: true } },
     },
   });
 
@@ -93,7 +93,7 @@ export async function GET() {
     orderBy: { createdAt: "asc" },
   });
 
-  const linkMap = new Map(user.embyLinks.map((l) => [l.embyServerId, l.embyUserId] as const));
+  const linkMap = new Map(user.embyLinks.map((l) => [l.embyServerId, { embyUserId: l.embyUserId, disabled: !!l.disabled }] as const));
 
   const list = await Promise.all(
     servers.map(async (s) => {
@@ -103,14 +103,16 @@ export async function GET() {
         apiKey ? fetchServerVersion(s.baseUrl, apiKey) : Promise.resolve(""),
       ]);
 
+      const link = linkMap.get(s.id) ?? null;
       return {
         id: s.id,
         name: s.name,
         enabled: s.enabled,
         online: s.lastHealthOk === true,
+        banned: !!link?.disabled,
         version,
         baseUrl: s.baseUrl,
-        embyUserId: linkMap.get(s.id) ?? null,
+        embyUserId: link?.embyUserId ?? null,
         counts: counts ?? { movieCount: 0, seriesCount: 0, episodeCount: 0, songCount: 0 },
       };
     })

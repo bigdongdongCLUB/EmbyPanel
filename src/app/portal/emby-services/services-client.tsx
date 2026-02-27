@@ -9,6 +9,7 @@ type Data = {
     id: string;
     name: string;
     online: boolean;
+    banned: boolean;
     version: string;
     baseUrl: string;
     embyUserId: string | null;
@@ -104,7 +105,10 @@ export function PortalEmbyServicesClient() {
                   <div className="text-3xl font-semibold">{s.name}</div>
                   <div className="text-sm text-gray-600 mt-1">版本：{s.version || "-"}</div>
                 </div>
-                <span className={"text-xs px-3 py-1 rounded-full border " + (s.online ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-700 border-red-200")}>{s.online ? "在线" : "离线"}</span>
+                <div className="flex flex-col items-end gap-1">
+                  <span className={"text-xs px-3 py-1 rounded-full border " + (s.online ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-700 border-red-200")}>{s.online ? "在线" : "离线"}</span>
+                  {s.banned ? <span className="text-xs px-3 py-1 rounded-full border bg-red-50 text-red-700 border-red-200">封禁中</span> : null}
+                </div>
               </div>
 
               <div className="rounded-lg bg-gray-50 border p-3">
