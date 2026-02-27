@@ -74,9 +74,8 @@ function parseDateLike(s: string): Date | null {
 
 function validUsername(v: string) {
   const s = v.trim();
-  if (s.length < 4 || s.length > 24) return false;
-  if (!/^[a-zA-Z0-9]+$/.test(s)) return false;
-  if (/^[0-9]+$/.test(s)) return false;
+  if (!s) return false;
+  if (s.length > 50) return false;
   if (s.toLowerCase() === TEMPLATE_USERNAME) return false;
   return true;
 }
