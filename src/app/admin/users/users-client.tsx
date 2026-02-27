@@ -1576,9 +1576,26 @@ export function UsersClient() {
                 <textarea className="mt-1 w-full border rounded px-3 py-2 text-sm h-56" value={trialOutput} readOnly />
                 <div className="mt-2">
                   <button
-                    className="border rounded px-3 py-2"
+                    type="button"
+                    className="bg-blue-600 hover:bg-blue-700 text-white rounded px-3 py-2 cursor-pointer"
                     onClick={async () => {
-                      await navigator.clipboard.writeText(trialOutput);
+                      try {
+                        if (navigator.clipboard?.writeText) {
+                          await navigator.clipboard.writeText(trialOutput);
+                        } else {
+                          throw new Error("clipboard_api_unavailable");
+                        }
+                      } catch {
+                        const el = document.createElement("textarea");
+                        el.value = trialOutput;
+                        el.style.position = "fixed";
+                        el.style.left = "-9999px";
+                        document.body.appendChild(el);
+                        el.focus();
+                        el.select();
+                        document.execCommand("copy");
+                        document.body.removeChild(el);
+                      }
                       alert("已复制");
                     }}
                   >
