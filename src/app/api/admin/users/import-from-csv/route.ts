@@ -121,9 +121,6 @@ export async function POST(req: Request) {
   });
   const serverById = new Map(embyServers.map((s) => [s.id, s] as const));
 
-  // cache server user list by server id
-  const embyUsersCache = new Map<string, any>();
-
   let success = 0;
   let skipped = 0;
   let failed = 0;
@@ -140,6 +137,7 @@ export async function POST(req: Request) {
     const planName = String(cols[2] ?? "").trim();
     const startRaw = String(cols[3] ?? "").trim();
     const endRaw = String(cols[4] ?? "").trim();
+    let createdUserId: string | null = null;
 
     try {
       if (!username) {
@@ -236,43 +234,49 @@ export async function POST(req: Request) {
             if (!server) continue;
             const apiKey = getEmbyApiKeyForServer(server);
 
-            let usersRes = embyUsersCache.get(sid);
-            if (!usersRes) {
-              usersRes = await embyFetchUsers(server.baseUrl, apiKey);
-              embyUsersCache.set(sid, usersRes);
-            }
-
             let embyUserId: string | null = null;
+
+            const usersRes = await embyFetchUsers(server.baseUrl, apiKey);
             if (usersRes.ok) {
               const found = usersRes.users.find((u: any) => String(u?.Name ?? "").toLowerCase() === username.toLowerCase());
-              if (found?.Id) {
-                embyUserId = String(found.Id);
-              }
+              if (found?.Id) embyUserId = String(found.Id);
             }
 
             if (!embyUserId) {
               const created = await embyCreateUser(server.baseUrl, apiKey, username);
-              if (created.ok && created.userId) {
-                embyUserId = created.userId;
-                // refresh cache for subsequent rows
-                embyUsersCache.delete(sid);
+              if (created.ok && created.userId) embyUserId = created.userId;
+            }
+
+            if (!embyUserId) {
+              const retryRes = await embyFetchUsers(server.baseUrl, apiKey);
+              if (retryRes.ok) {
+                const retryFound = retryRes.users.find((u: any) => String(u?.Name ?? "").toLowerCase() === username.toLowerCase());
+                if (retryFound?.Id) embyUserId = String(retryFound.Id);
               }
             }
 
-            if (embyUserId) {
-              await prisma.embyUserLink.upsert({
-                where: { userId_embyServerId: { userId: user.id, embyServerId: sid } },
-                update: { embyUserId, disabled: false },
-                create: { userId: user.id, embyServerId: sid, embyUserId, disabled: false },
-              });
-              await embySetUserDisabled(server.baseUrl, apiKey, embyUserId, false);
+            if (!embyUserId) {
+              throw new Error(`emby_link_failed:${sid}`);
             }
+
+            await prisma.embyUserLink.upsert({
+              where: { userId_embyServerId: { userId: user.id, embyServerId: sid } },
+              update: { embyUserId, disabled: false },
+              create: { userId: user.id, embyServerId: sid, embyUserId, disabled: false },
+            });
+            await embySetUserDisabled(server.baseUrl, apiKey, embyUserId, false);
           }
         }
       }
 
       success++;
     } catch (e: any) {
+      if (createdUserId) {
+        try {
+          await prisma.user.delete({ where: { id: createdUserId } });
+          existingPanelUsernames.delete(usernameKey);
+        } catch {}
+      }
       failed++;
       failures.push({ cell, username, reason: e?.message || "import_failed" });
     }
