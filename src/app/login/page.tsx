@@ -46,10 +46,10 @@ export default function LoginPage() {
   const usernameErrors = useMemo(() => {
     const list: string[] = [];
     if (!username) return list;
-    if (username.length < 5) list.push("用户名至少需要 5 个字符");
+    if (username.length < 4) list.push("用户名至少需要 4 个字符");
     if (username.length > 24) list.push("用户名不能超过 24 个字符");
     if (!/^[a-zA-Z0-9]+$/.test(username)) list.push("用户名只能包含字母或字母与数字的组合，不支持下划线、中文及其他符号");
-    if (username.length >= 5 && /^[0-9]+$/.test(username)) list.push("用户名不能全为数字，需包含至少一个字母");
+    if (username.length >= 4 && /^[0-9]+$/.test(username)) list.push("用户名不能全为数字，需包含至少一个字母");
     return list;
   }, [username]);
 
@@ -261,7 +261,7 @@ export default function LoginPage() {
           <form className="mt-3 max-w-3xl mx-auto px-10 space-y-1.5" onSubmit={doRegister}>
             <div className={`border border-gray-200 rounded-xl px-3 py-1.5 flex items-center gap-2 ${username && usernameErrors.length ? "border-red-300 bg-red-50" : ""}`}>
               <img src="/icons/user.svg" alt="用户名" className="h-4 w-4 opacity-60" />
-              <input className="w-full text-sm outline-none bg-transparent" placeholder="用户名（5位以上字母或字母+数字）" value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" />
+              <input className="w-full text-sm outline-none bg-transparent" placeholder="用户名（4位以上字母或字母+数字）" value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" />
             </div>
             {username && usernameErrors.length > 0 ? (
               <div className="border border-red-200 bg-red-50 rounded-lg px-3 py-2 space-y-0.5">
