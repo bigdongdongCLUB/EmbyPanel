@@ -156,6 +156,7 @@ export function UsersClient() {
   const [csvImportLoading, setCsvImportLoading] = useState(false);
   const [csvImportError, setCsvImportError] = useState<string | null>(null);
   const [csvImportPlans, setCsvImportPlans] = useState<PlanOption[]>([]);
+  const [csvFallbackPlanId, setCsvFallbackPlanId] = useState("");
   const [csvFileName, setCsvFileName] = useState("");
   const [csvText, setCsvText] = useState("");
   const [importServerId, setImportServerId] = useState("");
@@ -319,6 +320,7 @@ export function UsersClient() {
     setCsvImportLoading(true);
     setCsvText("");
     setCsvFileName("");
+    setCsvFallbackPlanId("");
     try {
       const res = await fetch("/api/admin/plans", { cache: "no-store" });
       const json = await res.json().catch(() => null);
@@ -1322,7 +1324,7 @@ export function UsersClient() {
                 <ol className="mt-2 list-decimal pl-6 text-sm text-sky-900 space-y-1">
                   <li>先下载 CSV 模板，并按模板填写：用户名、面板密码、订阅计划、开始时间、结束时间。</li>
                   <li>上传 CSV 后点击“开始导入”，系统将按行批量创建面板用户。</li>
-                  <li>若“订阅计划”为空，将仅创建用户；若填写计划但开始/结束时间缺失，则按无订阅处理。</li>
+                  <li>优先使用 CSV 行内订阅计划；仅当行内计划为空或无效时，才使用“分配订阅计划”。</li>
                   <li>导入完成会返回成功/跳过/失败数量，并显示失败行位置（如 A3）。</li>
                 </ol>
                 <div className="mt-3 text-sm font-semibold text-red-600">注意：单次最多导入 1000 行（不含表头）。</div>
@@ -1343,7 +1345,7 @@ export function UsersClient() {
 
               <div>
                 <label className="text-sm">分配订阅计划（可选）</label>
-                <select className="mt-1 w-full border rounded px-3 py-2" disabled={csvImportLoading}>
+                <select className="mt-1 w-full border rounded px-3 py-2" value={csvFallbackPlanId} onChange={(e) => setCsvFallbackPlanId(e.target.value)} disabled={csvImportLoading}>
                   <option value="">不分配（按 CSV 每行计划名称匹配）</option>
                   {csvImportPlans.map((p) => (
                     <option key={p.id} value={p.id}>{p.name}</option>
@@ -1412,7 +1414,7 @@ export function UsersClient() {
                     const res = await fetch("/api/admin/users/import-from-csv", {
                       method: "POST",
                       headers: { "content-type": "application/json" },
-                      body: JSON.stringify({ csv: csvText }),
+                      body: JSON.stringify({ csv: csvText, fallbackPlanId: csvFallbackPlanId || null }),
                     });
                     const json = await res.json().catch(() => null);
                     if (!res.ok) throw new Error(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);

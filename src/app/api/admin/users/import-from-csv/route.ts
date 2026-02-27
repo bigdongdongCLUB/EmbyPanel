@@ -16,6 +16,7 @@ const MAX_ROWS = 1000;
 
 const Schema = z.object({
   csv: z.string().min(1),
+  fallbackPlanId: z.string().min(1).nullable().optional(),
 });
 
 function parseCsvLine(line: string) {
@@ -81,6 +82,8 @@ export async function POST(req: Request) {
   const json = await req.json().catch(() => null);
   const parsed = Schema.safeParse(json);
   if (!parsed.success) return NextResponse.json({ error: "invalid_payload", issues: parsed.error.issues }, { status: 400 });
+
+  const fallbackPlanId = parsed.data.fallbackPlanId ?? null;
 
   const rawLines = parsed.data.csv
     .replace(/^\uFEFF/, "")
@@ -172,22 +175,21 @@ export async function POST(req: Request) {
       let startAt: Date | null = null;
       let endAt: Date | null = null;
 
-      if (planName) {
-        const plan = planByName.get(planName.toLowerCase());
-        if (plan) {
-          const s = parseDateLike(startRaw);
-          const e = parseDateLike(endRaw);
-          if (s && e) {
-            const now = new Date();
-            // 规则：开始时间晚于结束时间，或结束时间已过期 -> 按无订阅处理
-            if (s.getTime() < e.getTime() && e.getTime() > now.getTime()) {
-              planId = plan.id;
-              startAt = s;
-              endAt = e;
-            }
+      const csvPlan = planName ? planByName.get(planName.toLowerCase()) : null;
+      const finalPlanId = csvPlan?.id ?? fallbackPlanId ?? null;
+      if (finalPlanId) {
+        const s = parseDateLike(startRaw);
+        const e = parseDateLike(endRaw);
+        if (s && e) {
+          const now = new Date();
+          // 规则：开始时间晚于结束时间，或结束时间已过期 -> 按无订阅处理
+          if (s.getTime() < e.getTime() && e.getTime() > now.getTime()) {
+            planId = finalPlanId;
+            startAt = s;
+            endAt = e;
           }
-          // if plan filled but start/end missing/非法/过期/范围错误 => treat as no plan
         }
+        // if start/end missing/非法/过期/范围错误 => treat as no plan
       }
 
       const passwordHash = await hashPassword(panelPassword);
