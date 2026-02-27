@@ -141,6 +141,7 @@ export function UsersClient() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteSyncEmby, setDeleteSyncEmby] = useState(true);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
 
   const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
   const [bulkDeleteSyncEmby, setBulkDeleteSyncEmby] = useState(true);
@@ -800,8 +801,9 @@ export function UsersClient() {
             <div className="mt-5 flex gap-2">
               <button
                 className="bg-gray-700 text-white rounded px-3 py-2 disabled:opacity-50"
-                disabled={edit.loading}
+                disabled={edit.loading || editSaving}
                 onClick={async () => {
+                  if (editSaving) return;
                   const balanceNum = Number(edit.balance);
                   if (!Number.isFinite(balanceNum) || balanceNum < 0) {
                     alert("余额格式不正确");
@@ -834,34 +836,41 @@ export function UsersClient() {
                     endAt: new Date(edit.endAt + "T00:00:00.000Z").toISOString(),
                   };
 
-                  const res = await fetch(`/api/admin/users/${edit.id}`, {
-                    method: "PATCH",
-                    headers: { "content-type": "application/json" },
-                    body: JSON.stringify(payload),
-                  });
-                  const text = await res.text();
-                  let body: any = null;
+                  setEditSaving(true);
                   try {
-                    body = JSON.parse(text);
-                  } catch {}
-                  if (!res.ok) {
-                    let msg = text;
-                    if (body?.error === "cannot_demote_last_admin") {
-                      msg = "面板至少需要保留一位管理员";
-                    } else if (body?.error) {
-                      msg = String(body.error);
+                    const res = await fetch(`/api/admin/users/${edit.id}`, {
+                      method: "PATCH",
+                      headers: { "content-type": "application/json" },
+                      body: JSON.stringify(payload),
+                    });
+                    const text = await res.text();
+                    let body: any = null;
+                    try {
+                      body = JSON.parse(text);
+                    } catch {}
+                    if (!res.ok) {
+                      let msg = text;
+                      if (body?.error === "cannot_demote_last_admin") {
+                        msg = "面板至少需要保留一位管理员";
+                      } else if (body?.error) {
+                        msg = String(body.error);
+                      }
+                      alert(`保存失败: ${msg}`);
+                      return;
                     }
-                    alert(`保存失败: ${msg}`);
-                    return;
+                    if (body?.warn === "emby_name_conflict" && Array.isArray(body?.nameConflicts) && body.nameConflicts.length) {
+                      alert("已保存，但部分目标服务器存在同名用户，未自动创建：\n" + body.nameConflicts.map((x: any) => `- ${x.serverName}`).join("\n"));
+                    } else {
+                      alert("更新成功");
+                    }
+                    setEdit({ open: false });
+                    await refresh();
+                  } finally {
+                    setEditSaving(false);
                   }
-                  if (body?.warn === "emby_name_conflict" && Array.isArray(body?.nameConflicts) && body.nameConflicts.length) {
-                    alert("已保存，但部分目标服务器存在同名用户，未自动创建：\n" + body.nameConflicts.map((x: any) => `- ${x.serverName}`).join("\n"));
-                  }
-                  setEdit({ open: false });
-                  await refresh();
                 }}
               >
-                更新用户
+                {editSaving ? "更新中..." : "更新用户"}
               </button>
               <button className="border bg-white rounded px-3 py-2" onClick={() => setEdit({ open: false })}>
                 取消
