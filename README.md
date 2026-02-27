@@ -43,23 +43,14 @@
 
 ## 📞 联系我
 
-<table>
-<tr>
-<td width="120"><b>🔹 TG </b></td>
-<td><a href="https://t.me/bigdongdong">@bigdongdong</a></td>
-</tr>
-<tr>
-<td width="120"><b>🔹 TG 群组</b></td>
-<td><a href="https://t.me/bigdongdongGroup">@BDD@Tech</a></td>
-</tr>
-<tr>
-<td><b>🔹 邮箱</b></td>
-<td>boss@bigdongdong.com</td>
-</tr>
-</table>
+| 类型 | 信息 |
+|------|------|
+| Telegram | https://t.me/bigdongdong |
+| TG 群组 | https://t.me/bigdongdongGroup |
+| 邮箱 | boss@bigdongdong.com |
 
-💡 **注意 本人提供不了一点技术支持，但欢迎提交新需求和BUG！**
-
+> ❗ 本人不提供技术支持  
+> 欢迎提交 Issue、功能建议或 BUG 反馈
 ---
 
 ## ✨ 核心功能
