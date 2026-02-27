@@ -75,6 +75,7 @@ export default function LoginPage() {
     openRegistration &&
     !!username &&
     !usernameErrors.length &&
+    !!email.trim() &&
     !!password &&
     !passwordErrors.length &&
     !!confirmPassword &&
@@ -143,7 +144,7 @@ export default function LoginPage() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           username: username.trim(),
-          email: email.trim() || undefined,
+          email: email.trim(),
           password,
           name: username.trim(),
           inviteCode: inviteCode.trim() || undefined,
@@ -280,7 +281,7 @@ export default function LoginPage() {
 
             <div className="border border-gray-200 rounded-xl px-3 py-1.5 flex items-center gap-2">
               <span className="text-gray-400 text-sm">✉️</span>
-              <input className="w-full text-sm outline-none" placeholder="邮箱" value={email} onChange={(e) => setEmail(e.target.value)} />
+              <input className="w-full text-sm outline-none" placeholder="邮箱（必填）" value={email} onChange={(e) => setEmail(e.target.value)} required />
             </div>
 
             <div className={`border border-gray-200 rounded-xl px-3 py-1.5 flex items-center gap-2 ${passwordErrors.length ? "border-red-300" : ""}`}>

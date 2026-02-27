@@ -17,7 +17,7 @@ const schema = z.object({
     .max(24, "用户名不超过24个字符")
     .regex(/^[a-zA-Z0-9]+$/, "用户名只能包含字母或字母与数字的组合")
     .refine((v) => !/^[0-9]+$/.test(v), "用户名不能全为数字"),
-  email: z.string().email().optional(),
+  email: z.string().email(),
   password: z.string().min(8),
   name: z.string().min(1).optional(),
   inviteCode: z.string().min(3).max(32).optional(),
