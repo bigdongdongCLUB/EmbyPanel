@@ -164,7 +164,7 @@ export function CardCodesClient() {
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <div className="border rounded p-3"><div className="text-xs text-gray-500">卡密总数</div><div className="text-2xl text-blue-600">{summary.total}</div></div>
         <div className="border rounded p-3"><div className="text-xs text-gray-500">已使用</div><div className="text-2xl text-red-600">{summary.used}</div></div>
-        <div className="border rounded p-3"><div className="text-xs text-gray-500">未使用</div><div className="text-2xl text-emerald-600">{summary.unused}</div></div>
+        <div className="border rounded p-3"><div className="text-xs text-gray-500">未使用</div><div className="text-2xl text-amber-600">{summary.unused}</div></div>
         <div className="border rounded p-3"><div className="text-xs text-gray-500">余额卡密总数</div><div className="text-2xl text-green-600">{summary.balanceTotal}</div></div>
         <div className="border rounded p-3"><div className="text-xs text-gray-500">订阅卡密总数</div><div className="text-2xl text-purple-600">{summary.subTotal}</div></div>
       </div>
