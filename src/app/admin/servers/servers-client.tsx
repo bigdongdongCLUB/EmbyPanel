@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type Server = {
   id: string;
@@ -96,6 +96,11 @@ function UsersTable({
   setPageSize: (v: number) => void;
   onRefresh: () => void;
 }) {
+  const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [batchLoading, setBatchLoading] = useState(false);
+  const moreRef = useRef<HTMLDivElement | null>(null);
+
   const filtered = useMemo(() => {
     const qq = q.trim().toLowerCase();
     if (!qq) return users ?? [];
@@ -110,11 +115,65 @@ function UsersTable({
   const safePage = Math.min(Math.max(1, page), totalPages);
   const start = (safePage - 1) * pageSize;
   const pageRows = filtered.slice(start, start + pageSize);
+  const selectedIds = useMemo(() => Object.keys(selected).filter((id) => selected[id]), [selected]);
 
   useEffect(() => {
     if (page !== safePage) setPage(safePage);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [safePage]);
+
+  useEffect(() => {
+    const valid = new Set((users ?? []).map((u: any) => u.id));
+    setSelected((m) => {
+      const next: Record<string, boolean> = {};
+      for (const [k, v] of Object.entries(m)) if (v && valid.has(k)) next[k] = true;
+      return next;
+    });
+  }, [users]);
+
+  useEffect(() => {
+    const onDoc = (e: MouseEvent) => {
+      if (!moreRef.current) return;
+      if (!moreRef.current.contains(e.target as Node)) setMoreOpen(false);
+    };
+    const onEsc = (e: KeyboardEvent) => { if (e.key === "Escape") setMoreOpen(false); };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onEsc);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onEsc);
+    };
+  }, []);
+
+  async function runBatch(action: "disable" | "enable" | "delete") {
+    if (!selectedIds.length || batchLoading) return;
+    const label = action === "disable" ? "批量禁用" : action === "enable" ? "批量启用" : "批量删除";
+    if (!(await (window as any).showConfirm(`确定${label}已选 ${selectedIds.length} 个 Emby 用户吗？`))) return;
+    setBatchLoading(true);
+    try {
+      const res = await fetch(`/api/admin/emby-servers/${serverId}/users/batch`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action, userIds: selectedIds }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        alert(json?.error ? String(json.error) : `HTTP ${res.status}`);
+        return;
+      }
+      const failed = (json?.results ?? []).filter((x: any) => !x.ok);
+      if (failed.length) {
+        alert(`${label}完成，但失败 ${failed.length} 个`);
+      } else {
+        alert(`${label}成功`);
+      }
+      setSelected({});
+      setMoreOpen(false);
+      onRefresh();
+    } finally {
+      setBatchLoading(false);
+    }
+  }
 
   return (
     <div className="mt-4 space-y-3">
@@ -135,7 +194,20 @@ function UsersTable({
           </button>
         </div>
 
-        <div className="text-sm text-gray-600">共 {total} 个用户</div>
+        <div className="flex items-center gap-2">
+          <div className="text-sm text-gray-600">已选 {selectedIds.length} 个</div>
+          <div className="relative" ref={moreRef}>
+            <button className="border rounded px-3 py-2 text-sm" onClick={() => setMoreOpen((v) => !v)} disabled={batchLoading || !selectedIds.length}>更多 ▾</button>
+            {moreOpen ? (
+              <div className="absolute right-0 mt-1 w-36 bg-white border rounded shadow z-20 overflow-hidden">
+                <button className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-50" disabled={batchLoading} onClick={() => runBatch("disable")}>批量禁用</button>
+                <button className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-50" disabled={batchLoading} onClick={() => runBatch("enable")}>批量启用</button>
+                <button className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50" disabled={batchLoading} onClick={() => runBatch("delete")}>批量删除</button>
+              </div>
+            ) : null}
+          </div>
+          <div className="text-sm text-gray-600">共 {total} 个用户</div>
+        </div>
       </div>
 
       <div className="border rounded-lg overflow-hidden">
@@ -143,6 +215,23 @@ function UsersTable({
           <table className="min-w-[1250px] w-full text-sm">
             <thead className="text-left text-gray-600 sticky top-0 bg-white border-b">
               <tr>
+                <th className="py-2 px-3 w-10">
+                  <input
+                    type="checkbox"
+                    checked={pageRows.length > 0 && pageRows.every((u: any) => !!selected[u.id] || !!u.policy?.isAdministrator)}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setSelected((m) => {
+                        const next = { ...m };
+                        for (const u of pageRows as any[]) {
+                          if (u?.policy?.isAdministrator) continue;
+                          next[u.id] = checked;
+                        }
+                        return next;
+                      });
+                    }}
+                  />
+                </th>
                 <th className="py-2 px-3">用户名</th>
                 <th className="py-2 px-3">异常状态</th>
                 <th className="py-2 px-3">Emby用户状态</th>
@@ -155,6 +244,14 @@ function UsersTable({
             <tbody>
               {pageRows.map((u: any) => (
                 <tr key={u.id} className="border-b last:border-b-0">
+                  <td className="py-2 px-3">
+                    <input
+                      type="checkbox"
+                      disabled={!!u.policy?.isAdministrator}
+                      checked={!!selected[u.id]}
+                      onChange={(e) => setSelected((m) => ({ ...m, [u.id]: e.target.checked }))}
+                    />
+                  </td>
                   <td className="py-2 px-3 font-mono">{u.name}</td>
                   <td className="py-2 px-3">{u.anomalyStatus ?? "-"}</td>
                   <td className="py-2 px-3">
@@ -223,7 +320,7 @@ function UsersTable({
               ))}
               {total === 0 ? (
                 <tr>
-                  <td className="py-6 px-3 text-gray-500" colSpan={7}>
+                  <td className="py-6 px-3 text-gray-500" colSpan={8}>
                     无用户
                   </td>
                 </tr>
