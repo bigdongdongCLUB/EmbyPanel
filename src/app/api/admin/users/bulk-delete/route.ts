@@ -45,12 +45,10 @@ export async function POST(req: Request) {
           },
         });
 
-        await Promise.allSettled(
-          links.map(async (l) => {
-            const apiKey = getEmbyApiKeyForServer(l.embyServer);
-            await embyDeleteUser(l.embyServer.baseUrl, apiKey, l.embyUserId);
-          }),
-        );
+        for (const l of links) {
+          const apiKey = getEmbyApiKeyForServer(l.embyServer);
+          await embyDeleteUser(l.embyServer.baseUrl, apiKey, l.embyUserId);
+        }
       }
 
       await prisma.user.delete({ where: { id } });
