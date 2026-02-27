@@ -159,6 +159,16 @@ export function UsersClient() {
   const [csvFallbackPlanId, setCsvFallbackPlanId] = useState("");
   const [csvFileName, setCsvFileName] = useState("");
   const [csvText, setCsvText] = useState("");
+
+  const [trialOpen, setTrialOpen] = useState(false);
+  const [trialLoading, setTrialLoading] = useState(false);
+  const [trialError, setTrialError] = useState<string | null>(null);
+  const [trialUsername, setTrialUsername] = useState("");
+  const [trialPassword, setTrialPassword] = useState("");
+  const [trialPlanId, setTrialPlanId] = useState("");
+  const [trialHours, setTrialHours] = useState("");
+  const [trialTemplate, setTrialTemplate] = useState("安卓设备下可使用vidhub、afusetv、yamby、网易爆米花、emby官方播放器\n苹果设备下设备建议使用vidhub、senplayer、Infuse等\n软件需自己准备，本店不提供软件服务。");
+  const [trialOutput, setTrialOutput] = useState("");
   const [csvJobOpen, setCsvJobOpen] = useState(false);
   const [csvJobId, setCsvJobId] = useState("");
   const [csvJob, setCsvJob] = useState<any>(null);
@@ -363,6 +373,16 @@ export function UsersClient() {
     }
   }
 
+  function openTrialModal() {
+    setTrialError(null);
+    setTrialOutput("");
+    setTrialUsername("");
+    setTrialPassword("");
+    setTrialHours("");
+    setTrialPlanId(filterPlans[0]?.id ?? "");
+    setTrialOpen(true);
+  }
+
   const importSelectedIds = useMemo(() => Object.keys(importSelectedEmbyUsers).filter((id) => importSelectedEmbyUsers[id]), [importSelectedEmbyUsers]);
 
   async function loadEmbyUserListForImport() {
@@ -452,6 +472,16 @@ export function UsersClient() {
                   }}
                 >
                   从 CSV 模板导入用户
+                </button>
+
+                <button
+                  className="w-full text-left px-2 py-2 hover:bg-gray-50 rounded"
+                  onClick={() => {
+                    setMoreOpen(false);
+                    openTrialModal();
+                  }}
+                >
+                  试用号生成
                 </button>
 
                 <button
@@ -1501,6 +1531,103 @@ export function UsersClient() {
                 导入完成：成功{csvJob?.result?.success ?? 0} 跳过{csvJob?.result?.skipped ?? 0} 失败{csvJob?.result?.failed ?? 0}
               </div>
             ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {trialOpen ? (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-[70]">
+          <div className="bg-white rounded-lg w-full max-w-2xl p-4 max-h-[90vh] overflow-y-auto">
+            <div className="text-lg font-semibold">试用号创建</div>
+            {trialError ? <pre className="mt-2 text-xs text-red-600 whitespace-pre-wrap">{trialError}</pre> : null}
+
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm">用户名（可空）</label>
+                <input className="mt-1 w-full border rounded px-3 py-2" placeholder="留空随机生成5位" value={trialUsername} onChange={(e) => setTrialUsername(e.target.value)} />
+              </div>
+              <div>
+                <label className="text-sm">密码（可空）</label>
+                <input className="mt-1 w-full border rounded px-3 py-2" placeholder="留空随机生成8位纯数字" value={trialPassword} onChange={(e) => setTrialPassword(e.target.value)} />
+              </div>
+              <div>
+                <label className="text-sm">订阅计划</label>
+                <select className="mt-1 w-full border rounded px-3 py-2" value={trialPlanId} onChange={(e) => setTrialPlanId(e.target.value)}>
+                  <option value="">请选择</option>
+                  {filterPlans.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-sm">使用时间（小时，1-168，可空默认3）</label>
+                <input className="mt-1 w-full border rounded px-3 py-2" placeholder="3" value={trialHours} onChange={(e) => setTrialHours(e.target.value)} />
+              </div>
+            </div>
+
+            <div className="mt-3">
+              <label className="text-sm">说明模板</label>
+              <textarea className="mt-1 w-full border rounded px-3 py-2 text-sm h-24" value={trialTemplate} onChange={(e) => setTrialTemplate(e.target.value)} />
+            </div>
+
+            {trialOutput ? (
+              <div className="mt-3">
+                <label className="text-sm">生成结果</label>
+                <textarea className="mt-1 w-full border rounded px-3 py-2 text-sm h-56" value={trialOutput} readOnly />
+                <div className="mt-2">
+                  <button
+                    className="border rounded px-3 py-2"
+                    onClick={async () => {
+                      await navigator.clipboard.writeText(trialOutput);
+                      alert("已复制");
+                    }}
+                  >
+                    一键复制
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="mt-4 flex justify-end gap-2">
+              <button className="border bg-white rounded px-3 py-2" onClick={() => setTrialOpen(false)} disabled={trialLoading}>取消</button>
+              <button
+                className="bg-gray-700 text-white rounded px-3 py-2 disabled:opacity-50"
+                disabled={trialLoading || !trialPlanId}
+                onClick={async () => {
+                  setTrialLoading(true);
+                  setTrialError(null);
+                  try {
+                    const hoursNum = trialHours.trim() ? Number(trialHours) : 3;
+                    if (!Number.isFinite(hoursNum) || hoursNum < 1 || hoursNum > 168) {
+                      throw new Error("试用小时需在 1-168");
+                    }
+                    const res = await fetch("/api/admin/users/create-trial", {
+                      method: "POST",
+                      headers: { "content-type": "application/json" },
+                      body: JSON.stringify({
+                        username: trialUsername.trim() || null,
+                        password: trialPassword.trim() || null,
+                        planId: trialPlanId,
+                        hours: hoursNum,
+                      }),
+                    });
+                    const json = await res.json().catch(() => null);
+                    if (!res.ok) throw new Error(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
+
+                    const r = json?.result ?? {};
+                    const txt = `地址：${r.address || "https://xx.bestemby.com"}\n端口号：${r.port || "xxxxx"}\n用户名：${r.username}\n密码：${r.password}\n测试时间为${r.hours}小时，测试结束账户将被删除。\n${trialTemplate}`;
+                    setTrialOutput(txt);
+                    await refresh(false);
+                  } catch (e: any) {
+                    setTrialError(e?.message ?? "trial_create_failed");
+                  } finally {
+                    setTrialLoading(false);
+                  }
+                }}
+              >
+                {trialLoading ? "生成中..." : "生成试用号"}
+              </button>
+            </div>
           </div>
         </div>
       ) : null}
