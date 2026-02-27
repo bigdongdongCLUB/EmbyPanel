@@ -225,7 +225,7 @@ export function UsersClient() {
     };
   }, [csvJobOpen, csvJobId]);
 
-  async function refresh() {
+  async function refresh(resetPage = true) {
     setLoading(true);
     setError(null);
     try {
@@ -238,7 +238,7 @@ export function UsersClient() {
       const json = await res.json().catch(() => null);
       if (!res.ok) throw new Error(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
       setRows(json.users ?? []);
-      setPage(1);
+      if (resetPage) setPage(1);
       // prune selection after refresh
       setSelected((m) => {
         const next: Record<string, boolean> = {};
@@ -419,7 +419,7 @@ export function UsersClient() {
             <option value="none">无订阅</option>
           </select>
 
-          <button className="border rounded px-3 py-2" onClick={refresh}>
+          <button className="border rounded px-3 py-2" onClick={() => refresh()}>
             查询
           </button>
         </div>
@@ -864,7 +864,7 @@ export function UsersClient() {
                       alert("更新成功");
                     }
                     setEdit({ open: false });
-                    await refresh();
+                    await refresh(false);
                   } finally {
                     setEditSaving(false);
                   }
