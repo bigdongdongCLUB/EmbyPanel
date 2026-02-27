@@ -35,7 +35,7 @@ export async function GET(req: Request) {
         ? {
             subscriptions: {
               some: {
-                status: "ACTIVE",
+                status: { in: ["ACTIVE", "EXPIRED"] },
                 planId,
               },
             },
@@ -62,8 +62,8 @@ export async function GET(req: Request) {
         },
       },
       subscriptions: {
-        where: { status: "ACTIVE" },
-        orderBy: { endAt: "desc" },
+        where: { status: { in: ["ACTIVE", "EXPIRED"] } },
+        orderBy: [{ endAt: "desc" }, { createdAt: "desc" }],
         take: 1,
         select: {
           id: true,
