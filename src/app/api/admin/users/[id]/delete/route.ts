@@ -31,10 +31,17 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       select: { embyServerId: true, embyUserId: true, embyServer: { select: { id: true, baseUrl: true, apiKey: true, apiKeyEnc: true, apiKeyIv: true, apiKeyTag: true } } },
     });
 
-    for (const l of links) {
-      const apiKey = getEmbyApiKeyForServer(l.embyServer);
-      const r = await embyDeleteUser(l.embyServer.baseUrl, apiKey, l.embyUserId);
-      embyResults.push({ embyServerId: l.embyServerId, ok: r.ok, status: r.status, body: (r as any).body });
+    const settled = await Promise.allSettled(
+      links.map(async (l) => {
+        const apiKey = getEmbyApiKeyForServer(l.embyServer);
+        const r = await embyDeleteUser(l.embyServer.baseUrl, apiKey, l.embyUserId);
+        return { embyServerId: l.embyServerId, ok: r.ok, status: r.status, body: (r as any).body };
+      }),
+    );
+
+    for (const item of settled) {
+      if (item.status === "fulfilled") embyResults.push(item.value);
+      else embyResults.push({ ok: false, error: item.reason?.message ?? String(item.reason ?? "unknown") });
     }
   }
 
