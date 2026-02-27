@@ -13,6 +13,7 @@ type Row = {
   note: string | null;
   createdAt: string;
   usedAt: string | null;
+  usedByUser?: { id: string; username: string; email: string | null } | null;
   plan: { id: string; name: string } | null;
 };
 
@@ -231,7 +232,7 @@ export function CardCodesClient() {
                 const next: Record<string, boolean> = {};
                 for (const r of pageRows) next[r.id] = true;
                 setSelected(next);
-              }} /></th><th className="px-3 py-2">卡密</th><th className="px-3 py-2">类型</th><th className="px-3 py-2">内容</th><th className="px-3 py-2">状态</th><th className="px-3 py-2">使用时间</th><th className="px-3 py-2">创建时间</th><th className="px-3 py-2">操作</th>
+              }} /></th><th className="px-3 py-2">卡密</th><th className="px-3 py-2">类型</th><th className="px-3 py-2">内容</th><th className="px-3 py-2">状态</th><th className="px-3 py-2">使用用户</th><th className="px-3 py-2">使用时间</th><th className="px-3 py-2">创建时间</th><th className="px-3 py-2">操作</th>
             </tr>
           </thead>
           <tbody>
@@ -258,6 +259,16 @@ export function CardCodesClient() {
                                     <span className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 text-gray-500 px-2.5 py-0.5 text-xs font-medium">已禁用</span>
                                   )}
                                 </td>
+                <td className="px-3 py-2">
+                  {r.status === "USED" && r.usedByUser ? (
+                    <div className="leading-tight">
+                      <div className="font-medium">{r.usedByUser.username}</div>
+                      <div className="text-gray-500">{r.usedByUser.email || "-"}</div>
+                    </div>
+                  ) : (
+                    "-"
+                  )}
+                </td>
                 <td className="px-3 py-2">{fmt(r.usedAt)}</td>
                 <td className="px-3 py-2">{fmt(r.createdAt)}</td>
                 <td className="px-3 py-2">
@@ -293,7 +304,7 @@ export function CardCodesClient() {
                 </td>
               </tr>
             ))}
-            {!total ? <tr><td className="px-3 py-6 text-gray-500" colSpan={8}>暂无数据</td></tr> : null}
+            {!total ? <tr><td className="px-3 py-6 text-gray-500" colSpan={9}>暂无数据</td></tr> : null}
           </tbody>
         </table>
       </div>

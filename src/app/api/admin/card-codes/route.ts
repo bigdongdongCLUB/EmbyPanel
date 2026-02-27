@@ -71,9 +71,11 @@ export async function GET(req: Request) {
     if (!cardCodeModel) {
       const rows = await prisma.$queryRaw<any[]>`
         SELECT c."id", c."code", c."type", c."status", c."amountCents", c."payCycle", c."subscriptionDays", c."note", c."createdAt", c."usedAt",
-               p."id" as "planId", p."name" as "planName"
+               p."id" as "planId", p."name" as "planName",
+               u."id" as "usedByUserId", u."username" as "usedByUsername", u."email" as "usedByEmail"
         FROM "CardCode" c
         LEFT JOIN "Plan" p ON p."id" = c."planId"
+        LEFT JOIN "User" u ON u."id" = c."usedByUserId"
         ORDER BY c."createdAt" DESC
         LIMIT 500
       `;
@@ -101,6 +103,7 @@ export async function GET(req: Request) {
           note: r.note,
           createdAt: r.createdAt,
           usedAt: r.usedAt,
+          usedByUser: r.usedByUserId ? { id: r.usedByUserId, username: r.usedByUsername, email: r.usedByEmail } : null,
           plan: r.planId ? { id: r.planId, name: r.planName } : null,
         })),
         plans,
@@ -123,6 +126,7 @@ export async function GET(req: Request) {
           note: true,
           createdAt: true,
           usedAt: true,
+          usedByUser: { select: { id: true, username: true, email: true } },
           plan: { select: { id: true, name: true } },
         },
       }),
