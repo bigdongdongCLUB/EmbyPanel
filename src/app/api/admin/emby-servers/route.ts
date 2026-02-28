@@ -18,6 +18,7 @@ export async function GET() {
       id: true,
       name: true,
       baseUrl: true,
+      externalUrl: true,
       enabled: true,
       lastHealthAt: true,
       lastHealthOk: true,
@@ -33,6 +34,7 @@ export async function GET() {
 const CreateSchema = z.object({
   name: z.string().min(1).max(100),
   baseUrl: z.string().url(),
+  externalUrl: z.string().url().optional().nullable(),
   apiKey: z.string().min(10),
   enabled: z.boolean().optional(),
 });
@@ -51,6 +53,7 @@ export async function POST(req: Request) {
     data: {
       name: parsed.data.name,
       baseUrl: normalizeBaseUrl(parsed.data.baseUrl),
+      externalUrl: parsed.data.externalUrl ? normalizeBaseUrl(parsed.data.externalUrl) : null,
       apiKeyEnc: enc.enc,
       apiKeyIv: enc.iv,
       apiKeyTag: enc.tag,
@@ -62,6 +65,7 @@ export async function POST(req: Request) {
       id: true,
       name: true,
       baseUrl: true,
+      externalUrl: true,
       enabled: true,
       createdAt: true,
       updatedAt: true,

@@ -7,6 +7,7 @@ type Server = {
   id: string;
   name: string;
   baseUrl: string;
+  externalUrl?: string | null;
   enabled: boolean;
   lastHealthAt: string | null;
   lastHealthOk: boolean | null;
@@ -20,6 +21,7 @@ type ModalState =
       id: string;
       name: string;
       baseUrl: string;
+      externalUrl: string;
       apiKey: string;
       enabled: boolean;
       showApiKey: boolean;
@@ -442,6 +444,7 @@ export function ServersClient() {
 
   const [name, setName] = useState("");
   const [baseUrl, setBaseUrl] = useState("");
+  const [externalUrl, setExternalUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
 
   const [modal, setModal] = useState<ModalState>({ open: false });
@@ -476,7 +479,7 @@ export function ServersClient() {
     <div className="space-y-8">
       <section className="border rounded-lg p-4">
         <h2 className="font-semibold">新增服务器</h2>
-        <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="mt-3 grid grid-cols-1 md:grid-cols-4 gap-3">
           <div>
             <label className="text-sm">名称</label>
             <input className="mt-1 w-full border rounded px-3 py-2" value={name} onChange={(e) => setName(e.target.value)} placeholder="比如：4U Emby" />
@@ -484,6 +487,10 @@ export function ServersClient() {
           <div>
             <label className="text-sm">Base URL</label>
             <input className="mt-1 w-full border rounded px-3 py-2" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="http://host:8096" />
+          </div>
+          <div>
+            <label className="text-sm">外部访问地址（选填）</label>
+            <input className="mt-1 w-full border rounded px-3 py-2" value={externalUrl} onChange={(e) => setExternalUrl(e.target.value)} placeholder="https://emby.example.com" />
           </div>
           <div>
             <label className="text-sm">API Key</label>
@@ -499,7 +506,7 @@ export function ServersClient() {
               const res = await fetch("/api/admin/emby-servers", {
                 method: "POST",
                 headers: { "content-type": "application/json" },
-                body: JSON.stringify({ name, baseUrl, apiKey }),
+                body: JSON.stringify({ name, baseUrl, externalUrl: externalUrl.trim() || null, apiKey }),
               });
               if (!res.ok) {
                 const t = await res.text();
@@ -509,6 +516,7 @@ export function ServersClient() {
               setName("");
               setBaseUrl("");
               setApiKey("");
+              setExternalUrl("");
               await refresh();
             }}
           >
@@ -533,7 +541,8 @@ export function ServersClient() {
             <div key={s.id} className="border rounded p-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
               <div>
                 <div className="font-medium">{s.name}</div>
-                <div className="text-sm text-gray-600">{s.baseUrl}</div>
+                <div className="text-sm text-gray-600">Base URL：{s.baseUrl}</div>
+                <div className="text-sm text-gray-600">外部访问地址：{s.externalUrl || s.baseUrl}</div>
                 <div className="text-xs text-gray-500 mt-1">
                   {s.lastHealthOk === null
                     ? "健康检测：-"
@@ -609,6 +618,7 @@ export function ServersClient() {
                       id: s.id,
                       name: s.name,
                       baseUrl: s.baseUrl,
+                      externalUrl: s.externalUrl || "",
                       apiKey: "",
                       enabled: true,
                       showApiKey: false,
@@ -622,7 +632,8 @@ export function ServersClient() {
                         open: true,
                         id: s.id,
                         name: s.name,
-                        baseUrl: s.baseUrl,
+                        baseUrl: json?.server?.baseUrl || s.baseUrl,
+                        externalUrl: json?.server?.externalUrl || "",
                         apiKey: json?.server?.apiKey || "",
                         enabled: true,
                         showApiKey: false,
@@ -767,6 +778,14 @@ export function ServersClient() {
                 />
               </div>
               <div>
+                <label className="text-sm">外部访问地址（选填）</label>
+                <input
+                  className="mt-1 w-full border rounded px-3 py-2"
+                  value={modal.externalUrl}
+                  onChange={(e) => setModal({ ...modal, externalUrl: e.target.value })}
+                />
+              </div>
+              <div>
                 <label className="text-sm">API Key</label>
                 <div className="mt-1 relative">
                   <input
@@ -804,6 +823,7 @@ export function ServersClient() {
                   const payload: any = {
                     name: modal.name,
                     baseUrl: modal.baseUrl,
+                    externalUrl: modal.externalUrl.trim() || null,
                     apiKey: modal.apiKey.trim(),
                   };
 

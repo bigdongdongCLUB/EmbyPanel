@@ -12,6 +12,7 @@ import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
 const PatchSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   baseUrl: z.string().url().optional(),
+  externalUrl: z.string().url().nullable().optional(),
   apiKey: z.string().min(10).optional(),
   enabled: z.boolean().optional(),
 });
@@ -27,6 +28,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
       id: true,
       name: true,
       baseUrl: true,
+      externalUrl: true,
       enabled: true,
       apiKey: true,
       apiKeyEnc: true,
@@ -42,6 +44,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
       id: server.id,
       name: server.name,
       baseUrl: server.baseUrl,
+      externalUrl: server.externalUrl,
       enabled: server.enabled,
       apiKey,
     },
@@ -60,6 +63,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   const data: any = {};
   if (parsed.data.name !== undefined) data.name = parsed.data.name;
   if (parsed.data.baseUrl !== undefined) data.baseUrl = normalizeBaseUrl(parsed.data.baseUrl);
+  if (parsed.data.externalUrl !== undefined) data.externalUrl = parsed.data.externalUrl ? normalizeBaseUrl(parsed.data.externalUrl) : null;
   if (parsed.data.enabled !== undefined) data.enabled = parsed.data.enabled;
   if (parsed.data.apiKey !== undefined) {
     const enc = encryptString(parsed.data.apiKey);
@@ -76,6 +80,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       id: true,
       name: true,
       baseUrl: true,
+      externalUrl: true,
       enabled: true,
       lastHealthAt: true,
       lastHealthOk: true,

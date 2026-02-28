@@ -18,7 +18,12 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   const apiKey = getEmbyApiKeyForServer(server);
 
   const started = Date.now();
-  const result = await embyFetchSystemInfo(server.baseUrl, apiKey);
+  let result = await embyFetchSystemInfo(server.baseUrl, apiKey);
+  let usedUrl = server.baseUrl;
+  if (!result.ok && (server as any).externalUrl && (server as any).externalUrl !== server.baseUrl) {
+    result = await embyFetchSystemInfo((server as any).externalUrl, apiKey);
+    usedUrl = (server as any).externalUrl;
+  }
   const ms = Date.now() - started;
 
   if (!result.ok) {
@@ -44,5 +49,5 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
     },
   });
 
-  return NextResponse.json({ ok: true, ms, info });
+  return NextResponse.json({ ok: true, ms, info, usedUrl });
 }
