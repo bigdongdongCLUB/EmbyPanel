@@ -56,7 +56,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
       createdAt: true,
       embyLinks: { select: { embyServerId: true, embyUserId: true, embyServer: { select: { name: true } } } },
       subscriptions: {
-        where: { status: "ACTIVE" },
+        where: { status: { in: ["ACTIVE", "EXPIRED"] } },
         orderBy: { endAt: "desc" },
         take: 1,
         select: {
@@ -127,21 +127,21 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
   const subscription = parsed.data.subscription;
 
-  // snapshot previous assigned servers from current ACTIVE subscription
-  const prevActive = await prisma.subscription.findFirst({
-    where: { userId: id, status: "ACTIVE" },
+  // snapshot previous assigned servers from latest ACTIVE/EXPIRED subscription
+  const prevSub = await prisma.subscription.findFirst({
+    where: { userId: id, status: { in: ["ACTIVE", "EXPIRED"] } },
     orderBy: { endAt: "desc" },
     select: { id: true, planId: true, servers: { select: { embyServerId: true } } },
   });
-  const prevPlanId = prevActive?.planId ?? null;
-  const prevServerIds = new Set((prevActive?.servers ?? []).map((x) => x.embyServerId));
+  const prevPlanId = prevSub?.planId ?? null;
+  const prevServerIds = new Set((prevSub?.servers ?? []).map((x) => x.embyServerId));
 
   await prisma.$transaction(async (tx) => {
     await tx.user.update({ where: { id }, data });
 
     if (subscription !== undefined) {
-      // Replace active subscription (simple MVP)
-      await tx.subscription.updateMany({ where: { userId: id, status: "ACTIVE" }, data: { status: "CANCELED" } });
+      // Replace current subscription (ACTIVE/EXPIRED)
+      await tx.subscription.updateMany({ where: { userId: id, status: { in: ["ACTIVE", "EXPIRED"] } }, data: { status: "CANCELED" } });
 
       if (subscription !== null) {
         const sub = await tx.subscription.create({
