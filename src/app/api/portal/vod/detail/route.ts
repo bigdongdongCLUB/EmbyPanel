@@ -8,6 +8,107 @@ import { normalizeBaseUrl } from "@/lib/emby";
 
 const TMDB_BASE = "https://api.themoviedb.org/3";
 
+type EmbyItem = {
+  Id?: string;
+  Name?: string;
+  ProductionYear?: number;
+  ProviderIds?: Record<string, string>;
+};
+
+function norm(s: string) {
+  return String(s || "")
+    .toLowerCase()
+    .replace(/[\s\-_.:：,，'"“”‘’!！?？()（）\[\]【】]/g, "")
+    .trim();
+}
+
+function getTmdbProviderId(item: EmbyItem) {
+  const p = item?.ProviderIds ?? {};
+  return String(p.Tmdb ?? p.TMDb ?? p.tmdb ?? "").trim();
+}
+
+function scoreMatch(item: EmbyItem, title: string, originalTitle: string, year: number | null, tmdbId: string) {
+  let score = 0;
+  const name = String(item?.Name ?? "");
+  const n = norm(name);
+  const t1 = norm(title);
+  const t2 = norm(originalTitle);
+
+  const providerTmdb = getTmdbProviderId(item);
+  if (providerTmdb && providerTmdb === tmdbId) score += 1000;
+
+  if (n && t1 && n === t1) score += 120;
+  else if (n && t1 && (n.includes(t1) || t1.includes(n))) score += 70;
+
+  if (n && t2 && n === t2) score += 110;
+  else if (n && t2 && (n.includes(t2) || t2.includes(n))) score += 65;
+
+  if (year && item?.ProductionYear) {
+    const dy = Math.abs(Number(item.ProductionYear) - year);
+    if (dy === 0) score += 40;
+    else if (dy <= 1) score += 20;
+  }
+
+  return score;
+}
+
+async function fetchJsonWithRetry(url: string, timeoutMs = 5000, retries = 1) {
+  let lastErr: any = null;
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.json();
+    } catch (e: any) {
+      lastErr = e;
+    }
+  }
+  throw lastErr ?? new Error("fetch_failed");
+}
+
+async function searchBestItemByTitle(params: {
+  base: string;
+  embyKey: string;
+  includeType: "Series" | "Movie";
+  title: string;
+  originalTitle: string;
+  year: number | null;
+  tmdbId: string;
+}) {
+  const terms = Array.from(new Set([params.title, params.originalTitle].map((s) => String(s || "").trim()).filter(Boolean)));
+  const all: EmbyItem[] = [];
+
+  for (const term of terms) {
+    const u = `${params.base}/Items?SearchTerm=${encodeURIComponent(term)}&IncludeItemTypes=${params.includeType}&Recursive=true&api_key=${params.embyKey}&Limit=50&Fields=Name,ProductionYear,ProviderIds`;
+    try {
+      const data = await fetchJsonWithRetry(u, 5000, 1);
+      all.push(...(data?.Items ?? []));
+    } catch {
+      // ignore term-level failure
+    }
+  }
+
+  const dedup = new Map<string, EmbyItem>();
+  for (const x of all) {
+    const k = String(x?.Id ?? "");
+    if (!k) continue;
+    if (!dedup.has(k)) dedup.set(k, x);
+  }
+
+  let best: EmbyItem | null = null;
+  let bestScore = -1;
+  for (const x of dedup.values()) {
+    const s = scoreMatch(x, params.title, params.originalTitle, params.year, params.tmdbId);
+    if (s > bestScore) {
+      bestScore = s;
+      best = x;
+    }
+  }
+
+  if (best && bestScore >= 70) return best;
+  return null;
+}
+
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -27,7 +128,7 @@ export async function GET(req: Request) {
   if (!apiKey) return NextResponse.json({ error: "tmdb_not_configured" }, { status: 503 });
 
   try {
-    const detailUrl = `${TMDB_BASE}/${mediaType}/${tmdbId}?api_key=${apiKey}&language=zh-CN&append_to_response=seasons`;
+    const detailUrl = `${TMDB_BASE}/${mediaType}/${tmdbId}?api_key=${apiKey}&language=zh-CN&append_to_response=seasons,external_ids`;
     const detailRes = await fetch(detailUrl, { signal: AbortSignal.timeout(8000) });
     if (!detailRes.ok) throw new Error(`TMDB detail ${detailRes.status}`);
     const detail = await detailRes.json();
@@ -39,7 +140,6 @@ export async function GET(req: Request) {
             .map((s: any) => ({ seasonNumber: s.season_number, name: s.name, episodeCount: s.episode_count }))
         : [];
 
-    // Check user's subscribed Emby servers
     const links = await prisma.embyUserLink.findMany({
       where: { userId: userId, disabled: false },
       include: { embyServer: true },
@@ -48,6 +148,8 @@ export async function GET(req: Request) {
     const serverResults: Array<{ serverId: string; serverName: string; seasons: Record<number, boolean>; hasMovie: boolean }> = [];
     const searchTitle = (detail.title ?? detail.name ?? "").trim();
     const searchOriginal = (detail.original_title ?? detail.original_name ?? "").trim();
+    const yearText = (detail.release_date ?? detail.first_air_date ?? "").slice(0, 4);
+    const year = /^\d{4}$/.test(yearText) ? Number(yearText) : null;
 
     for (const link of links) {
       const server = link.embyServer;
@@ -57,32 +159,53 @@ export async function GET(req: Request) {
 
       try {
         if (mediaType === "tv") {
-          const searchUrl = `${base}/Items?SearchTerm=${encodeURIComponent(searchTitle)}&IncludeItemTypes=Series&Recursive=true&api_key=${embyKey}&Limit=5`;
-          const searchRes = await fetch(searchUrl, { signal: AbortSignal.timeout(5000) });
-          const searchData = searchRes.ok ? await searchRes.json() : null;
-          const series = (searchData?.Items ?? []).find(
-            (item: any) =>
-              item.Name?.toLowerCase().includes(searchTitle.toLowerCase()) ||
-              (searchOriginal && item.Name?.toLowerCase().includes(searchOriginal.toLowerCase()))
-          );
+          const bestSeries = await searchBestItemByTitle({
+            base,
+            embyKey,
+            includeType: "Series",
+            title: searchTitle,
+            originalTitle: searchOriginal,
+            year,
+            tmdbId: String(tmdbId),
+          });
 
           const seasonsPresent: Record<number, boolean> = {};
           for (const s of seasons) seasonsPresent[s.seasonNumber] = false;
 
-          if (series?.Id) {
-            const seasonsUrl = `${base}/Shows/${series.Id}/Seasons?api_key=${embyKey}`;
-            const seasonsRes = await fetch(seasonsUrl, { signal: AbortSignal.timeout(5000) });
-            const seasonsData = seasonsRes.ok ? await seasonsRes.json() : null;
-            for (const s of seasonsData?.Items ?? []) {
-              if (s.IndexNumber > 0) seasonsPresent[s.IndexNumber] = true;
+          if (bestSeries?.Id) {
+            let seasonItems: any[] = [];
+            try {
+              const seasonsUrl = `${base}/Shows/${bestSeries.Id}/Seasons?api_key=${embyKey}`;
+              const seasonsData = await fetchJsonWithRetry(seasonsUrl, 5000, 1);
+              seasonItems = seasonsData?.Items ?? [];
+            } catch {
+              try {
+                const fallbackUrl = `${base}/Items?ParentId=${encodeURIComponent(bestSeries.Id)}&IncludeItemTypes=Season&Recursive=false&api_key=${embyKey}&Limit=200&Fields=IndexNumber`;
+                const fallbackData = await fetchJsonWithRetry(fallbackUrl, 5000, 1);
+                seasonItems = fallbackData?.Items ?? [];
+              } catch {
+                seasonItems = [];
+              }
+            }
+
+            for (const s of seasonItems) {
+              const idx = Number(s?.IndexNumber);
+              if (Number.isFinite(idx) && idx > 0) seasonsPresent[idx] = true;
             }
           }
+
           serverResults.push({ serverId: server.id, serverName: server.name, seasons: seasonsPresent, hasMovie: false });
         } else {
-          const searchUrl = `${base}/Items?SearchTerm=${encodeURIComponent(searchTitle)}&IncludeItemTypes=Movie&Recursive=true&api_key=${embyKey}&Limit=5`;
-          const searchRes = await fetch(searchUrl, { signal: AbortSignal.timeout(5000) });
-          const searchData = searchRes.ok ? await searchRes.json() : null;
-          serverResults.push({ serverId: server.id, serverName: server.name, seasons: {}, hasMovie: (searchData?.Items ?? []).length > 0 });
+          const bestMovie = await searchBestItemByTitle({
+            base,
+            embyKey,
+            includeType: "Movie",
+            title: searchTitle,
+            originalTitle: searchOriginal,
+            year,
+            tmdbId: String(tmdbId),
+          });
+          serverResults.push({ serverId: server.id, serverName: server.name, seasons: {}, hasMovie: !!bestMovie?.Id });
         }
       } catch {
         serverResults.push({ serverId: server.id, serverName: server.name, seasons: {}, hasMovie: false });
