@@ -56,14 +56,13 @@ export async function POST(req: Request) {
     for (const u of users) {
       usersScanned += 1;
 
-      const latestActive = await prisma.subscription.findFirst({
-        where: { userId: u.id, status: "ACTIVE" },
-        orderBy: { endAt: "desc" },
-        select: { id: true, payCycle: true, endAt: true },
+      const expiredTrial = await prisma.subscription.findFirst({
+        where: { userId: u.id, status: "ACTIVE", payCycle: "TRIAL", endAt: { lte: now } },
+        select: { id: true },
       });
 
       // 规则：试用号到期后直接删除（面板 + Emby）
-      if (latestActive && latestActive.payCycle === "TRIAL" && latestActive.endAt <= now) {
+      if (expiredTrial) {
         for (const l of u.embyLinks) {
           try {
             const apiKey = getEmbyApiKeyForServer(l.embyServer as any);
