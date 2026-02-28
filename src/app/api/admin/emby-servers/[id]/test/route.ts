@@ -23,22 +23,33 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   const apiKey = getEmbyApiKeyForServer(server);
 
   const started = Date.now();
-  const baseRes = await embyFetchSystemInfo(server.baseUrl, apiKey);
-  const baseMs = Date.now() - started;
+  let baseRes: any;
+  let baseMs = 0;
+  try {
+    baseRes = await embyFetchSystemInfo(server.baseUrl, apiKey);
+    baseMs = Date.now() - started;
+  } catch (e: any) {
+    baseMs = Date.now() - started;
+    baseRes = { ok: false, error: String(e?.message ?? e ?? "fetch_failed") };
+  }
 
   let external: any = { tested: false };
   if ((server as any).externalUrl) {
     const t1 = Date.now();
-    const extRes = await embyFetchSystemInfo((server as any).externalUrl, apiKey);
-    const extMs = Date.now() - t1;
-    external = extRes.ok
-      ? { tested: true, ok: true, ms: extMs }
-      : { tested: true, ok: false, error: `HTTP ${extRes.status}: ${extRes.body?.slice(0, 300)}` };
+    try {
+      const extRes = await embyFetchSystemInfo((server as any).externalUrl, apiKey);
+      const extMs = Date.now() - t1;
+      external = extRes.ok
+        ? { tested: true, ok: true, ms: extMs }
+        : { tested: true, ok: false, error: `HTTP ${extRes.status}: ${extRes.body?.slice(0, 300)}` };
+    } catch (e: any) {
+      external = { tested: true, ok: false, error: String(e?.message ?? e ?? "fetch_failed") };
+    }
   }
 
   const detail = baseRes.ok
     ? { base: { ok: true, ms: baseMs }, external }
-    : { base: { ok: false, error: `HTTP ${baseRes.status}: ${baseRes.body?.slice(0, 300)}` }, external };
+    : { base: { ok: false, error: baseRes.error ? String(baseRes.error) : `HTTP ${baseRes.status}: ${baseRes.body?.slice(0, 300)}` }, external };
 
   await prisma.embyServer.update({
     where: { id },
