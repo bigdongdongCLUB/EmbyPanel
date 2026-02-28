@@ -1629,7 +1629,12 @@ export function UsersClient() {
                       }),
                     });
                     const json = await res.json().catch(() => null);
-                    if (!res.ok) throw new Error(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
+                    if (!res.ok) {
+                      if (json?.error === "server_unreachable_generate_failed") {
+                        throw new Error("服务器无响应生成失败");
+                      }
+                      throw new Error(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
+                    }
 
                     const r = json?.result ?? {};
                     const txt = `地址：${r.address || "https://xx.bestemby.com"}\n端口号：${r.port || "xxxxx"}\n用户名：${r.username}\n密码：${r.password}\n测试时间为${r.hours}小时，测试结束账户将被删除。\n${trialTemplate}`;

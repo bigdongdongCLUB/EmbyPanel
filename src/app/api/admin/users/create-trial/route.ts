@@ -8,7 +8,7 @@ import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
 import { encryptSyncPassword } from "@/lib/user-secrets";
 import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
-import { embyCreateUser, embySetUserDisabled, embySetUserPassword } from "@/lib/emby-provision";
+import { embyCreateUser, embyDeleteUser, embySetUserDisabled, embySetUserPassword } from "@/lib/emby-provision";
 import { embyFetchUsers } from "@/lib/emby";
 
 const Schema = z.object({
@@ -90,87 +90,113 @@ export async function POST(req: Request) {
   const passwordHash = await hashPassword(password);
   const enc = encryptSyncPassword(password);
 
-  const user = await prisma.user.create({
-    data: {
-      username,
-      email: null,
-      passwordHash,
-      syncPasswordEnc: enc.enc,
-      syncPasswordIv: enc.iv,
-      syncPasswordTag: enc.tag,
-      role: "USER",
-      enabled: true,
-    },
-    select: { id: true, username: true },
-  });
+  let userIdForRollback: string | null = null;
+  const createdEmby: Array<{ baseUrl: string; apiKey: string; embyUserId: string }> = [];
 
-  const startAt = new Date();
-  const endAt = new Date(startAt.getTime() + hours * 3600 * 1000);
+  try {
+    const user = await prisma.user.create({
+      data: {
+        username,
+        email: null,
+        passwordHash,
+        syncPasswordEnc: enc.enc,
+        syncPasswordIv: enc.iv,
+        syncPasswordTag: enc.tag,
+        role: "USER",
+        enabled: true,
+      },
+      select: { id: true, username: true },
+    });
+    userIdForRollback = user.id;
 
-  const sub = await prisma.subscription.create({
-    data: {
-      userId: user.id,
-      planId: plan.id,
-      status: "ACTIVE",
-      payCycle: "TRIAL",
-      startAt,
-      endAt,
-    },
-    select: { id: true },
-  });
+    const startAt = new Date();
+    const endAt = new Date(startAt.getTime() + hours * 3600 * 1000);
 
-  const configs = await prisma.planServerConfig.findMany({ where: { planId: plan.id }, select: { embyServerId: true } });
-  const serverIds = Array.from(new Set(configs.map((x) => x.embyServerId)));
-
-  if (serverIds.length) {
-    await prisma.subscriptionServer.createMany({
-      data: serverIds.map((sid) => ({ subscriptionId: sub.id, embyServerId: sid })),
-      skipDuplicates: true,
+    const sub = await prisma.subscription.create({
+      data: {
+        userId: user.id,
+        planId: plan.id,
+        status: "ACTIVE",
+        payCycle: "TRIAL",
+        startAt,
+        endAt,
+      },
+      select: { id: true },
     });
 
-    const servers = await prisma.embyServer.findMany({
-      where: { id: { in: serverIds }, enabled: true },
-      select: { id: true, baseUrl: true, apiKey: true, apiKeyEnc: true, apiKeyIv: true, apiKeyTag: true },
-    });
+    const configs = await prisma.planServerConfig.findMany({ where: { planId: plan.id }, select: { embyServerId: true } });
+    const serverIds = Array.from(new Set(configs.map((x) => x.embyServerId)));
 
-    for (const s of servers) {
-      const apiKey = getEmbyApiKeyForServer(s);
-      let embyUserId: string | null = null;
+    if (serverIds.length) {
+      await prisma.subscriptionServer.createMany({
+        data: serverIds.map((sid) => ({ subscriptionId: sub.id, embyServerId: sid })),
+        skipDuplicates: true,
+      });
 
-      const usersRes = await embyFetchUsers(s.baseUrl, apiKey);
-      if (usersRes.ok) {
+      const servers = await prisma.embyServer.findMany({
+        where: { id: { in: serverIds }, enabled: true },
+        select: { id: true, baseUrl: true, apiKey: true, apiKeyEnc: true, apiKeyIv: true, apiKeyTag: true },
+      });
+
+      for (const s of servers) {
+        const apiKey = getEmbyApiKeyForServer(s);
+        let embyUserId: string | null = null;
+        let justCreated = false;
+
+        const usersRes = await embyFetchUsers(s.baseUrl, apiKey);
+        if (!usersRes.ok) throw new Error("server_unreachable_generate_failed");
         const found = usersRes.users.find((u: any) => String(u?.Name ?? "").toLowerCase() === username.toLowerCase());
         if (found?.Id) embyUserId = String(found.Id);
-      }
 
-      if (!embyUserId) {
-        const created = await embyCreateUser(s.baseUrl, apiKey, username);
-        if (created.ok && created.userId) embyUserId = created.userId;
-      }
+        if (!embyUserId) {
+          const created = await embyCreateUser(s.baseUrl, apiKey, username);
+          if (!created.ok || !created.userId) throw new Error("server_unreachable_generate_failed");
+          embyUserId = created.userId;
+          justCreated = true;
+        }
 
-      if (embyUserId) {
-        await embySetUserPassword(s.baseUrl, apiKey, embyUserId, password);
-        await embySetUserDisabled(s.baseUrl, apiKey, embyUserId, false);
+        const pwSet = await embySetUserPassword(s.baseUrl, apiKey, embyUserId, password);
+        if (!pwSet.ok) throw new Error("server_unreachable_generate_failed");
+        const enSet = await embySetUserDisabled(s.baseUrl, apiKey, embyUserId, false);
+        if (!enSet.ok) throw new Error("server_unreachable_generate_failed");
+
         await prisma.embyUserLink.upsert({
           where: { userId_embyServerId: { userId: user.id, embyServerId: s.id } },
           update: { embyUserId, disabled: false },
           create: { userId: user.id, embyServerId: s.id, embyUserId, disabled: false },
         });
+
+        if (justCreated) createdEmby.push({ baseUrl: s.baseUrl, apiKey, embyUserId });
       }
     }
+
+    const firstServer = await prisma.embyServer.findFirst({ where: { id: { in: serverIds } }, select: { baseUrl: true } });
+    const addr = parseAddressAndPort(firstServer?.baseUrl ?? "https://xx.bestemby.com");
+
+    return NextResponse.json({
+      ok: true,
+      result: {
+        username,
+        password,
+        hours,
+        address: addr.address,
+        port: addr.port,
+      },
+    });
+  } catch (e: any) {
+    for (const c of createdEmby) {
+      try {
+        await embyDeleteUser(c.baseUrl, c.apiKey, c.embyUserId);
+      } catch {}
+    }
+    if (userIdForRollback) {
+      try {
+        await prisma.user.delete({ where: { id: userIdForRollback } });
+      } catch {}
+    }
+    if (String(e?.message ?? "") === "server_unreachable_generate_failed") {
+      return NextResponse.json({ error: "server_unreachable_generate_failed" }, { status: 502 });
+    }
+    return NextResponse.json({ error: "trial_create_failed", detail: String(e?.message ?? e) }, { status: 500 });
   }
-
-  const firstServer = await prisma.embyServer.findFirst({ where: { id: { in: serverIds } }, select: { baseUrl: true } });
-  const addr = parseAddressAndPort(firstServer?.baseUrl ?? "https://xx.bestemby.com");
-
-  return NextResponse.json({
-    ok: true,
-    result: {
-      username,
-      password,
-      hours,
-      address: addr.address,
-      port: addr.port,
-    },
-  });
 }
