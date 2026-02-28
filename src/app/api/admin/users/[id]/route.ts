@@ -75,7 +75,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
 
   const [servers, plans] = await Promise.all([
     prisma.embyServer.findMany({ where: { enabled: true }, orderBy: { createdAt: "desc" }, select: { id: true, name: true } }),
-    prisma.plan.findMany({ where: { enabled: true }, orderBy: { createdAt: "desc" }, select: { id: true, name: true, visible: true } }),
+    prisma.plan.findMany({ orderBy: { createdAt: "desc" }, select: { id: true, name: true, visible: true, enabled: true } }),
   ]);
 
   return NextResponse.json({ ok: true, user, servers, plans });

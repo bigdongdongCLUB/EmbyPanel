@@ -63,8 +63,8 @@ export async function POST(req: Request) {
   const hours = parsed.data.hours ?? 3;
   const planId = parsed.data.planId;
 
-  const plan = await prisma.plan.findUnique({ where: { id: planId }, select: { id: true, name: true, enabled: true } });
-  if (!plan || !plan.enabled) return NextResponse.json({ error: "plan_not_found" }, { status: 404 });
+  const plan = await prisma.plan.findUnique({ where: { id: planId }, select: { id: true, name: true } });
+  if (!plan) return NextResponse.json({ error: "plan_not_found" }, { status: 404 });
 
   let username = (parsed.data.username ?? "").trim();
   if (username) {
