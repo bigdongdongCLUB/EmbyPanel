@@ -397,9 +397,9 @@ function UsersTable({
           <div className="mr-auto text-gray-600">第 {total ? (safePage - 1) * pageSize + 1 : 0}-{Math.min(safePage * pageSize, total)} 条，共 {total} 条记录</div>
 
           <div className="flex items-center gap-2">
-            <button className="border rounded px-2 py-1 disabled:opacity-40" disabled={safePage <= 1} onClick={() => setPage(safePage - 1)}>{"<"}</button>
+            <button className="border rounded px-2 py-1 disabled:opacity-40" disabled={safePage <= 1} onClick={() => setPage(safePage - 1)}>‹</button>
             <span className="border rounded px-2 py-1 text-blue-600">{safePage}</span>
-            <button className="border rounded px-2 py-1 disabled:opacity-40" disabled={safePage >= totalPages} onClick={() => setPage(safePage + 1)}>{">"}</button>
+            <button className="border rounded px-2 py-1 disabled:opacity-40" disabled={safePage >= totalPages} onClick={() => setPage(safePage + 1)}>›</button>
 
             <select
               className="h-9 border rounded px-2 text-sm"
