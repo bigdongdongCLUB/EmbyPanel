@@ -579,7 +579,7 @@ export function ServersClient() {
                     const res = await fetch(`/api/admin/emby-servers/${s.id}/test`, { method: "POST" });
                     const txt = await res.text();
                     if (!res.ok) {
-                      alert(`测试失败: ${txt}`);
+                      alert("测试失败");
                     } else {
                       let ms: string | number = "-";
                       try {
