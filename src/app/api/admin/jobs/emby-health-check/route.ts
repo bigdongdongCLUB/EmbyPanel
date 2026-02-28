@@ -57,16 +57,11 @@ export async function POST(req: Request) {
 
     try {
       const t0 = Date.now();
-      let r = await embyFetchSystemInfo(s.baseUrl, apiKey);
-      let usedUrl = s.baseUrl;
-      if (!r.ok && s.externalUrl && s.externalUrl !== s.baseUrl) {
-        r = await embyFetchSystemInfo(s.externalUrl, apiKey);
-        usedUrl = s.externalUrl;
-      }
+      const r = await embyFetchSystemInfo(s.baseUrl, apiKey);
       const ms = Date.now() - t0;
       if (r.ok) {
         okCount += 1;
-        await prisma.embyServer.update({ where: { id: s.id }, data: { lastHealthAt: now, lastHealthOk: true, lastHealthMsg: `${ms}ms (${usedUrl === s.baseUrl ? "base" : "external"})` } });
+        await prisma.embyServer.update({ where: { id: s.id }, data: { lastHealthAt: now, lastHealthOk: true, lastHealthMsg: `${ms}ms` } });
       } else {
         failCount += 1;
         await prisma.embyServer.update({ where: { id: s.id }, data: { lastHealthAt: now, lastHealthOk: false, lastHealthMsg: errText((r as any).error || (r as any).status || "health_check_failed") } });

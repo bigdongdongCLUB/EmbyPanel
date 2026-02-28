@@ -78,6 +78,13 @@ function parseLatencyMs(msg?: string | null) {
   return m ? Number(m[1]) : null;
 }
 
+function renderHealthInline(lastHealthOk: boolean | null, lastHealthMsg?: string | null) {
+  if (lastHealthOk === null) return " -";
+  if (lastHealthOk === false) return " ❌ 失败";
+  const latency = parseLatencyMs(lastHealthMsg);
+  return ` ✅ ${latency !== null ? `${latency}ms` : "延迟未知"}`;
+}
+
 function UsersTable({
   serverId,
   users,
@@ -541,14 +548,13 @@ export function ServersClient() {
             <div key={s.id} className="border rounded p-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
               <div>
                 <div className="font-medium">{s.name}</div>
-                <div className="text-sm text-gray-600">Base URL：{s.baseUrl}</div>
-                <div className="text-sm text-gray-600">外部访问地址：{s.externalUrl || s.baseUrl}</div>
-                <div className="text-xs text-gray-500 mt-1">
-                  {s.lastHealthOk === null
-                    ? "健康检测：-"
-                    : s.lastHealthOk
-                      ? `✅ ${parseLatencyMs(s.lastHealthMsg) !== null ? `${parseLatencyMs(s.lastHealthMsg)}ms` : "延迟未知"}`
-                      : "❌ 失败"}
+                <div className="text-sm text-gray-600">
+                  Base URL：{s.baseUrl}
+                  <span className="text-xs text-gray-500">{renderHealthInline(s.lastHealthOk, s.lastHealthMsg)}</span>
+                </div>
+                <div className="text-sm text-gray-600">
+                  外部访问地址：{s.externalUrl || s.baseUrl}
+                  <span className="text-xs text-gray-500">{renderHealthInline(s.lastHealthOk, s.lastHealthMsg)}</span>
                 </div>
               </div>
               <div className="flex gap-2">
