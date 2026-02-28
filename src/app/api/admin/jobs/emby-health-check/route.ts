@@ -57,14 +57,29 @@ export async function POST(req: Request) {
 
     try {
       const t0 = Date.now();
-      const r = await embyFetchSystemInfo(s.baseUrl, apiKey);
-      const ms = Date.now() - t0;
-      if (r.ok) {
+      const baseRes = await embyFetchSystemInfo(s.baseUrl, apiKey);
+      const baseMs = Date.now() - t0;
+
+      let external: any = { tested: false };
+      if (s.externalUrl) {
+        const t1 = Date.now();
+        const extRes = await embyFetchSystemInfo(s.externalUrl, apiKey);
+        const extMs = Date.now() - t1;
+        external = extRes.ok
+          ? { tested: true, ok: true, ms: extMs }
+          : { tested: true, ok: false, error: errText((extRes as any).error || (extRes as any).status || "health_check_failed") };
+      }
+
+      const detail = baseRes.ok
+        ? { base: { ok: true, ms: baseMs }, external }
+        : { base: { ok: false, error: errText((baseRes as any).error || (baseRes as any).status || "health_check_failed") }, external };
+
+      if (baseRes.ok) {
         okCount += 1;
-        await prisma.embyServer.update({ where: { id: s.id }, data: { lastHealthAt: now, lastHealthOk: true, lastHealthMsg: `${ms}ms` } });
+        await prisma.embyServer.update({ where: { id: s.id }, data: { lastHealthAt: now, lastHealthOk: true, lastHealthMsg: JSON.stringify(detail) } });
       } else {
         failCount += 1;
-        await prisma.embyServer.update({ where: { id: s.id }, data: { lastHealthAt: now, lastHealthOk: false, lastHealthMsg: errText((r as any).error || (r as any).status || "health_check_failed") } });
+        await prisma.embyServer.update({ where: { id: s.id }, data: { lastHealthAt: now, lastHealthOk: false, lastHealthMsg: JSON.stringify(detail) } });
       }
     } catch (e: any) {
       failCount += 1;

@@ -23,31 +23,36 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   const apiKey = getEmbyApiKeyForServer(server);
 
   const started = Date.now();
-  const result = await embyFetchSystemInfo(server.baseUrl, apiKey);
-  const ms = Date.now() - started;
+  const baseRes = await embyFetchSystemInfo(server.baseUrl, apiKey);
+  const baseMs = Date.now() - started;
 
-  if (!result.ok) {
-    await prisma.embyServer.update({
-      where: { id },
-      data: {
-        lastHealthAt: new Date(),
-        lastHealthOk: false,
-        lastHealthMsg: `HTTP ${result.status}: ${result.body?.slice(0, 300)}`,
-      },
-    });
-    return NextResponse.json({ ok: false, ms, status: result.status }, { status: 502 });
+  let external: any = { tested: false };
+  if ((server as any).externalUrl) {
+    const t1 = Date.now();
+    const extRes = await embyFetchSystemInfo((server as any).externalUrl, apiKey);
+    const extMs = Date.now() - t1;
+    external = extRes.ok
+      ? { tested: true, ok: true, ms: extMs }
+      : { tested: true, ok: false, error: `HTTP ${extRes.status}: ${extRes.body?.slice(0, 300)}` };
   }
 
-  const info = result.parsed.success ? result.parsed.data : result.json;
+  const detail = baseRes.ok
+    ? { base: { ok: true, ms: baseMs }, external }
+    : { base: { ok: false, error: `HTTP ${baseRes.status}: ${baseRes.body?.slice(0, 300)}` }, external };
 
   await prisma.embyServer.update({
     where: { id },
     data: {
       lastHealthAt: new Date(),
-      lastHealthOk: true,
-      lastHealthMsg: `OK ${ms}ms`,
+      lastHealthOk: baseRes.ok,
+      lastHealthMsg: JSON.stringify(detail),
     },
   });
 
-  return NextResponse.json({ ok: true, ms, info });
+  if (!baseRes.ok) {
+    return NextResponse.json({ ok: false, base: detail.base, external }, { status: 502 });
+  }
+
+  const info = baseRes.parsed.success ? baseRes.parsed.data : baseRes.json;
+  return NextResponse.json({ ok: true, ms: baseMs, info, base: detail.base, external });
 }

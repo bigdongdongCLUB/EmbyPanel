@@ -78,10 +78,23 @@ function parseLatencyMs(msg?: string | null) {
   return m ? Number(m[1]) : null;
 }
 
-function renderHealthInline(lastHealthOk: boolean | null, lastHealthMsg?: string | null) {
-  if (lastHealthOk === null) return " -";
-  if (lastHealthOk === false) return " ❌ 失败";
-  const latency = parseLatencyMs(lastHealthMsg);
+function parseHealthDetail(lastHealthMsg?: string | null) {
+  if (!lastHealthMsg) return null;
+  try {
+    const j = JSON.parse(lastHealthMsg);
+    if (j && j.base) return j;
+  } catch {}
+  return null;
+}
+
+function renderOneHealth(part: any, fallbackMsg?: string | null, fallbackOk?: boolean | null) {
+  if (part?.tested === false) return " -";
+  if (part?.ok === true) return ` ✅ ${part?.ms != null ? `${part.ms}ms` : "延迟未知"}`;
+  if (part?.ok === false) return " ❌ 失败";
+
+  if (fallbackOk === null || fallbackOk === undefined) return " -";
+  if (fallbackOk === false) return " ❌ 失败";
+  const latency = parseLatencyMs(fallbackMsg);
   return ` ✅ ${latency !== null ? `${latency}ms` : "延迟未知"}`;
 }
 
@@ -544,17 +557,19 @@ export function ServersClient() {
         {!loading && servers.length === 0 ? <div className="mt-3 text-sm text-gray-500">暂无服务器</div> : null}
 
         <div className="mt-4 space-y-3">
-          {servers.map((s) => (
+          {servers.map((s) => {
+            const detail = parseHealthDetail(s.lastHealthMsg);
+            return (
             <div key={s.id} className="border rounded p-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
               <div>
                 <div className="font-medium">{s.name}</div>
                 <div className="text-sm text-gray-600">
                   Base URL：{s.baseUrl}
-                  <span className="text-xs text-gray-500">{renderHealthInline(s.lastHealthOk, s.lastHealthMsg)}</span>
+                  <span className="text-xs text-gray-500">{renderOneHealth(detail?.base, s.lastHealthMsg, s.lastHealthOk)}</span>
                 </div>
                 <div className="text-sm text-gray-600">
                   外部访问地址：{s.externalUrl || s.baseUrl}
-                  <span className="text-xs text-gray-500">{renderHealthInline(s.lastHealthOk, s.lastHealthMsg)}</span>
+                  <span className="text-xs text-gray-500">{renderOneHealth(detail?.external, s.lastHealthMsg, s.lastHealthOk)}</span>
                 </div>
               </div>
               <div className="flex gap-2">
@@ -672,7 +687,8 @@ export function ServersClient() {
                 </button>
               </div>
             </div>
-          ))}
+          );
+          })}
         </div>
       </section>
 
