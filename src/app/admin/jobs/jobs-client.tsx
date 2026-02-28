@@ -147,9 +147,9 @@ export function JobsClient() {
 
       <div className="mt-3 flex items-center gap-2 text-sm border-t pt-3">
         <div className="mr-auto text-gray-600">第 {data?.total ? ((data?.page ?? 1) - 1) * pageSize + 1 : 0}-{Math.min((data?.page ?? 1) * pageSize, data?.total ?? 0)} 条，共 {data?.total ?? 0} 条记录</div>
-        <button className="border rounded px-2 py-1 disabled:opacity-40" disabled={(data?.page ?? 1) <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>‹</button>
+        <button className="border rounded px-2 py-1 disabled:opacity-40" disabled={(data?.page ?? 1) <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>{"<"}</button>
         <span className="border rounded px-2 py-1 text-blue-600">{data?.page ?? 1}</span>
-        <button className="border rounded px-2 py-1 disabled:opacity-40" disabled={(data?.page ?? 1) >= (data?.totalPages ?? 1)} onClick={() => setPage((p) => p + 1)}>›</button>
+        <button className="border rounded px-2 py-1 disabled:opacity-40" disabled={(data?.page ?? 1) >= (data?.totalPages ?? 1)} onClick={() => setPage((p) => p + 1)}>{">"}</button>
         <select className="h-9 border rounded px-2 text-sm" value={String(pageSize)} onChange={(e) => { setPage(1); setPageSize(Number(e.target.value)); }}>
           <option value="10">10/页</option>
           <option value="20">20/页</option>

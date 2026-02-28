@@ -565,9 +565,9 @@ export function VodClient() {
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-2 pt-2">
               <button className="h-8 px-2 rounded border text-sm text-gray-600 disabled:opacity-40" onClick={() => changePage(1)} disabled={currentPage <= 1}>«</button>
-              <button className="h-8 px-2 rounded border text-sm text-gray-600 disabled:opacity-40" onClick={() => changePage(currentPage - 1)} disabled={currentPage <= 1}>‹</button>
+              <button className="h-8 px-2 rounded border text-sm text-gray-600 disabled:opacity-40" onClick={() => changePage(currentPage - 1)} disabled={currentPage <= 1}>{"<"}</button>
               <span className="text-sm text-gray-600 px-2">{currentPage} / {totalPages}</span>
-              <button className="h-8 px-2 rounded border text-sm text-gray-600 disabled:opacity-40" onClick={() => changePage(currentPage + 1)} disabled={currentPage >= totalPages}>›</button>
+              <button className="h-8 px-2 rounded border text-sm text-gray-600 disabled:opacity-40" onClick={() => changePage(currentPage + 1)} disabled={currentPage >= totalPages}>{">"}</button>
               <button className="h-8 px-2 rounded border text-sm text-gray-600 disabled:opacity-40" onClick={() => changePage(totalPages)} disabled={currentPage >= totalPages}>»</button>
             </div>
           )}
@@ -655,9 +655,9 @@ export function VodClient() {
                   <div className="flex items-center justify-between pt-2 text-xs text-gray-600">
                     <div>共 {myReqTotal} 条</div>
                     <div className="flex items-center gap-2">
-                      <button className="border rounded px-2 py-1 disabled:opacity-40" disabled={myReqPage <= 1 || myReqLoading} onClick={() => loadMyRequests(myReqPage - 1)}>‹</button>
+                      <button className="border rounded px-2 py-1 disabled:opacity-40" disabled={myReqPage <= 1 || myReqLoading} onClick={() => loadMyRequests(myReqPage - 1)}>{"<"}</button>
                       <span>{myReqPage} / {myReqTotalPages}</span>
-                      <button className="border rounded px-2 py-1 disabled:opacity-40" disabled={myReqPage >= myReqTotalPages || myReqLoading} onClick={() => loadMyRequests(myReqPage + 1)}>›</button>
+                      <button className="border rounded px-2 py-1 disabled:opacity-40" disabled={myReqPage >= myReqTotalPages || myReqLoading} onClick={() => loadMyRequests(myReqPage + 1)}>{">"}</button>
                     </div>
                   </div>
                 )}
