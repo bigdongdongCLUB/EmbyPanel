@@ -37,14 +37,14 @@ export function PaginationBar({
 
       <div className="ml-auto flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-1">
-        <button className="h-8 w-8 rounded text-gray-600 disabled:opacity-40" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
+        <button className="h-7 w-7 rounded text-gray-600 disabled:opacity-40" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
           ‹
         </button>
         {pages.map((p) => (
           <button
             key={p}
             className={
-              "h-8 min-w-8 px-2 rounded " +
+              "h-7 min-w-7 px-1.5 rounded " +
               (p === page ? "border border-blue-500 text-blue-600" : "text-gray-800 hover:bg-gray-50")
             }
             onClick={() => onPageChange(p)}
@@ -52,13 +52,13 @@ export function PaginationBar({
             {p}
           </button>
         ))}
-        <button className="h-8 w-8 rounded text-gray-600 disabled:opacity-40" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>
+        <button className="h-7 w-7 rounded text-gray-600 disabled:opacity-40" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>
           ›
         </button>
         </div>
 
         <select
-          className="h-9 border rounded px-2 text-sm"
+          className="h-8 border rounded px-2 text-sm"
           value={String(pageSize)}
           onChange={(e) => {
             onPageSizeChange(Number(e.target.value));
@@ -73,7 +73,7 @@ export function PaginationBar({
         <div className="flex items-center gap-2">
           <span>Go to</span>
           <input
-            className="h-9 w-16 border rounded px-2"
+            className="h-8 w-14 border rounded px-2"
             value={goto}
             onChange={(e) => setGoto(e.target.value.replace(/[^0-9]/g, ""))}
             onKeyDown={(e) => {
