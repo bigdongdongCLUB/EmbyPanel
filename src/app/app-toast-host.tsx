@@ -60,13 +60,13 @@ export function AppToastHost() {
       ? "border-green-200 text-gray-900"
       : "border-blue-200 text-gray-900";
 
-  const icon = toast.tone === "error" ? "⨯" : toast.tone === "success" ? "✓" : "i";
+  const icon = toast.tone === "error" ? "×" : toast.tone === "success" ? "✓" : "i";
   const iconCls = toast.tone === "error" ? "bg-red-500" : toast.tone === "success" ? "bg-green-500" : "bg-blue-500";
 
   return (
     <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100]">
       <div className={`max-w-[80vw] bg-white border rounded-2xl shadow-xl p-[10px] flex items-center justify-center gap-2 ${toneCls}`}>
-        <span className={`inline-flex h-6 w-6 min-h-6 min-w-6 shrink-0 aspect-square items-center justify-center rounded-full text-white text-sm leading-none ${iconCls}`}>{icon}</span>
+        <span className={`inline-flex h-7 w-7 min-h-7 min-w-7 shrink-0 aspect-square items-center justify-center rounded-full text-white text-[18px] font-semibold leading-none ${iconCls}`}>{icon}</span>
         <span className="text-base font-medium break-words text-center">{toast.text}</span>
       </div>
     </div>
