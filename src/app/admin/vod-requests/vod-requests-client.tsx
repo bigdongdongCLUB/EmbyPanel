@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { PaginationBar } from "@/components/pagination-bar";
 
 type Row = {
   id: string;
@@ -292,17 +293,15 @@ export function VodRequestsAdminClient() {
         </table>
       </div>
 
-      <div className="flex items-center gap-2 text-sm">
-        <div className="mr-auto text-gray-600">第 {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, total)} 条，共 {total} 条记录</div>
-        <button className="border rounded px-2 py-1 disabled:opacity-40" disabled={!canPrev || loading} onClick={() => refresh(page - 1, pageSize)}>‹</button>
-        <span className="border rounded px-2 py-1 text-blue-600">{page}</span>
-        <button className="border rounded px-2 py-1 disabled:opacity-40" disabled={!canNext || loading} onClick={() => refresh(page + 1, pageSize)}>›</button>
-        <select className="h-9 border rounded px-2 text-sm" value={String(pageSize)} onChange={(e) => { const n = Number(e.target.value) || 10; setPageSize(n); refresh(1, n); }}>
-          <option value="10">10/页</option>
-          <option value="20">20/页</option>
-          <option value="30">30/页</option>
-        </select>
-      </div>
+      <PaginationBar
+        total={total}
+        page={page}
+        totalPages={totalPages}
+        pageSize={pageSize}
+        onPageChange={(p) => refresh(p, pageSize)}
+        onPageSizeChange={(n) => { setPageSize(n); refresh(1, n); }}
+        pageSizeOptions={[10, 20, 30]}
+      />
     </div>
   );
 }

@@ -32,10 +32,11 @@ export function PaginationBar({
   }, [page, totalPages]);
 
   return (
-    <div className="flex flex-wrap items-center gap-3 border-t p-3 text-sm">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t p-3 text-sm">
       <div className="text-gray-600">共 {total} 条记录</div>
 
-      <div className="flex items-center gap-1">
+      <div className="ml-auto flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-1">
         <button className="h-8 w-8 rounded text-gray-600 disabled:opacity-40" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
           ‹
         </button>
@@ -54,35 +55,36 @@ export function PaginationBar({
         <button className="h-8 w-8 rounded text-gray-600 disabled:opacity-40" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>
           ›
         </button>
-      </div>
+        </div>
 
-      <select
-        className="h-9 border rounded px-2 text-sm"
-        value={String(pageSize)}
-        onChange={(e) => {
-          onPageSizeChange(Number(e.target.value));
-          onPageChange(1);
-        }}
-      >
-        {pageSizeOptions.map((v) => (
-          <option key={v} value={v}>{`${v} / page`}</option>
-        ))}
-      </select>
-
-      <div className="flex items-center gap-2">
-        <span>Go to</span>
-        <input
-          className="h-9 w-16 border rounded px-2"
-          value={goto}
-          onChange={(e) => setGoto(e.target.value.replace(/[^0-9]/g, ""))}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              const p = Number(goto);
-              if (Number.isFinite(p) && p >= 1 && p <= totalPages) onPageChange(p);
-            }
+        <select
+          className="h-9 border rounded px-2 text-sm"
+          value={String(pageSize)}
+          onChange={(e) => {
+            onPageSizeChange(Number(e.target.value));
+            onPageChange(1);
           }}
-        />
-        <span>Page</span>
+        >
+          {pageSizeOptions.map((v) => (
+            <option key={v} value={v}>{`${v} / page`}</option>
+          ))}
+        </select>
+
+        <div className="flex items-center gap-2">
+          <span>Go to</span>
+          <input
+            className="h-9 w-16 border rounded px-2"
+            value={goto}
+            onChange={(e) => setGoto(e.target.value.replace(/[^0-9]/g, ""))}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                const p = Number(goto);
+                if (Number.isFinite(p) && p >= 1 && p <= totalPages) onPageChange(p);
+              }
+            }}
+          />
+          <span>Page</span>
+        </div>
       </div>
     </div>
   );

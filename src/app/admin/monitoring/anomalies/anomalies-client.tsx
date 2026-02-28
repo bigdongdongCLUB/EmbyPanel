@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { PaginationBar } from "@/components/pagination-bar";
 
 type ServerOption = { id: string; name: string; enabled: boolean };
 
@@ -258,17 +259,15 @@ export function MonitoringAnomaliesClient() {
         </div>
 
         {data ? (
-          <div className="mt-3 flex items-center gap-2 text-sm border-t pt-3">
-            <div className="mr-auto text-gray-600">第 {data.total ? (data.page - 1) * pageSize + 1 : 0}-{Math.min(data.page * pageSize, data.total)} 条，共 {data.total} 条记录</div>
-            <button className="border rounded px-2 py-1 disabled:opacity-40" disabled={page <= 1 || loading} onClick={() => setPage((p) => Math.max(1, p - 1))}>‹</button>
-            <span className="border rounded px-2 py-1 text-blue-600">{data.page}</span>
-            <button className="border rounded px-2 py-1 disabled:opacity-40" disabled={page >= data.totalPages || loading} onClick={() => setPage((p) => Math.min(data.totalPages, p + 1))}>›</button>
-            <select className="h-9 border rounded px-2 text-sm" value={String(pageSize)} onChange={(e) => setPageSize(Number(e.target.value))}>
-              <option value="10">10/页</option>
-              <option value="20">20/页</option>
-              <option value="50">50/页</option>
-              <option value="100">100/页</option>
-            </select>
+          <div className="mt-3">
+            <PaginationBar
+              total={data.total}
+              page={data.page}
+              totalPages={data.totalPages}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={(n) => { setPage(1); setPageSize(n); }}
+            />
           </div>
         ) : null}
       </div>

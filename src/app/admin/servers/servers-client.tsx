@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { PaginationBar } from "@/components/pagination-bar";
 
 type Server = {
   id: string;
@@ -393,29 +394,14 @@ function UsersTable({
           </table>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t p-3 text-sm">
-          <div className="mr-auto text-gray-600">第 {total ? (safePage - 1) * pageSize + 1 : 0}-{Math.min(safePage * pageSize, total)} 条，共 {total} 条记录</div>
-
-          <div className="flex items-center gap-2">
-            <button className="border rounded px-2 py-1 disabled:opacity-40" disabled={safePage <= 1} onClick={() => setPage(safePage - 1)}>‹</button>
-            <span className="border rounded px-2 py-1 text-blue-600">{safePage}</span>
-            <button className="border rounded px-2 py-1 disabled:opacity-40" disabled={safePage >= totalPages} onClick={() => setPage(safePage + 1)}>›</button>
-
-            <select
-              className="h-9 border rounded px-2 text-sm"
-              value={String(pageSize)}
-              onChange={(e) => {
-                setPageSize(Number(e.target.value));
-                setPage(1);
-              }}
-            >
-              <option value="10">10/页</option>
-              <option value="20">20/页</option>
-              <option value="50">50/页</option>
-              <option value="100">100/页</option>
-            </select>
-          </div>
-        </div>
+        <PaginationBar
+          total={total}
+          page={safePage}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          onPageChange={(p) => setPage(Math.min(Math.max(1, p), totalPages))}
+          onPageSizeChange={(n) => { setPageSize(n); setPage(1); }}
+        />
       </div>
 
       {deleteLogOpen ? (

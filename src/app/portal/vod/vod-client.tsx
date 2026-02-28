@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { PaginationBar } from "@/components/pagination-bar";
 
 type MediaItem = {
   id: number;
@@ -563,12 +564,16 @@ export function VodClient() {
           </div>
 
           {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2 pt-2">
-              <button className="h-8 px-2 rounded border text-sm text-gray-600 disabled:opacity-40" onClick={() => changePage(1)} disabled={currentPage <= 1}>«</button>
-              <button className="h-8 px-2 rounded border text-sm text-gray-600 disabled:opacity-40" onClick={() => changePage(currentPage - 1)} disabled={currentPage <= 1}>‹</button>
-              <span className="text-sm text-gray-600 px-2">{currentPage} / {totalPages}</span>
-              <button className="h-8 px-2 rounded border text-sm text-gray-600 disabled:opacity-40" onClick={() => changePage(currentPage + 1)} disabled={currentPage >= totalPages}>›</button>
-              <button className="h-8 px-2 rounded border text-sm text-gray-600 disabled:opacity-40" onClick={() => changePage(totalPages)} disabled={currentPage >= totalPages}>»</button>
+            <div className="pt-2">
+              <PaginationBar
+                total={searchTotal ?? (totalPages === 1 ? items.length : totalPages * 20)}
+                page={currentPage}
+                totalPages={totalPages}
+                pageSize={20}
+                onPageChange={changePage}
+                onPageSizeChange={() => {}}
+                pageSizeOptions={[20]}
+              />
             </div>
           )}
         </>
@@ -652,13 +657,16 @@ export function VodClient() {
                 ))}
 
                 {myReqTotalPages > 1 && (
-                  <div className="flex items-center justify-between pt-2 text-xs text-gray-600">
-                    <div>共 {myReqTotal} 条</div>
-                    <div className="flex items-center gap-2">
-                      <button className="border rounded px-2 py-1 disabled:opacity-40" disabled={myReqPage <= 1 || myReqLoading} onClick={() => loadMyRequests(myReqPage - 1)}>‹</button>
-                      <span>{myReqPage} / {myReqTotalPages}</span>
-                      <button className="border rounded px-2 py-1 disabled:opacity-40" disabled={myReqPage >= myReqTotalPages || myReqLoading} onClick={() => loadMyRequests(myReqPage + 1)}>›</button>
-                    </div>
+                  <div className="pt-2">
+                    <PaginationBar
+                      total={myReqTotal}
+                      page={myReqPage}
+                      totalPages={myReqTotalPages}
+                      pageSize={10}
+                      onPageChange={loadMyRequests}
+                      onPageSizeChange={() => {}}
+                      pageSizeOptions={[10]}
+                    />
                   </div>
                 )}
               </div>
