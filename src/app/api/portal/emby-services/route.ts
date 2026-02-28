@@ -87,11 +87,20 @@ export async function GET() {
     ...user.embyLinks.map((l) => l.embyServerId),
   ]);
 
-  const servers = await prisma.embyServer.findMany({
-    where: { id: { in: Array.from(serverIds) } },
-    select: { id: true, name: true, baseUrl: true, externalUrl: true, enabled: true, apiKey: true, apiKeyEnc: true, apiKeyIv: true, apiKeyTag: true, lastHealthOk: true },
-    orderBy: { createdAt: "asc" },
-  });
+  let servers: any[] = [];
+  try {
+    servers = await prisma.embyServer.findMany({
+      where: { id: { in: Array.from(serverIds) } },
+      select: { id: true, name: true, baseUrl: true, externalUrl: true, enabled: true, apiKey: true, apiKeyEnc: true, apiKeyIv: true, apiKeyTag: true, lastHealthOk: true },
+      orderBy: { createdAt: "asc" },
+    });
+  } catch {
+    servers = await prisma.embyServer.findMany({
+      where: { id: { in: Array.from(serverIds) } },
+      select: { id: true, name: true, baseUrl: true, enabled: true, apiKey: true, apiKeyEnc: true, apiKeyIv: true, apiKeyTag: true, lastHealthOk: true },
+      orderBy: { createdAt: "asc" },
+    });
+  }
 
   const linkMap = new Map(user.embyLinks.map((l) => [l.embyServerId, { embyUserId: l.embyUserId, disabled: !!l.disabled }] as const));
 

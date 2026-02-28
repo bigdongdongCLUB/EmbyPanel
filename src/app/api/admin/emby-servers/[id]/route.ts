@@ -22,20 +22,37 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   const { id } = await ctx.params;
-  const server = await prisma.embyServer.findUnique({
-    where: { id },
-    select: {
-      id: true,
-      name: true,
-      baseUrl: true,
-      externalUrl: true,
-      enabled: true,
-      apiKey: true,
-      apiKeyEnc: true,
-      apiKeyIv: true,
-      apiKeyTag: true,
-    },
-  });
+  let server: any = null;
+  try {
+    server = await prisma.embyServer.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        baseUrl: true,
+        externalUrl: true,
+        enabled: true,
+        apiKey: true,
+        apiKeyEnc: true,
+        apiKeyIv: true,
+        apiKeyTag: true,
+      },
+    });
+  } catch {
+    server = await prisma.embyServer.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        baseUrl: true,
+        enabled: true,
+        apiKey: true,
+        apiKeyEnc: true,
+        apiKeyIv: true,
+        apiKeyTag: true,
+      },
+    });
+  }
   if (!server) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
   const apiKey = getEmbyApiKeyForServer(server as any);
@@ -73,22 +90,43 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     data.apiKey = null;
   }
 
-  const updated = await prisma.embyServer.update({
-    where: { id },
-    data,
-    select: {
-      id: true,
-      name: true,
-      baseUrl: true,
-      externalUrl: true,
-      enabled: true,
-      lastHealthAt: true,
-      lastHealthOk: true,
-      lastHealthMsg: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-  });
+  let updated: any;
+  try {
+    updated = await prisma.embyServer.update({
+      where: { id },
+      data,
+      select: {
+        id: true,
+        name: true,
+        baseUrl: true,
+        externalUrl: true,
+        enabled: true,
+        lastHealthAt: true,
+        lastHealthOk: true,
+        lastHealthMsg: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  } catch {
+    const safeData = { ...data } as any;
+    delete safeData.externalUrl;
+    updated = await prisma.embyServer.update({
+      where: { id },
+      data: safeData,
+      select: {
+        id: true,
+        name: true,
+        baseUrl: true,
+        enabled: true,
+        lastHealthAt: true,
+        lastHealthOk: true,
+        lastHealthMsg: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  }
 
   return NextResponse.json({ server: updated });
 }

@@ -27,11 +27,20 @@ export async function POST(req: Request) {
   const job = await prisma.jobRun.create({ data: { jobName: "emby-health-check", startedAt } });
 
   try {
-    const servers = await prisma.embyServer.findMany({
-    where: { enabled: true },
-    select: { id: true, name: true, baseUrl: true, externalUrl: true, apiKey: true, apiKeyEnc: true, apiKeyIv: true, apiKeyTag: true },
-    orderBy: { createdAt: "asc" },
-  });
+    let servers: any[] = [];
+    try {
+      servers = await prisma.embyServer.findMany({
+        where: { enabled: true },
+        select: { id: true, name: true, baseUrl: true, externalUrl: true, apiKey: true, apiKeyEnc: true, apiKeyIv: true, apiKeyTag: true },
+        orderBy: { createdAt: "asc" },
+      });
+    } catch {
+      servers = await prisma.embyServer.findMany({
+        where: { enabled: true },
+        select: { id: true, name: true, baseUrl: true, apiKey: true, apiKeyEnc: true, apiKeyIv: true, apiKeyTag: true },
+        orderBy: { createdAt: "asc" },
+      });
+    }
 
   let okCount = 0;
   let failCount = 0;

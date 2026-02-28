@@ -12,7 +12,12 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   const { id } = await ctx.params;
-  const server = await prisma.embyServer.findUnique({ where: { id } });
+  let server: any = null;
+  try {
+    server = await prisma.embyServer.findUnique({ where: { id }, select: { id: true, baseUrl: true, externalUrl: true, apiKey: true, apiKeyEnc: true, apiKeyIv: true, apiKeyTag: true } });
+  } catch {
+    server = await prisma.embyServer.findUnique({ where: { id }, select: { id: true, baseUrl: true, apiKey: true, apiKeyEnc: true, apiKeyIv: true, apiKeyTag: true } });
+  }
   if (!server) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
   const apiKey = getEmbyApiKeyForServer(server);

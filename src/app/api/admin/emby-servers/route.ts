@@ -12,21 +12,40 @@ export async function GET() {
   const auth = await requireAdmin();
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
-  const servers = await prisma.embyServer.findMany({
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      name: true,
-      baseUrl: true,
-      externalUrl: true,
-      enabled: true,
-      lastHealthAt: true,
-      lastHealthOk: true,
-      lastHealthMsg: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-  });
+  let servers: any[] = [];
+  try {
+    servers = await prisma.embyServer.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        baseUrl: true,
+        externalUrl: true,
+        enabled: true,
+        lastHealthAt: true,
+        lastHealthOk: true,
+        lastHealthMsg: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  } catch {
+    // 兼容尚未执行 externalUrl 迁移的环境
+    servers = await prisma.embyServer.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        baseUrl: true,
+        enabled: true,
+        lastHealthAt: true,
+        lastHealthOk: true,
+        lastHealthMsg: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  }
 
   return NextResponse.json({ servers });
 }
@@ -49,28 +68,52 @@ export async function POST(req: Request) {
 
   const enc = encryptString(parsed.data.apiKey);
 
-  const server = await prisma.embyServer.create({
-    data: {
-      name: parsed.data.name,
-      baseUrl: normalizeBaseUrl(parsed.data.baseUrl),
-      externalUrl: parsed.data.externalUrl ? normalizeBaseUrl(parsed.data.externalUrl) : null,
-      apiKeyEnc: enc.enc,
-      apiKeyIv: enc.iv,
-      apiKeyTag: enc.tag,
-      // keep plaintext empty
-      apiKey: null,
-      enabled: parsed.data.enabled ?? true,
-    },
-    select: {
-      id: true,
-      name: true,
-      baseUrl: true,
-      externalUrl: true,
-      enabled: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-  });
+  let server: any;
+  try {
+    server = await prisma.embyServer.create({
+      data: {
+        name: parsed.data.name,
+        baseUrl: normalizeBaseUrl(parsed.data.baseUrl),
+        externalUrl: parsed.data.externalUrl ? normalizeBaseUrl(parsed.data.externalUrl) : null,
+        apiKeyEnc: enc.enc,
+        apiKeyIv: enc.iv,
+        apiKeyTag: enc.tag,
+        // keep plaintext empty
+        apiKey: null,
+        enabled: parsed.data.enabled ?? true,
+      },
+      select: {
+        id: true,
+        name: true,
+        baseUrl: true,
+        externalUrl: true,
+        enabled: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  } catch {
+    // 兼容尚未执行 externalUrl 迁移的环境
+    server = await prisma.embyServer.create({
+      data: {
+        name: parsed.data.name,
+        baseUrl: normalizeBaseUrl(parsed.data.baseUrl),
+        apiKeyEnc: enc.enc,
+        apiKeyIv: enc.iv,
+        apiKeyTag: enc.tag,
+        apiKey: null,
+        enabled: parsed.data.enabled ?? true,
+      },
+      select: {
+        id: true,
+        name: true,
+        baseUrl: true,
+        enabled: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  }
 
   return NextResponse.json({ server }, { status: 201 });
 }
