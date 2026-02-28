@@ -9,6 +9,10 @@ import { normalizeBaseUrl } from "@/lib/emby";
 import { encryptString } from "@/lib/crypto";
 import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
 
+async function ensureExternalUrlColumn() {
+  await prisma.$executeRawUnsafe('ALTER TABLE "EmbyServer" ADD COLUMN IF NOT EXISTS "externalUrl" TEXT');
+}
+
 const PatchSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   baseUrl: z.string().url().optional(),
@@ -90,43 +94,23 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     data.apiKey = null;
   }
 
-  let updated: any;
-  try {
-    updated = await prisma.embyServer.update({
-      where: { id },
-      data,
-      select: {
-        id: true,
-        name: true,
-        baseUrl: true,
-        externalUrl: true,
-        enabled: true,
-        lastHealthAt: true,
-        lastHealthOk: true,
-        lastHealthMsg: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
-  } catch {
-    const safeData = { ...data } as any;
-    delete safeData.externalUrl;
-    updated = await prisma.embyServer.update({
-      where: { id },
-      data: safeData,
-      select: {
-        id: true,
-        name: true,
-        baseUrl: true,
-        enabled: true,
-        lastHealthAt: true,
-        lastHealthOk: true,
-        lastHealthMsg: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
-  }
+  await ensureExternalUrlColumn();
+  const updated = await prisma.embyServer.update({
+    where: { id },
+    data,
+    select: {
+      id: true,
+      name: true,
+      baseUrl: true,
+      externalUrl: true,
+      enabled: true,
+      lastHealthAt: true,
+      lastHealthOk: true,
+      lastHealthMsg: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
 
   return NextResponse.json({ server: updated });
 }

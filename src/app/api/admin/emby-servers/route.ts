@@ -8,6 +8,10 @@ import { requireAdmin } from "@/lib/admin";
 import { normalizeBaseUrl } from "@/lib/emby";
 import { encryptString } from "@/lib/crypto";
 
+async function ensureExternalUrlColumn() {
+  await prisma.$executeRawUnsafe('ALTER TABLE "EmbyServer" ADD COLUMN IF NOT EXISTS "externalUrl" TEXT');
+}
+
 export async function GET() {
   const auth = await requireAdmin();
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
@@ -67,53 +71,30 @@ export async function POST(req: Request) {
   if (!parsed.success) return NextResponse.json({ error: "invalid_payload" }, { status: 400 });
 
   const enc = encryptString(parsed.data.apiKey);
+  await ensureExternalUrlColumn();
 
-  let server: any;
-  try {
-    server = await prisma.embyServer.create({
-      data: {
-        name: parsed.data.name,
-        baseUrl: normalizeBaseUrl(parsed.data.baseUrl),
-        externalUrl: parsed.data.externalUrl ? normalizeBaseUrl(parsed.data.externalUrl) : null,
-        apiKeyEnc: enc.enc,
-        apiKeyIv: enc.iv,
-        apiKeyTag: enc.tag,
-        // keep plaintext empty
-        apiKey: null,
-        enabled: parsed.data.enabled ?? true,
-      },
-      select: {
-        id: true,
-        name: true,
-        baseUrl: true,
-        externalUrl: true,
-        enabled: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
-  } catch {
-    // 兼容尚未执行 externalUrl 迁移的环境
-    server = await prisma.embyServer.create({
-      data: {
-        name: parsed.data.name,
-        baseUrl: normalizeBaseUrl(parsed.data.baseUrl),
-        apiKeyEnc: enc.enc,
-        apiKeyIv: enc.iv,
-        apiKeyTag: enc.tag,
-        apiKey: null,
-        enabled: parsed.data.enabled ?? true,
-      },
-      select: {
-        id: true,
-        name: true,
-        baseUrl: true,
-        enabled: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
-  }
+  const server = await prisma.embyServer.create({
+    data: {
+      name: parsed.data.name,
+      baseUrl: normalizeBaseUrl(parsed.data.baseUrl),
+      externalUrl: parsed.data.externalUrl ? normalizeBaseUrl(parsed.data.externalUrl) : null,
+      apiKeyEnc: enc.enc,
+      apiKeyIv: enc.iv,
+      apiKeyTag: enc.tag,
+      // keep plaintext empty
+      apiKey: null,
+      enabled: parsed.data.enabled ?? true,
+    },
+    select: {
+      id: true,
+      name: true,
+      baseUrl: true,
+      externalUrl: true,
+      enabled: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
 
   return NextResponse.json({ server }, { status: 201 });
 }
