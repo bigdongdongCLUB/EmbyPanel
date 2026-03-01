@@ -81,6 +81,80 @@ async function submitCustomQuery(baseUrl: string, apiKey: string, query: string)
   return { ok: false as const, rows: [] as any[] };
 }
 
+function parseActivityEntryToPlayback(entry: any, username: string) {
+  const text = [
+    pickString(entry, ["Overview", "overview"]),
+    pickString(entry, ["Name", "name"]),
+    pickString(entry, ["ShortOverview", "shortOverview"]),
+  ]
+    .filter(Boolean)
+    .join(" ");
+  if (!text) return null;
+
+  const lower = text.toLowerCase();
+  if (!lower.includes(String(username).toLowerCase())) return null;
+  if (!/(开始播放|已停止播放|playing|stopped)/i.test(text)) return null;
+
+  let mediaName = "";
+  let client = "-";
+
+  let m = text.match(/在\s*(.+?)\s*上开始播放\s*(.+)$/);
+  if (m) {
+    client = (m[1] || "").trim() || "-";
+    mediaName = (m[2] || "").trim();
+  }
+
+  if (!mediaName) {
+    m = text.match(/上\s*.+?\s*已停止播放\s*(.+)$/);
+    if (m) mediaName = (m[1] || "").trim();
+  }
+
+  if (!mediaName) {
+    m = text.match(/(?:开始播放|已停止播放)\s*(.+)$/);
+    if (m) mediaName = (m[1] || "").trim();
+  }
+
+  if (!client) {
+    m = text.match(/在\s*(.+?)\s*上/);
+    if (m) client = (m[1] || "").trim() || "-";
+  }
+
+  mediaName = mediaName.replace(/^[:：\-\s]+/, "").trim();
+  if (!mediaName) return null;
+
+  const dtRaw = pickDate(entry);
+  if (!dtRaw) return null;
+
+  return {
+    mediaName,
+    client: client || "-",
+    ip: pickString(entry, ["RemoteEndPoint", "remoteEndPoint", "RemoteAddress", "remoteAddress", "IpAddress", "ipAddress"]) || "-",
+    lastPlayedAt: dtRaw,
+  };
+}
+
+async function fetchActivityEntries(baseUrl: string, apiKey: string, limit = 500) {
+  const base = normalizeBaseUrl(baseUrl);
+  const urls = [
+    `${base}/System/ActivityLog/Entries?api_key=${encodeURIComponent(apiKey)}&Limit=${limit}`,
+    `${base}/System/ActivityLog/Entries?api_key=${encodeURIComponent(apiKey)}&StartIndex=0&Limit=${limit}`,
+  ];
+
+  for (const u of urls) {
+    try {
+      const res = await fetch(u, { method: "GET", headers: { Accept: "application/json" }, cache: "no-store" });
+      if (!res.ok) continue;
+      const json = await res.json().catch(() => null);
+      const rows = parseRows(json);
+      if (rows.length) return { ok: true as const, rows };
+    } catch {
+      // try next endpoint variant
+    }
+  }
+
+  return { ok: false as const, rows: [] as any[] };
+}
+
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -135,7 +209,6 @@ export async function GET(req: Request) {
     const first = await submitCustomQuery(s.baseUrl, apiKey, qByUserId);
     const second = await submitCustomQuery(s.baseUrl, apiKey, qByUserName);
     const rows = [...(first.ok ? first.rows : []), ...(second.ok ? second.rows : [])];
-    if (!rows.length) continue;
 
     const dedupe = new Set<string>();
     for (const r of rows) {
@@ -166,6 +239,33 @@ export async function GET(req: Request) {
         ip,
         lastPlayedAt,
       });
+    }
+
+    // Fallback: some Emby installs expose playback only via ActivityLog (no PlaybackActivity rows)
+    const activityRes = await fetchActivityEntries(s.baseUrl, apiKey, 800);
+    if (activityRes.ok) {
+      for (const e of activityRes.rows) {
+        const parsed = parseActivityEntryToPlayback(e, username);
+        if (!parsed) continue;
+
+        const t = new Date(parsed.lastPlayedAt).getTime();
+        if (Number.isFinite(t) && t < since.getTime()) continue;
+
+        const key = `${parsed.mediaName}|${parsed.lastPlayedAt}|${parsed.client}|${parsed.ip}`;
+        if (dedupe.has(key)) continue;
+        dedupe.add(key);
+
+        records.push({
+          serverId: s.id,
+          serverName: s.name,
+          mediaName: parsed.mediaName,
+          itemId: null,
+          durationSeconds: 0,
+          client: parsed.client,
+          ip: parsed.ip,
+          lastPlayedAt: parsed.lastPlayedAt,
+        });
+      }
     }
   }
 
