@@ -56,6 +56,7 @@ export function PortalPlaybackStatsClient() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const tableWrapRef = useRef<HTMLDivElement | null>(null);
+  const [openTitleKey, setOpenTitleKey] = useState<string | null>(null);
 
   async function refresh(days = rangeDays) {
     setLoading(true);
@@ -82,6 +83,10 @@ export function PortalPlaybackStatsClient() {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const safePage = Math.min(page, totalPages);
   const pageRows = useMemo(() => rows.slice((safePage - 1) * pageSize, safePage * pageSize), [rows, safePage, pageSize]);
+
+  useEffect(() => {
+    setOpenTitleKey(null);
+  }, [safePage, pageSize, rangeDays, rows.length]);
 
   function ensureTooltipVisible(el: HTMLElement) {
     const wrap = tableWrapRef.current;
@@ -163,17 +168,22 @@ export function PortalPlaybackStatsClient() {
                   <tr key={`${r.serverName}_${r.mediaName}_${r.lastPlayedAt}_${i}`} className="border-t">
                     <td className="px-4 py-2">{r.serverName}</td>
                     <td className="px-4 py-2">
-                      <div className="relative group inline-block max-w-[520px] align-middle">
-                        <span
-                          title={r.mediaName}
-                          onMouseEnter={(e) => {
-                            if (isTrimmed(r.mediaName, 40)) ensureTooltipVisible(e.currentTarget as HTMLElement);
+                      <div className="relative inline-block max-w-[520px] align-middle">
+                        <button
+                          type="button"
+                          className="text-left"
+                          onClick={(e) => {
+                            if (!isTrimmed(r.mediaName, 40)) return;
+                            ensureTooltipVisible(e.currentTarget as HTMLElement);
+                            const key = `${r.serverName}_${r.mediaName}_${r.lastPlayedAt}_${i}`;
+                            setOpenTitleKey((prev) => (prev === key ? null : key));
                           }}
+                          title={r.mediaName}
                         >
                           {trimTitle(r.mediaName, 40)}
-                        </span>
-                        {isTrimmed(r.mediaName, 40) ? (
-                          <div className="pointer-events-none absolute left-0 top-full z-20 mt-1 hidden min-w-[260px] max-w-[560px] rounded border bg-black px-2 py-1 text-xs text-white shadow-lg group-hover:block">
+                        </button>
+                        {isTrimmed(r.mediaName, 40) && openTitleKey === `${r.serverName}_${r.mediaName}_${r.lastPlayedAt}_${i}` ? (
+                          <div className="absolute left-0 top-full z-20 mt-1 min-w-[260px] max-w-[560px] rounded border bg-black px-2 py-1 text-xs text-white shadow-lg">
                             {r.mediaName}
                           </div>
                         ) : null}
