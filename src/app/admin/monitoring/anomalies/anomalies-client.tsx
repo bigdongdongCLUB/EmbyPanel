@@ -134,16 +134,16 @@ export function MonitoringAnomaliesClient() {
 
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap gap-2 items-center">
+    <div className="space-y-6">
+      <div className="flex flex-wrap gap-2 items-center bg-white border border-[#eaeaea] rounded-xl p-2 shadow-sm">
         <input
-          className="border rounded px-3 py-2 min-w-[220px]"
+          className="border border-transparent bg-[#f4f5f7] rounded-lg px-3 py-2 min-w-[220px] focus:border-[#e3001b] outline-none"
           placeholder="搜索用户名"
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
 
-        <select className="border rounded px-3 py-2" value={serverId} onChange={(e) => setServerId(e.target.value)}>
+        <select className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={serverId} onChange={(e) => setServerId(e.target.value)}>
           <option value="__ALL__">全部服务器</option>
           {servers.map((s) => (
             <option key={s.id} value={s.id}>
@@ -152,16 +152,16 @@ export function MonitoringAnomaliesClient() {
           ))}
         </select>
 
-        <select className="border rounded px-3 py-2" value={String(rangeDays)} onChange={(e) => setRangeDays(Number(e.target.value))}>
+        <select className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={String(rangeDays)} onChange={(e) => setRangeDays(Number(e.target.value))}>
           <option value="7">最近 7 天</option>
           <option value="30">最近 30 天</option>
         </select>
 
-        <button className="border rounded px-3 py-2" onClick={refresh} disabled={loading}>
+        <button className="border border-[#eaeaea] bg-white rounded-lg px-3 py-2 hover:bg-[#f4f5f7]" onClick={refresh} disabled={loading}>
           刷新
         </button>
 
-        <button className="border rounded px-3 py-2" onClick={runScanNow} disabled={runningScan}>
+        <button className="bg-[#e3001b] hover:bg-[#c20017] text-white rounded-lg px-4 py-2" onClick={runScanNow} disabled={runningScan}>
           {runningScan ? "检测中..." : "立即检测"}
         </button>
 
@@ -170,7 +170,7 @@ export function MonitoringAnomaliesClient() {
 
       {error ? <pre className="text-xs text-red-600 whitespace-pre-wrap">{error}</pre> : null}
 
-      <div className="bg-white border rounded-lg p-4">
+      <div className="bg-white border border-[#eaeaea] rounded-2xl p-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="font-medium text-sm">异常列表（定时任务每5分钟检测）</div>
           <div className="text-xs text-gray-500">{data ? `共 ${data.total} 条，当前第 ${data.page}/${data.totalPages} 页` : ""}</div>
@@ -178,7 +178,7 @@ export function MonitoringAnomaliesClient() {
 
         <div className="mt-3 overflow-auto">
           <table className="min-w-[1100px] w-full text-sm">
-            <thead className="text-left text-gray-600 border-b">
+            <thead className="text-left text-[#666] border-b border-[#eaeaea] bg-[#f8f9fa]">
               <tr>
                                 <th className="py-2 px-3">用户名</th>
                 <th className="py-2 px-3">服务器</th>
@@ -194,7 +194,7 @@ export function MonitoringAnomaliesClient() {
                 const crossRegion = isCrossRegionByIp(a.ips || []);
                 return (
                   <React.Fragment key={a.id}>
-                    <tr className="border-b">
+                    <tr className="border-b border-[#eaeaea]">
                       <td className="py-2 px-3">{a.user?.name || "-"}</td>
                       <td className="py-2 px-3">{a.server?.name || "-"}</td>
                       <td className="py-2 px-3">
