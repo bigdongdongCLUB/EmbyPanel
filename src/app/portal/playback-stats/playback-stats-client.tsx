@@ -88,19 +88,22 @@ export function PortalPlaybackStatsClient() {
     setOpenTitleKey(null);
   }, [safePage, pageSize, rangeDays, rows.length]);
 
-  function ensureTooltipVisible(el: HTMLElement) {
+  function ensureTooltipVisibleByKey(tipKey: string) {
     const wrap = tableWrapRef.current;
     if (!wrap) return;
 
-    const rowRect = el.getBoundingClientRect();
-    const wrapRect = wrap.getBoundingClientRect();
-    const tooltipEstimatedHeight = 52;
-    const extraGap = 8;
-    const overflowBottom = rowRect.bottom + tooltipEstimatedHeight + extraGap - wrapRect.bottom;
+    requestAnimationFrame(() => {
+      const tipEl = wrap.querySelector(`[data-tip-key="${tipKey}"]`) as HTMLElement | null;
+      if (!tipEl) return;
 
-    if (overflowBottom > 0) {
-      wrap.scrollBy({ top: overflowBottom + 6, behavior: "smooth" });
-    }
+      const wrapRect = wrap.getBoundingClientRect();
+      const tipRect = tipEl.getBoundingClientRect();
+
+      const overflowBottom = tipRect.bottom - wrapRect.bottom;
+      if (overflowBottom > 0) {
+        wrap.scrollBy({ top: overflowBottom + 10, behavior: "smooth" });
+      }
+    });
   }
 
   return (
@@ -172,18 +175,19 @@ export function PortalPlaybackStatsClient() {
                         <button
                           type="button"
                           className="text-left"
-                          onClick={(e) => {
+                          onClick={() => {
                             if (!isTrimmed(r.mediaName, 40)) return;
-                            ensureTooltipVisible(e.currentTarget as HTMLElement);
-                            const key = `${r.serverName}_${r.mediaName}_${r.lastPlayedAt}_${i}`;
-                            setOpenTitleKey((prev) => (prev === key ? null : key));
+                            const key = `${safePage}-${i}`;
+                            const next = openTitleKey === key ? null : key;
+                            setOpenTitleKey(next);
+                            if (next) ensureTooltipVisibleByKey(next);
                           }}
                           title={r.mediaName}
                         >
                           {trimTitle(r.mediaName, 40)}
                         </button>
-                        {isTrimmed(r.mediaName, 40) && openTitleKey === `${r.serverName}_${r.mediaName}_${r.lastPlayedAt}_${i}` ? (
-                          <div className="absolute left-0 top-full z-20 mt-1 min-w-[260px] max-w-[560px] rounded border bg-black px-2 py-1 text-xs text-white shadow-lg">
+                        {isTrimmed(r.mediaName, 40) && openTitleKey === `${safePage}-${i}` ? (
+                          <div data-tip-key={`${safePage}-${i}`} className="absolute left-0 top-full z-20 mt-1 min-w-[260px] max-w-[560px] rounded border bg-black px-2 py-1 text-xs text-white shadow-lg">
                             {r.mediaName}
                           </div>
                         ) : null}
