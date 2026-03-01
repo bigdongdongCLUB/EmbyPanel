@@ -177,7 +177,7 @@ export function PaymentsAdminClient() {
 
       <div className="flex items-center justify-between gap-2">
         <input className="border rounded px-3 py-2 w-full max-w-xs" placeholder="搜索支付方式名称或描述" value={q} onChange={(e) => setQ(e.target.value)} />
-        <button className="bg-blue-600 text-white rounded px-3 py-2" onClick={openCreate}>+ 添加支付方式</button>
+        <button className="bg-[#e3001b] text-white rounded px-3 py-2" onClick={openCreate}>+ 添加支付方式</button>
       </div>
 
       {error ? <pre className="text-xs text-red-600 whitespace-pre-wrap">{error}</pre> : null}
@@ -226,8 +226,8 @@ export function PaymentsAdminClient() {
             <div className="text-2xl font-semibold">添加支付方式</div>
 
             <div className="flex gap-6 border-b">
-              <button className={`pb-2 border-b-2 ${step === 1 ? "border-blue-500 text-blue-600" : "border-transparent"}`} onClick={() => setStep(1)}>基本信息</button>
-              <button className={`pb-2 border-b-2 ${step === 2 ? "border-blue-500 text-blue-600" : "border-transparent text-gray-400"}`} disabled={!form.processor} onClick={() => setStep(2)}>配置信息</button>
+              <button className={`pb-2 border-b-2 ${step === 1 ? "border-[#e3001b] text-[#e3001b]" : "border-transparent"}`} onClick={() => setStep(1)}>基本信息</button>
+              <button className={`pb-2 border-b-2 ${step === 2 ? "border-[#e3001b] text-[#e3001b]" : "border-transparent text-gray-400"}`} disabled={!form.processor} onClick={() => setStep(2)}>配置信息</button>
             </div>
 
             {step === 1 ? (

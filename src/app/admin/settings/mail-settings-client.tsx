@@ -124,7 +124,7 @@ export function MailSettingsClient() {
 
         <div className="pt-3 border-t flex gap-2 items-center flex-wrap">
           <button
-            className="bg-blue-600 text-white rounded px-4 py-2 disabled:opacity-60"
+            className="bg-[#e3001b] text-white rounded px-4 py-2 disabled:opacity-60"
             disabled={saving || !canSave}
             onClick={async () => {
               setSaving(true);

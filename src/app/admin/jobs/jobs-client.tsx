@@ -70,7 +70,7 @@ export function JobsClient() {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <Card title="今日执行次数" value={data?.summary.todayTotal ?? 0} color="text-blue-600" />
+        <Card title="今日执行次数" value={data?.summary.todayTotal ?? 0} color="text-[#e3001b]" />
         <Card title="成功执行" value={data?.summary.todaySuccess ?? 0} color="text-green-600" />
         <Card title="执行失败" value={data?.summary.todayFailed ?? 0} color="text-rose-600" />
         <Card title="任务类型" value={data?.summary.jobTypes ?? 0} color="text-violet-600" />

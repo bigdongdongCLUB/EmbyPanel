@@ -68,8 +68,8 @@ export function InviteRebateClient() {
       <div className="border rounded-lg bg-white p-6 space-y-5">
         <div className="text-lg font-semibold">返利系统设置</div>
 
-        <div className="rounded border border-blue-200 bg-blue-50 p-4 text-sm text-gray-700">
-          <div className="font-medium text-blue-900 mb-2">返利系统说明</div>
+        <div className="rounded border border-[#f3d4d8] bg-[#fff7f8] p-4 text-sm text-gray-700">
+          <div className="font-medium text-[#b00016] mb-2">返利系统说明</div>
           <ul className="list-disc pl-5 space-y-1">
             <li>支持最多三级邀请返利活动，用户购买/续费订阅时，邀请人可获得返利奖励。</li>
             <li>循环返利：每次购买都返利；仅首次返利：被邀请人仅首次购买触发返利。</li>
@@ -137,7 +137,7 @@ export function InviteRebateClient() {
 
         <div className="pt-2 flex gap-2">
           <button
-            className="bg-blue-600 text-white rounded px-4 py-2 disabled:opacity-60"
+            className="bg-[#e3001b] text-white rounded px-4 py-2 disabled:opacity-60"
             disabled={saving}
             onClick={async () => {
               const payload = {

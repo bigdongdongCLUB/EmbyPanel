@@ -1047,7 +1047,7 @@ export function UsersClient() {
               </div>
             </div>
 
-            <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-4 text-gray-800">
+            <div className="mt-4 rounded-lg border border-[#f3d4d8] bg-[#fff7f8] p-4 text-gray-800">
               <div className="font-semibold mb-1">操作说明</div>
               <ul className="list-disc pl-5 text-sm space-y-1">
                 <li>将为 {selectedIds.length} 个选中用户添加订阅时间</li>
@@ -1618,7 +1618,7 @@ export function UsersClient() {
                 <div className="mt-2">
                   <button
                     type="button"
-                    className="bg-blue-600 hover:bg-blue-700 text-white rounded px-3 py-2 cursor-pointer"
+                    className="bg-[#e3001b] hover:bg-[#c20017] text-white rounded px-3 py-2 cursor-pointer"
                     onClick={async () => {
                       try {
                         if (navigator.clipboard?.writeText) {

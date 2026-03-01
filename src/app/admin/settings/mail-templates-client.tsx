@@ -97,7 +97,7 @@ export function MailTemplatesClient() {
             return (
               <button
                 key={k}
-                className={"pb-2 border-b-2 " + (active ? "border-blue-600 text-blue-600" : "border-transparent text-gray-700")}
+                className={"pb-2 border-b-2 " + (active ? "border-[#e3001b] text-[#e3001b]" : "border-transparent text-gray-700")}
                 onClick={() => setActiveKey(k)}
               >
                 {LABELS[k]}
@@ -118,7 +118,7 @@ export function MailTemplatesClient() {
 
         <div className="pt-3 border-t flex gap-2">
           <button
-            className="bg-blue-600 text-white rounded px-4 py-2 disabled:opacity-60"
+            className="bg-[#e3001b] text-white rounded px-4 py-2 disabled:opacity-60"
             disabled={saving || !subject.trim() || !bodyHtml.trim() || !dirty}
             onClick={async () => {
               setSaving(true);
@@ -194,7 +194,7 @@ export function MailTemplatesClient() {
           </div>
           <div>
             <button
-              className="bg-blue-600 text-white rounded px-4 py-2"
+              className="bg-[#e3001b] text-white rounded px-4 py-2"
               onClick={async () => {
                 const d = Number(noticeDays || "0");
                 if (!Number.isFinite(d) || d < 1 || d > 30) {

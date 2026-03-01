@@ -119,7 +119,7 @@ export function AnnouncementsClient() {
       <h1 className="text-xl font-semibold">公告管理</h1>
 
       <div className="flex items-center justify-end">
-        <button className="h-7 bg-blue-600 text-white rounded px-3 text-xs" onClick={openCreate}>
+        <button className="h-7 bg-[#e3001b] text-white rounded px-3 text-xs" onClick={openCreate}>
           + 发布公告
         </button>
       </div>

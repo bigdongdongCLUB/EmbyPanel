@@ -163,7 +163,7 @@ export function CardCodesClient() {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <div className="border rounded p-3"><div className="text-xs text-gray-500">卡密总数</div><div className="text-2xl text-blue-600">{summary.total}</div></div>
+        <div className="border rounded p-3"><div className="text-xs text-gray-500">卡密总数</div><div className="text-2xl text-[#e3001b]">{summary.total}</div></div>
         <div className="border rounded p-3"><div className="text-xs text-gray-500">已使用</div><div className="text-2xl text-red-600">{summary.used}</div></div>
         <div className="border rounded p-3"><div className="text-xs text-gray-500">未使用</div><div className="text-2xl text-amber-600">{summary.unused}</div></div>
         <div className="border rounded p-3"><div className="text-xs text-gray-500">余额卡密总数</div><div className="text-2xl text-green-600">{summary.balanceTotal}</div></div>
@@ -186,7 +186,7 @@ export function CardCodesClient() {
           <option value="DISABLED">已禁用</option>
         </select>
         <button className="h-7 border rounded px-3 text-xs" onClick={refresh} disabled={loading}>刷新</button>
-        <button className="h-7 bg-blue-600 text-white rounded px-3 text-xs ml-auto" onClick={() => setOpen(true)}>创建卡密</button>
+        <button className="h-7 bg-[#e3001b] text-white rounded px-3 text-xs ml-auto" onClick={() => setOpen(true)}>创建卡密</button>
         <div ref={moreRef} className="relative">
           <button className="h-7 border rounded px-3 text-xs cursor-pointer select-none flex items-center" onClick={() => setMoreOpen((v) => !v)}>更多</button>
           {moreOpen ? (
@@ -326,7 +326,7 @@ export function CardCodesClient() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg w-full max-w-[470px] p-4 space-y-4 max-h-[85vh] overflow-auto">
             <div className="text-xl font-semibold">批量创建卡密</div>
-            <div className="rounded-lg border bg-blue-50 p-4 text-sm text-gray-700">支持生成余额充值卡密和订阅卡密。卡密默认16位大写英文+数字。</div>
+            <div className="rounded-lg border bg-[#fff7f8] p-4 text-sm text-gray-700">支持生成余额充值卡密和订阅卡密。卡密默认16位大写英文+数字。</div>
 
             <div>
               <label className="text-sm">* 生成数量</label>
@@ -420,7 +420,7 @@ export function CardCodesClient() {
 
             <div className="flex items-center gap-2">
               <button
-                className="bg-blue-600 text-white rounded px-4 py-2"
+                className="bg-[#e3001b] text-white rounded px-4 py-2"
                 onClick={async () => {
                   const all = createdCodes.join("\n");
                   const ok = await copyTextSafe(all);

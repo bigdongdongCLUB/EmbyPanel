@@ -70,12 +70,12 @@ export function VodSettingsClient() {
       <div className="space-y-6 max-w-2xl">
 
         {/* 说明卡片 */}
-      <div className="flex gap-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-4">
-        <span className="text-blue-500 text-lg mt-0.5 shrink-0">ℹ</span>
+      <div className="flex gap-3 rounded-xl border border-[#f3d4d8] bg-[#fff7f8] px-4 py-4">
+        <span className="text-[#e3001b] text-lg mt-0.5 shrink-0">ℹ</span>
         <div className="text-sm text-gray-700 leading-relaxed">
           <div className="font-medium text-gray-800 mb-1">关于点播功能</div>
           点播功能允许用户请求添加电影和电视剧内容。启用此功能需要配置 TMDB API Key。API Key 可从{" "}
-          <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noreferrer" className="text-blue-600 underline underline-offset-2">
+          <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noreferrer" className="text-[#e3001b] underline underline-offset-2">
             https://www.themoviedb.org/settings/api
           </a>{" "}获取。
         </div>
@@ -106,7 +106,7 @@ export function VodSettingsClient() {
           </button>
         </div>
         <p className="text-xs text-gray-400">用于获取影视数据的 API Key</p>
-        <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline">
+        <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noreferrer" className="text-xs text-[#e3001b] hover:underline">
           获取 TMDB API Key →
         </a>
       </div>

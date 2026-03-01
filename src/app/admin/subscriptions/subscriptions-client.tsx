@@ -344,7 +344,7 @@ export function SubscriptionsClient() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="text-sm text-gray-600">共 {plans.length} 个订阅计划</div>
-        <button className="bg-blue-600 text-white rounded px-3 py-2" onClick={openCreate}>
+        <button className="bg-[#e3001b] text-white rounded px-3 py-2" onClick={openCreate}>
           + 创建订阅
         </button>
       </div>

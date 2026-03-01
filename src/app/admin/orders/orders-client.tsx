@@ -112,7 +112,7 @@ export function OrdersAdminClient() {
         </div>
         <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-4">
           <div className="text-sm text-gray-500">待支付订单</div>
-          <div className="text-2xl font-semibold mt-1 text-blue-700">{summary.pendingOrders}</div>
+          <div className="text-2xl font-semibold mt-1 text-[#e3001b]">{summary.pendingOrders}</div>
         </div>
       </div>
 

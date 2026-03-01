@@ -58,7 +58,7 @@ function statusText(v: BizStatus) {
 }
 
 function statusCls(v: BizStatus) {
-  if (v === "PENDING") return "border-blue-200 bg-blue-50 text-blue-700";
+  if (v === "PENDING") return "border-[#f3d4d8] bg-[#fff7f8] text-[#e3001b]";
   if (v === "NO_RESOURCE") return "border-red-200 bg-red-50 text-red-600";
   if (v === "PROCESSING") return "border-amber-200 bg-amber-50 text-amber-700";
   if (v === "CANNOT_UPDATE") return "border-purple-200 bg-purple-50 text-purple-700";
@@ -167,7 +167,7 @@ export function VodRequestsAdminClient() {
 
       <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
         <div className="border rounded p-3"><div className="text-xs text-gray-500">总计</div><div className="text-2xl text-gray-800">{summary.total}</div></div>
-        <div className="border rounded p-3"><div className="text-xs text-gray-500">待处理</div><div className="text-2xl text-blue-600">{summary.pending}</div></div>
+        <div className="border rounded p-3"><div className="text-xs text-gray-500">待处理</div><div className="text-2xl text-[#e3001b]">{summary.pending}</div></div>
         <div className="border rounded p-3"><div className="text-xs text-gray-500">无资源</div><div className="text-2xl text-red-600">{summary.noResource}</div></div>
         <div className="border rounded p-3"><div className="text-xs text-gray-500">进行中</div><div className="text-2xl text-amber-600">{summary.processing}</div></div>
         <div className="border rounded p-3"><div className="text-xs text-gray-500">无法更新</div><div className="text-2xl text-purple-600">{summary.cannotUpdate}</div></div>
@@ -181,7 +181,7 @@ export function VodRequestsAdminClient() {
         </div>
         <div className="border rounded p-3 bg-white">
           <div className="text-xs text-gray-500">近30日电影点播数量</div>
-          <div className="text-2xl text-blue-700">{summary.recentMovieCount}</div>
+          <div className="text-2xl text-[#e3001b]">{summary.recentMovieCount}</div>
         </div>
         <div className="border rounded p-3 bg-white">
           <div className="text-xs text-gray-500">近30日提交最多用户</div>
@@ -231,7 +231,7 @@ export function VodRequestsAdminClient() {
                       <div className="font-medium text-gray-800 truncate">{r.title}</div>
                       <div className="text-xs text-gray-500 truncate">{r.titleOriginal || "-"}</div>
                       <div className="text-xs text-gray-500 mt-1">
-                        <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] mr-1 ${r.mediaType === "MOVIE" ? "bg-blue-50 text-blue-700" : "bg-purple-50 text-purple-700"}`}>{r.mediaType === "MOVIE" ? "电影" : "电视剧"}</span>
+                        <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] mr-1 ${r.mediaType === "MOVIE" ? "bg-[#fff7f8] text-[#e3001b]" : "bg-purple-50 text-purple-700"}`}>{r.mediaType === "MOVIE" ? "电影" : "电视剧"}</span>
                         {r.mediaType === "TV" && r.season ? `S${String(r.season).padStart(2, "0")} · ` : ""}{r.year || "-"}
                       </div>
                     </div>

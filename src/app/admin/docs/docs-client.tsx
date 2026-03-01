@@ -117,7 +117,7 @@ export function DocsAdminClient() {
 
       <div className="border rounded-lg bg-white overflow-hidden">
         <div className="p-3 flex items-center justify-end gap-2 border-b">
-          <button className="bg-blue-600 text-white rounded px-3 py-2 text-sm" onClick={openCreate}>
+          <button className="bg-[#e3001b] text-white rounded px-3 py-2 text-sm" onClick={openCreate}>
             + 新建文档
           </button>
         </div>
@@ -159,7 +159,7 @@ export function DocsAdminClient() {
                     <td className="px-4 py-3">{new Date(d.createdAt).toLocaleString("zh-CN", { hour12: false, timeZone: "Asia/Shanghai" })}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3 text-sm">
-                        <button className="text-gray-700 hover:text-blue-600" onClick={() => openEdit(d)}>
+                        <button className="text-gray-700 hover:text-[#e3001b]" onClick={() => openEdit(d)}>
                           编辑
                         </button>
                         <button className="text-red-600 hover:text-red-700" onClick={() => removeDoc(d.id)}>
