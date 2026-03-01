@@ -59,14 +59,14 @@ const TABS: { key: Tab; label: string; icon: string }[] = [
 function PosterCard({ item, inLibrary, onClick }: { item: MediaItem; inLibrary: boolean; onClick: () => void }) {
   return (
     <div className="cursor-pointer group" onClick={onClick}>
-      <div className="relative rounded-xl overflow-hidden aspect-[2/3] bg-gray-100 shadow-sm">
+      <div className="relative rounded-lg overflow-hidden aspect-[2/3] bg-gradient-to-br from-[#e4eaf5] to-[#cbd6e9] border-2 border-transparent transition-all duration-300 group-hover:border-[#e3001b] group-hover:shadow-[0_8px_24px_rgba(227,0,27,0.15)] group-hover:-translate-y-1">
         {item.posterPath ? (
           <img src={item.posterPath} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" loading="lazy" />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs p-2 text-center">{item.title}</div>
         )}
         <div className="absolute top-1.5 left-1.5">
-          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded text-white shadow ${item.mediaType === "movie" ? "bg-blue-500" : "bg-purple-500"}`}>
+          <span className="text-[11px] font-bold px-1.5 py-0.5 rounded text-white bg-[#e3001b] shadow">
             {item.mediaType === "movie" ? "电影" : "剧集"}
           </span>
         </div>
@@ -78,15 +78,15 @@ function PosterCard({ item, inLibrary, onClick }: { item: MediaItem; inLibrary: 
         ) : null}
         {inLibrary && (
           <div className="absolute bottom-1.5 left-1.5">
-            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded border border-green-400 bg-green-50 text-green-700 shadow-sm">
+            <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-white/90 text-[#222] shadow-sm border border-white/80">
               已入库
             </span>
           </div>
         )}
       </div>
-      <div className="mt-1.5 px-0.5">
-        <div className="text-sm font-medium text-gray-800 truncate">{item.title}</div>
-        <div className="text-xs text-gray-400">{item.year}</div>
+      <div className="mt-2 px-0.5">
+        <div className="text-sm font-bold text-[#222] truncate">{item.title}</div>
+        <div className="text-xs text-[#888]">{item.year}</div>
       </div>
     </div>
   );
@@ -485,11 +485,11 @@ export function VodClient() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-xl font-semibold text-gray-800">点播功能</div>
+          <div className="text-2xl font-bold text-[#222]">点播功能</div>
           {!vodEnabled || !vodCanRequest ? <div className="text-sm text-red-600 mt-1">{vodDisabledReason}</div> : null}
         </div>
         <button
-          className="flex items-center gap-1.5 border rounded-lg px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 shrink-0"
+          className="flex items-center gap-1.5 border border-[#eaeaea] bg-white rounded-lg px-3 py-2 text-sm text-[#666] hover:border-[#e3001b] hover:text-[#e3001b] shrink-0"
           onClick={async () => {
             await loadMyRequests(1);
             setShowMyRequests(true);
@@ -500,9 +500,9 @@ export function VodClient() {
       </div>
 
       {/* Search */}
-      <div className="bg-white border rounded-xl p-4 space-y-2">
+      <div className="bg-white border border-[#eaeaea] rounded-xl p-2 space-y-2 shadow-sm">
         <div className="flex gap-2">
-          <div className="flex-1 flex items-center border rounded-lg px-3 py-2 gap-2 focus-within:border-blue-400">
+          <div className="flex-1 flex items-center bg-[#f4f5f7] border border-transparent rounded-lg px-3 py-2 gap-2 focus-within:border-[#e3001b] focus-within:bg-white">
             <input
               className="flex-1 text-sm outline-none"
               placeholder="搜索电影或电视剧..."
@@ -514,7 +514,7 @@ export function VodClient() {
               <button className="text-gray-300 hover:text-gray-500 text-sm" onClick={() => { clearSearch(); }}>✕</button>
             )}
           </div>
-          <button className="px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 shrink-0" onClick={() => doSearch(searchInput)}>
+          <button className="px-6 py-2 bg-[#e3001b] text-white rounded-lg text-sm font-bold hover:bg-[#c20017] shrink-0" onClick={() => doSearch(searchInput)}>
             搜索
           </button>
           {searchQuery && (
@@ -531,12 +531,12 @@ export function VodClient() {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b overflow-x-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+      <div className="flex border-b border-[#eaeaea] overflow-x-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
         {TABS.map((tab) => (
           <button
             key={tab.key}
-            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm whitespace-nowrap border-b-2 -mb-px transition-colors ${
-              activeTab === tab.key && !searchQuery ? "border-blue-600 text-blue-600 font-medium" : "border-transparent text-gray-500 hover:text-gray-700"
+            className={`flex items-center gap-1.5 px-4 py-3 text-[15px] whitespace-nowrap border-b-2 -mb-px transition-colors ${
+              activeTab === tab.key && !searchQuery ? "border-[#e3001b] text-[#e3001b] font-bold" : "border-transparent text-[#888] hover:text-[#222]"
             }`}
             onClick={() => { setActiveTab(tab.key); clearSearch(); setCurrentPage(1); }}
           >
