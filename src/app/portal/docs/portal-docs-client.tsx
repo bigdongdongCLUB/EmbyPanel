@@ -48,11 +48,16 @@ export function DocsPortalClient() {
                   <td className="px-5 py-4 text-[#222] font-medium">{d.title}</td>
                   <td className="px-5 py-4 text-[#666]">{new Date(d.updatedAt).toLocaleString("zh-CN", { hour12: false, timeZone: "Asia/Shanghai" })}</td>
                   <td className="px-5 py-4">
-                    <Link className="inline-flex items-center p-1.5 rounded hover:bg-[#fff0f1]" href={`/portal/docs/${d.id}`} title="查看文档">
+                    <Link
+                      className="inline-flex items-center justify-center p-2 md:p-1.5 rounded hover:bg-[#fff0f1]"
+                      href={`/portal/docs/${d.id}`}
+                      title="查看文档"
+                      aria-label="查看文档"
+                    >
                       <img
                         src="/icons/docs.svg"
                         alt="查看文档"
-                        className="h-4 w-4"
+                        className="h-5 w-5 md:h-4 md:w-4"
                         style={{ filter: "brightness(0) saturate(100%) invert(16%) sepia(98%) saturate(5512%) hue-rotate(346deg) brightness(93%) contrast(101%)" }}
                       />
                     </Link>
