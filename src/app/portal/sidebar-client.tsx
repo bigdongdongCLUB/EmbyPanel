@@ -41,6 +41,7 @@ export function PortalSidebarClient({ collapsed, siteName, siteLogoDataUrl, clas
           <Item href="/portal/invites" label="我的邀请" icon="/icons/invites.svg" collapsed={collapsed} />
           <Item href="/portal/emby-services" label="Emby 服务" icon="/icons/emby-services.svg" collapsed={collapsed} />
           <Item href="/portal/playback-stats" label="播放统计" icon="/icons/playback-stats.svg" collapsed={collapsed} />
+          <Item href="/portal/docs" label="使用文档" icon="/icons/docs.svg" collapsed={collapsed} />
         </div>
       </nav>
 

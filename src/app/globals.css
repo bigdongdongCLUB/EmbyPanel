@@ -85,3 +85,18 @@ body {
   height: 100%;
   cursor: pointer;
 }
+
+/* Markdown 文档展示：图片自适应窗口 */
+.docs-content img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 8px 0;
+  border-radius: 8px;
+}
+
+.docs-content p { margin: 8px 0; }
+.docs-content ul { margin: 8px 0; padding-left: 18px; list-style: disc; }
+.docs-content h1, .docs-content h2, .docs-content h3, .docs-content h4 { font-weight: 600; margin: 10px 0 6px; }
+.docs-content code { background: #f3f4f6; border-radius: 4px; padding: 0 4px; }
+.docs-content a { color: #2563eb; text-decoration: underline; }
