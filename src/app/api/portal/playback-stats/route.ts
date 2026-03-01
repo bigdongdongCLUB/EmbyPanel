@@ -81,6 +81,14 @@ async function submitCustomQuery(baseUrl: string, apiKey: string, query: string)
   return { ok: false as const, rows: [] as any[] };
 }
 
+function normalizeMediaKey(v: string) {
+  return String(v || "")
+    .toLowerCase()
+    .replace(/[\s\u3000]+/g, "")
+    .replace(/[\[\]【】()（）]/g, "")
+    .trim();
+}
+
 function parseActivityEntryToPlayback(entry: any, username: string) {
   const text = [
     pickString(entry, ["Overview", "overview"]),
@@ -93,7 +101,10 @@ function parseActivityEntryToPlayback(entry: any, username: string) {
 
   const lower = text.toLowerCase();
   if (!lower.includes(String(username).toLowerCase())) return null;
-  if (!/(开始播放|已停止播放|playing|stopped)/i.test(text)) return null;
+
+  const isStart = /(开始播放|start\s*playing|playing)/i.test(text) && !/(已停止播放|stopped)/i.test(text);
+  const isStop = /(已停止播放|stop\s*playing|stopped)/i.test(text);
+  if (!isStart && !isStop) return null;
 
   let mediaName = "";
   let client = "-";
@@ -110,11 +121,11 @@ function parseActivityEntryToPlayback(entry: any, username: string) {
   }
 
   if (!mediaName) {
-    m = text.match(/(?:开始播放|已停止播放)\s*(.+)$/);
+    m = text.match(/(?:开始播放|已停止播放|start\s*playing|stopped)\s*(.+)$/i);
     if (m) mediaName = (m[1] || "").trim();
   }
 
-  if (!client) {
+  if (!client || client === "-") {
     m = text.match(/在\s*(.+?)\s*上/);
     if (m) client = (m[1] || "").trim() || "-";
   }
@@ -126,7 +137,9 @@ function parseActivityEntryToPlayback(entry: any, username: string) {
   if (!dtRaw) return null;
 
   return {
+    eventType: isStop ? "stop" : "start",
     mediaName,
+    mediaKey: normalizeMediaKey(mediaName),
     client: client || "-",
     ip: pickString(entry, ["RemoteEndPoint", "remoteEndPoint", "RemoteAddress", "remoteAddress", "IpAddress", "ipAddress"]) || "-",
     lastPlayedAt: dtRaw,
@@ -211,13 +224,15 @@ export async function GET(req: Request) {
     const rows = [...(first.ok ? first.rows : []), ...(second.ok ? second.rows : [])];
 
     const dedupe = new Set<string>();
+
+    // A) playback-reporting rows (preferred: duration/ip usually more准确)
     for (const r of rows) {
       const mediaName = pickString(r, ["ItemName", "itemName", "Name", "name", "Item", "item", "NowPlayingItemName"]);
       const lastPlayedAt = pickDate(r);
       const durationSeconds = normalizeDurationSeconds(r?.PlaybackDuration ?? r?.playbackDuration ?? r?.Duration ?? r?.PlayDuration ?? 0);
       const itemId = pickString(r, ["ItemId", "itemId", "MediaId", "mediaId"]) || null;
       const client = pickString(r, ["ClientName", "clientName", "Client", "client", "DeviceName", "deviceName"]) || "-";
-      const ip = pickString(r, ["RemoteAddress", "remoteAddress", "IpAddress", "ipAddress", "IPAddress"]) || "-";
+      const ip = pickString(r, ["RemoteAddress", "remoteAddress", "IpAddress", "ipAddress", "IPAddress", "RemoteEndPoint"]) || "-";
 
       if (!mediaName && !itemId) continue;
       if (!lastPlayedAt) continue;
@@ -225,7 +240,7 @@ export async function GET(req: Request) {
       const t = new Date(lastPlayedAt).getTime();
       if (Number.isFinite(t) && t < since.getTime()) continue;
 
-      const key = `${itemId || mediaName}|${lastPlayedAt}|${client}|${ip}`;
+      const key = `${itemId || normalizeMediaKey(mediaName)}|${lastPlayedAt}|${client}|${ip}`;
       if (dedupe.has(key)) continue;
       dedupe.add(key);
 
@@ -241,29 +256,89 @@ export async function GET(req: Request) {
       });
     }
 
-    // Fallback: some Emby installs expose playback only via ActivityLog (no PlaybackActivity rows)
-    const activityRes = await fetchActivityEntries(s.baseUrl, apiKey, 800);
+    // B) ActivityLog fallback + enrich: 用 start/stop 估算时长，补 client/ip
+    const activityRes = await fetchActivityEntries(s.baseUrl, apiKey, 1000);
     if (activityRes.ok) {
-      for (const e of activityRes.rows) {
-        const parsed = parseActivityEntryToPlayback(e, username);
-        if (!parsed) continue;
+      const events = activityRes.rows
+        .map((e) => parseActivityEntryToPlayback(e, username))
+        .filter(Boolean) as Array<{ eventType: "start" | "stop"; mediaName: string; mediaKey: string; client: string; ip: string; lastPlayedAt: string }>;
 
-        const t = new Date(parsed.lastPlayedAt).getTime();
-        if (Number.isFinite(t) && t < since.getTime()) continue;
+      events.sort((a, b) => new Date(a.lastPlayedAt).getTime() - new Date(b.lastPlayedAt).getTime());
 
-        const key = `${parsed.mediaName}|${parsed.lastPlayedAt}|${parsed.client}|${parsed.ip}`;
+      const starts = new Map<string, number[]>();
+      const stopDerived: Array<{ mediaName: string; client: string; ip: string; lastPlayedAt: string; durationSeconds: number }> = [];
+
+      for (const ev of events) {
+        const t = new Date(ev.lastPlayedAt).getTime();
+        if (!Number.isFinite(t)) continue;
+        if (t < since.getTime()) continue;
+
+        const k = `${ev.mediaKey}|${ev.client}`;
+        if (ev.eventType === "start") {
+          const arr = starts.get(k) ?? [];
+          arr.push(t);
+          starts.set(k, arr);
+          continue;
+        }
+
+        // stop event
+        const arr = starts.get(k) ?? [];
+        let duration = 0;
+        if (arr.length) {
+          const st = arr.pop()!;
+          starts.set(k, arr);
+          duration = Math.max(0, Math.round((t - st) / 1000));
+          // limit abnormal huge durations
+          if (duration > 24 * 3600) duration = 0;
+        }
+
+        stopDerived.push({
+          mediaName: ev.mediaName,
+          client: ev.client,
+          ip: ev.ip,
+          lastPlayedAt: ev.lastPlayedAt,
+          durationSeconds: duration,
+        });
+      }
+
+      // merge derived stop records into existing records (补全缺失字段/时长)
+      for (const d of stopDerived) {
+        const dt = new Date(d.lastPlayedAt).getTime();
+        let matched: any = null;
+        let bestDelta = Number.POSITIVE_INFINITY;
+
+        for (const r of records) {
+          if (r.serverId !== s.id) continue;
+          if (normalizeMediaKey(r.mediaName) !== normalizeMediaKey(d.mediaName)) continue;
+          const rt = new Date(r.lastPlayedAt).getTime();
+          if (!Number.isFinite(rt)) continue;
+          const delta = Math.abs(rt - dt);
+          if (delta <= 10 * 60 * 1000 && delta < bestDelta) {
+            bestDelta = delta;
+            matched = r;
+          }
+        }
+
+        if (matched) {
+          if ((!matched.client || matched.client === "-") && d.client && d.client !== "-") matched.client = d.client;
+          if ((!matched.ip || matched.ip === "-") && d.ip && d.ip !== "-") matched.ip = d.ip;
+          if ((matched.durationSeconds ?? 0) <= 0 && d.durationSeconds > 0) matched.durationSeconds = d.durationSeconds;
+          continue;
+        }
+
+        const key = `${normalizeMediaKey(d.mediaName)}|${d.lastPlayedAt}|${d.client}|${d.ip}`;
         if (dedupe.has(key)) continue;
         dedupe.add(key);
 
         records.push({
           serverId: s.id,
           serverName: s.name,
-          mediaName: parsed.mediaName,
+          mediaName: d.mediaName,
           itemId: null,
-          durationSeconds: 0,
-          client: parsed.client,
-          ip: parsed.ip,
-          lastPlayedAt: parsed.lastPlayedAt,
+          durationSeconds: d.durationSeconds,
+          client: d.client || "-",
+          ip: d.ip || "-",
+          lastPlayedAt: d.lastPlayedAt,
         });
       }
     }
@@ -272,7 +347,7 @@ export async function GET(req: Request) {
   records.sort((a, b) => new Date(b.lastPlayedAt).getTime() - new Date(a.lastPlayedAt).getTime());
 
   const totalDurationSeconds = records.reduce((sum, r) => sum + (Number.isFinite(r.durationSeconds) ? r.durationSeconds : 0), 0);
-  const uniqueSet = new Set(records.map((r) => `${r.serverId}:${r.itemId || r.mediaName}`));
+  const uniqueSet = new Set(records.map((r) => String(r.itemId || normalizeMediaKey(r.mediaName) || r.mediaName)));
 
   return NextResponse.json({
     ok: true,
