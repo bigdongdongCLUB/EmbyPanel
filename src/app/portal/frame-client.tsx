@@ -37,7 +37,7 @@ export function PortalFrameClient({ username, role, siteName, siteLogoDataUrl, c
   }
 
   return (
-    <div className="panel-compact min-h-screen bg-gray-50">
+    <div className="panel-compact min-h-screen bg-[#f4f5f7]">
       <PortalSidebarClient
         collapsed={isMobile ? false : collapsed}
         siteName={siteName}
@@ -47,16 +47,16 @@ export function PortalFrameClient({ username, role, siteName, siteLogoDataUrl, c
       {isMobile && mobileOpen ? <div className="fixed inset-0 z-20 bg-black/30" onClick={() => setMobileOpen(false)} /> : null}
 
       <div className={isMobile ? "" : collapsed ? "pl-16" : "pl-60"}>
-        <header className="sticky top-0 z-20 h-14 bg-white border-b flex items-center justify-between px-3 md:px-4">
+        <header className="sticky top-0 z-20 h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 md:px-8">
           <div className="flex items-center gap-2">
             <button className="border rounded px-2 py-1 text-sm" onClick={toggle} title={isMobile ? (mobileOpen ? "收起菜单" : "展开菜单") : collapsed ? "展开菜单" : "收起菜单"}>
               <img src="/icons/menu.svg" alt="菜单" className="h-4 w-4" />
             </button>
-            <div className="text-sm text-gray-700">用户中心</div>
+            <div className="text-base font-medium text-gray-800">用户中心</div>
           </div>
           <PortalHeaderClient username={username} role={role} />
         </header>
-        <main className="p-3 md:p-6">{children}</main>
+        <main className="p-4 md:p-8 max-w-[1400px] mx-auto w-full">{children}</main>
       </div>
     </div>
   );
