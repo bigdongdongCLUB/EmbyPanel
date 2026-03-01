@@ -47,15 +47,17 @@ export function InvitesClient() {
   }, []);
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-semibold">我的邀请</h1>
+    <div className="max-w-[1000px] mx-auto space-y-6">
+      <h1 className="text-2xl font-bold text-[#222]">我的邀请</h1>
       {loading ? <div className="text-sm text-gray-500">加载中…</div> : null}
 
-      <div className="border rounded-lg bg-white p-4">
-        <div className="text-sm text-gray-600 mb-2">分享您的邀请码给朋友，邀请他们加入</div>
-        <div className="flex items-center gap-2">
+      <div className="relative bg-white border-2 border-[#e3001b] rounded-2xl p-8 shadow-[0_8px_24px_rgba(227,0,27,0.08)]">
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#e3001b] text-white text-xs font-bold px-4 py-1 rounded-full">专属邀请码</div>
+        <div className="text-[15px] text-[#666] mb-4">分享您的邀请码给朋友，邀请他们加入</div>
+
+        <div className="flex flex-col md:flex-row gap-4 md:items-stretch">
           <div
-            className="flex-1 border rounded px-3 py-2 bg-gray-50 font-mono text-blue-600 text-lg cursor-text"
+            className="flex-1 min-h-12 bg-[#f8f9fa] border border-[#eaeaea] rounded-lg flex items-center px-5 text-2xl font-mono font-bold text-[#e3001b] tracking-[0.12em] cursor-text"
             onClick={() => {
               const text = inviteCode || "";
               if (!text) return;
@@ -68,10 +70,11 @@ export function InvitesClient() {
               } catch {}
             }}
           >
-            <span id="invite-code-text">{inviteCode || "-"}</span>
+            <span id="invite-code-text" className="truncate">{inviteCode || "-"}</span>
           </div>
+
           <button
-            className="bg-blue-600 text-white rounded px-3 py-2 text-sm"
+            className="h-12 px-8 bg-[#e3001b] text-white rounded-lg text-[15px] font-bold hover:bg-[#c20017]"
             onClick={async () => {
               const text = inviteCode || "";
               if (!text) {
@@ -108,8 +111,9 @@ export function InvitesClient() {
           >
             复制邀请码
           </button>
+
           <button
-            className="border rounded px-3 py-2 text-sm"
+            className="h-12 px-6 border border-[#eaeaea] bg-white text-[#222] rounded-lg text-[15px] hover:bg-[#f8f9fa]"
             onClick={async () => {
               const ok = await (window as any).showConfirm("确认重新生成邀请码？旧邀请码将失效。");
               if (!ok) return;
@@ -129,52 +133,50 @@ export function InvitesClient() {
       </div>
 
       {rebatePolicy?.enabled ? (
-        <div className="rounded border border-amber-200 bg-amber-50 p-4 text-sm">
-          <div className="font-medium mb-2">返利计算示例</div>
-          <div>
-            返利模式：{rebatePolicy?.mode === "FIRST_ONLY" ? "仅首次返利" : "循环返利"}；已开启
+        <div className="bg-[#f4f5f7] rounded-2xl p-8">
+          <div className="text-base font-bold mb-3 text-[#222]">返利计算示例</div>
+          <div className="text-sm text-[#222] leading-8">
+            <div>返利模式：{rebatePolicy?.mode === "FIRST_ONLY" ? "仅首次返利" : "循环返利"}；已开启</div>
+            <div>假设被邀请用户购买 ¥300 订阅：</div>
+            <ul className="list-disc pl-5 text-[#666] space-y-1">
+              <li>一级邀请人：¥300 × {rebatePolicy?.rate1 ?? 0}% = ¥{(((rebatePolicy?.rate1 ?? 0) * 300) / 100).toFixed(2)}</li>
+              {(rebatePolicy?.level ?? 1) >= 2 ? (
+                <li>二级邀请人：¥300 × {rebatePolicy?.rate2 ?? 0}% = ¥{(((rebatePolicy?.rate2 ?? 0) * 300) / 100).toFixed(2)}</li>
+              ) : null}
+              {(rebatePolicy?.level ?? 1) >= 3 ? (
+                <li>三级邀请人：¥300 × {rebatePolicy?.rate3 ?? 0}% = ¥{(((rebatePolicy?.rate3 ?? 0) * 300) / 100).toFixed(2)}</li>
+              ) : null}
+            </ul>
           </div>
-          <div className="mt-1">假设被邀请用户购买 ¥300 订阅：</div>
-          <ul className="list-disc pl-5 mt-1 space-y-1">
-            <li>一级邀请人：¥300 × {rebatePolicy?.rate1 ?? 0}% = ¥{(((rebatePolicy?.rate1 ?? 0) * 300) / 100).toFixed(2)}</li>
-            {(rebatePolicy?.level ?? 1) >= 2 ? (
-              <li>二级邀请人：¥300 × {rebatePolicy?.rate2 ?? 0}% = ¥{(((rebatePolicy?.rate2 ?? 0) * 300) / 100).toFixed(2)}</li>
-            ) : null}
-            {(rebatePolicy?.level ?? 1) >= 3 ? (
-              <li>三级邀请人：¥300 × {rebatePolicy?.rate3 ?? 0}% = ¥{(((rebatePolicy?.rate3 ?? 0) * 300) / 100).toFixed(2)}</li>
-            ) : null}
-          </ul>
         </div>
       ) : (
-        <div className="rounded border border-red-200 bg-red-50 p-4 text-sm text-red-600 font-medium">
-          系统暂时未启用返利系统，您的邀请无法获得返利
-        </div>
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-600 font-medium">系统暂时未启用返利系统，您的邀请无法获得返利</div>
       )}
 
-      <div className="border rounded-lg bg-white overflow-auto">
-        <table className="min-w-[760px] w-full text-sm">
-          <thead className="border-b text-left text-gray-600">
+      <div className="bg-white rounded-2xl border border-[#eaeaea] overflow-auto">
+        <table className="min-w-[760px] w-full text-sm text-left">
+          <thead className="bg-[#f8f9fa] text-[#666] border-b border-[#eaeaea]">
             <tr>
-              <th className="px-3 py-2">邀请用户</th>
-              <th className="px-3 py-2">注册时间</th>
-              <th className="px-3 py-2">订阅计划</th>
-              <th className="px-3 py-2">付费周期</th>
-              <th className="px-3 py-2">返利金额</th>
+              <th className="px-6 py-4 font-medium">邀请用户</th>
+              <th className="px-6 py-4 font-medium">注册时间</th>
+              <th className="px-6 py-4 font-medium">订阅计划</th>
+              <th className="px-6 py-4 font-medium">付费周期</th>
+              <th className="px-6 py-4 font-medium">返利金额</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((r, i) => (
-              <tr key={i} className="border-b last:border-b-0">
-                <td className="px-3 py-2">{r.invitedUsername}</td>
-                <td className="px-3 py-2">{r.registerDate}</td>
-                <td className="px-3 py-2">{r.planName}</td>
-                <td className="px-3 py-2">{r.payCycle}</td>
-                <td className="px-3 py-2">¥{r.rebateAmount}</td>
+              <tr key={i} className="border-b border-[#eaeaea] last:border-b-0">
+                <td className="px-6 py-5 text-[#666]">{r.invitedUsername}</td>
+                <td className="px-6 py-5 text-[#666]">{r.registerDate}</td>
+                <td className="px-6 py-5 text-[#666]">{r.planName}</td>
+                <td className="px-6 py-5 text-[#666]">{r.payCycle}</td>
+                <td className="px-6 py-5 text-[#666]">¥{r.rebateAmount}</td>
               </tr>
             ))}
             {!rows.length ? (
               <tr>
-                <td className="px-3 py-6 text-gray-500" colSpan={5}>暂无邀请购买记录</td>
+                <td className="px-6 py-16 text-center text-[#aaa]" colSpan={5}>暂无邀请购买记录</td>
               </tr>
             ) : null}
           </tbody>
