@@ -96,69 +96,69 @@ export function PortalPlaybackStatsClient() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h1 className="text-xl font-semibold">播放统计</h1>
-        <button className="border rounded px-3 py-1.5" onClick={() => refresh()}>
+        <h1 className="text-2xl font-bold text-[#222]">播放统计</h1>
+        <button className="border border-[#eaeaea] bg-white rounded-lg px-3 py-1.5 text-sm text-[#666] hover:border-[#e3001b] hover:text-[#e3001b]" onClick={() => refresh()}>
           刷新
         </button>
       </div>
 
-      <div className="flex items-center gap-2 text-sm">
-        <span>时间范围：</span>
-        <select
-          className="border rounded px-2 py-1.5"
-          value={String(rangeDays)}
-          onChange={(e) => {
-            const v = Number(e.target.value) as 7 | 30 | 90;
-            setRangeDays(v);
-            setPage(1);
-            refresh(v);
-          }}
-        >
-          <option value="7">最近7天</option>
-          <option value="30">最近30天</option>
-          <option value="90">最近90天</option>
-        </select>
+      <div className="bg-white border border-[#eaeaea] rounded-xl p-2 shadow-sm">
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-[#666]">时间范围：</span>
+          <select
+            className="border border-[#eaeaea] rounded-lg px-3 py-2 bg-[#f4f5f7] focus:border-[#e3001b] outline-none"
+            value={String(rangeDays)}
+            onChange={(e) => {
+              const v = Number(e.target.value) as 7 | 30 | 90;
+              setRangeDays(v);
+              setPage(1);
+              refresh(v);
+            }}
+          >
+            <option value="7">最近7天</option>
+            <option value="30">最近30天</option>
+            <option value="90">最近90天</option>
+          </select>
+        </div>
       </div>
 
       {error ? <div className="text-sm text-red-600">{error}</div> : null}
       {loading ? <div className="text-sm text-gray-500">加载中…</div> : null}
 
-      <div className="grid grid-cols-1 gap-3">
-        <div className="border rounded-lg p-4">
-          <div className="text-sm text-gray-500">观看影片数量</div>
-          <div className="text-2xl font-semibold mt-1">{data?.summary.watchedItemCount ?? 0} 部</div>
-        </div>
+      <div className="rounded-2xl border border-transparent bg-[#f8f9fa] p-6 max-w-sm">
+        <div className="text-sm text-[#888]">观看影片数量</div>
+        <div className="text-3xl font-bold text-[#222] mt-2">{data?.summary.watchedItemCount ?? 0} <span className="text-sm font-normal">部</span></div>
       </div>
 
-      <div className="border rounded-lg overflow-hidden">
-        <div className="px-4 py-3 border-b font-medium">我的播放记录</div>
+      <div className="border border-[#eaeaea] rounded-2xl overflow-hidden bg-white">
+        <div className="px-5 py-3 border-b border-[#eaeaea] font-semibold text-[#222]">我的播放记录</div>
         <div ref={tableWrapRef} className="overflow-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-700">
+            <thead className="bg-[#f8f9fa] text-[#666]">
               <tr>
-                <th className="text-left px-4 py-2 whitespace-nowrap">服务器名称</th>
-                <th className="text-left px-4 py-2 whitespace-nowrap">媒体名称</th>
-                                <th className="text-left px-4 py-2 whitespace-nowrap">客户端</th>
-                <th className="text-left px-4 py-2 whitespace-nowrap">IP地址</th>
-                <th className="text-left px-4 py-2 whitespace-nowrap">最后播放时间</th>
+                <th className="text-left px-4 py-3 whitespace-nowrap">服务器名称</th>
+                <th className="text-left px-4 py-3 whitespace-nowrap">媒体名称</th>
+                <th className="text-left px-4 py-3 whitespace-nowrap">客户端</th>
+                <th className="text-left px-4 py-3 whitespace-nowrap">IP地址</th>
+                <th className="text-left px-4 py-3 whitespace-nowrap">最后播放时间</th>
               </tr>
             </thead>
             <tbody>
               {pageRows.length === 0 ? (
                 <tr>
-                  <td className="px-4 py-6 text-center text-gray-500" colSpan={5}>暂无记录</td>
+                  <td className="px-4 py-10 text-center text-[#888]" colSpan={5}>暂无记录</td>
                 </tr>
               ) : (
                 pageRows.map((r, i) => (
-                  <tr key={`${r.serverName}_${r.mediaName}_${r.lastPlayedAt}_${i}`} className="border-t">
-                    <td className="px-4 py-2">{r.serverName}</td>
-                    <td className="px-4 py-2">
+                  <tr key={`${r.serverName}_${r.mediaName}_${r.lastPlayedAt}_${i}`} className="border-t border-[#eaeaea]">
+                    <td className="px-4 py-3 text-[#222]">{r.serverName}</td>
+                    <td className="px-4 py-3 text-[#222]">
                       <div className="relative inline-block max-w-[520px] align-middle">
                         <button
                           type="button"
-                          className="text-left"
+                          className="text-left hover:text-[#e3001b]"
                           onClick={() => {
                             if (!isTrimmed(r.mediaName, 40)) return;
                             const key = `${safePage}-${i}`;
@@ -171,15 +171,15 @@ export function PortalPlaybackStatsClient() {
                           {trimTitle(r.mediaName, 40)}
                         </button>
                         {isTrimmed(r.mediaName, 40) && openTitleKey === `${safePage}-${i}` ? (
-                          <div data-tip-key={`${safePage}-${i}`} className="absolute left-0 top-full z-20 mt-1 min-w-[260px] max-w-[560px] rounded border bg-black px-2 py-1 text-xs text-white shadow-lg">
+                          <div data-tip-key={`${safePage}-${i}`} className="absolute left-0 top-full z-20 mt-1 min-w-[260px] max-w-[560px] rounded border border-[#eaeaea] bg-[#222] px-2 py-1 text-xs text-white shadow-lg">
                             {r.mediaName}
                           </div>
                         ) : null}
                       </div>
                     </td>
-                    <td className="px-4 py-2">{r.client || "-"}</td>
-                    <td className="px-4 py-2">{r.ip || "-"}</td>
-                    <td className="px-4 py-2">{fmtTime(r.lastPlayedAt)}</td>
+                    <td className="px-4 py-3 text-[#666]">{r.client || "-"}</td>
+                    <td className="px-4 py-3 text-[#666]">{r.ip || "-"}</td>
+                    <td className="px-4 py-3 text-[#666]">{fmtTime(r.lastPlayedAt)}</td>
                   </tr>
                 ))
               )}
