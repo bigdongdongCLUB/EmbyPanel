@@ -21,19 +21,19 @@ export function PortalDocDetailClient({ id }: { id: string }) {
   const html = useMemo(() => renderMarkdownLite(item?.content || ""), [item?.content]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5 max-w-[1000px] mx-auto">
       <div>
-        <Link className="text-sm text-blue-600 hover:text-blue-700" href="/portal/docs">← 返回文档列表</Link>
+        <Link className="inline-flex items-center text-sm text-[#e3001b] hover:text-[#c20017]" href="/portal/docs">← 返回文档列表</Link>
       </div>
 
       {loading ? (
-        <div className="text-sm text-gray-500">加载中…</div>
+        <div className="text-sm text-[#888]">加载中…</div>
       ) : !item ? (
-        <div className="text-sm text-gray-500">文档不存在或未发布</div>
+        <div className="text-sm text-[#888]">文档不存在或未发布</div>
       ) : (
-        <div className="border rounded-lg p-4 bg-white">
-          <div className="text-xl font-semibold mb-2">{item.title}</div>
-          <div className="text-xs text-gray-500 mb-3">更新于：{new Date(item.updatedAt).toLocaleString("zh-CN", { hour12: false, timeZone: "Asia/Shanghai" })}</div>
+        <div className="border border-[#eaeaea] rounded-2xl p-6 bg-white shadow-sm">
+          <div className="text-2xl font-bold text-[#222] mb-2">{item.title}</div>
+          <div className="text-xs text-[#888] mb-4">更新于：{new Date(item.updatedAt).toLocaleString("zh-CN", { hour12: false, timeZone: "Asia/Shanghai" })}</div>
           <div className="docs-content" dangerouslySetInnerHTML={{ __html: html }} />
         </div>
       )}
