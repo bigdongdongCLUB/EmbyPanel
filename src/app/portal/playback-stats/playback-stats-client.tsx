@@ -44,6 +44,10 @@ function trimTitle(v: string, max = 40) {
   return s.slice(0, max) + "...";
 }
 
+function isTrimmed(v: string, max = 40) {
+  return String(v || "").length > max;
+}
+
 export function PortalPlaybackStatsClient() {
   const [rangeDays, setRangeDays] = useState<7 | 30 | 90>(30);
   const [loading, setLoading] = useState(true);
@@ -142,7 +146,16 @@ export function PortalPlaybackStatsClient() {
                 pageRows.map((r, i) => (
                   <tr key={`${r.serverName}_${r.mediaName}_${r.lastPlayedAt}_${i}`} className="border-t">
                     <td className="px-4 py-2">{r.serverName}</td>
-                    <td className="px-4 py-2" title={r.mediaName}>{trimTitle(r.mediaName, 40)}</td>
+                    <td className="px-4 py-2">
+                      <div className="relative group inline-block max-w-[520px] align-middle">
+                        <span title={r.mediaName}>{trimTitle(r.mediaName, 40)}</span>
+                        {isTrimmed(r.mediaName, 40) ? (
+                          <div className="pointer-events-none absolute left-0 top-full z-20 mt-1 hidden min-w-[260px] max-w-[560px] rounded border bg-black px-2 py-1 text-xs text-white shadow-lg group-hover:block">
+                            {r.mediaName}
+                          </div>
+                        ) : null}
+                      </div>
+                    </td>
                     <td className="px-4 py-2">{fmtDuration(r.durationSeconds)}</td>
                     <td className="px-4 py-2">{r.client || "-"}</td>
                     <td className="px-4 py-2">{r.ip || "-"}</td>
