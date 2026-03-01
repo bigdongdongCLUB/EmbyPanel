@@ -41,6 +41,8 @@ services:
       INTERNAL_JOBS_SECRET: ${INTERNAL_JOBS_SECRET}
     ports:
       - "${WEB_PORT:-3000}:3000"
+    volumes:
+      - ./data/uploads:/app/public/uploads
     depends_on:
       - db
       - redis

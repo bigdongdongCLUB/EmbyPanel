@@ -21,13 +21,18 @@ export async function POST(req: Request) {
   const y = String(now.getFullYear());
   const m = String(now.getMonth() + 1).padStart(2, '0');
   const dir = path.join(process.cwd(), 'public', 'uploads', 'docs', y, m);
-  await fs.mkdir(dir, { recursive: true });
 
-  const name = `${crypto.randomUUID()}.${ext}`;
-  const abs = path.join(dir, name);
-  const buf = Buffer.from(await file.arrayBuffer());
-  await fs.writeFile(abs, buf);
+  try {
+    await fs.mkdir(dir, { recursive: true });
 
-  const url = `/uploads/docs/${y}/${m}/${name}`;
-  return NextResponse.json({ ok: true, url });
+    const name = `${crypto.randomUUID()}.${ext}`;
+    const abs = path.join(dir, name);
+    const buf = Buffer.from(await file.arrayBuffer());
+    await fs.writeFile(abs, buf);
+
+    const url = `/uploads/docs/${y}/${m}/${name}`;
+    return NextResponse.json({ ok: true, url });
+  } catch (e: any) {
+    return NextResponse.json({ error: 'upload_write_failed', detail: e?.message || String(e) }, { status: 500 });
+  }
 }

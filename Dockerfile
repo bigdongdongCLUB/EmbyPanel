@@ -30,6 +30,9 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/src/generated ./src/generated
 COPY --from=builder /app/scripts ./scripts
 
+# make runtime upload dir writable for non-root nextjs user
+RUN mkdir -p /app/public/uploads && chown -R nextjs:nodejs /app/public
+
 USER nextjs
 EXPOSE 3000
 CMD ["npm","run","start"]
