@@ -5,6 +5,8 @@ import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
+import { normalizeBaseUrl } from "@/lib/emby";
 
 async function ensurePlaybackEventTable() {
   try {
@@ -63,6 +65,91 @@ type OutputRow = {
   lastPlayedAt: string;
 };
 
+function pickString(obj: any, keys: string[]) {
+  for (const k of keys) {
+    const v = obj?.[k];
+    if (v !== undefined && v !== null && String(v).trim()) return String(v).trim();
+  }
+  return "";
+}
+
+function pickDate(obj: any) {
+  const raw = pickString(obj, ["DateCreated", "dateCreated", "Date", "date", "Time", "time"]);
+  if (!raw) return null;
+  const d = new Date(raw);
+  return Number.isFinite(d.getTime()) ? d : null;
+}
+
+async function fetchActivityEntries(baseUrl: string, apiKey: string, limit = 1200) {
+  const base = normalizeBaseUrl(baseUrl);
+  const urls = [
+    `${base}/System/ActivityLog/Entries?api_key=${encodeURIComponent(apiKey)}&Limit=${limit}`,
+    `${base}/System/ActivityLog/Entries?api_key=${encodeURIComponent(apiKey)}&StartIndex=0&Limit=${limit}`,
+  ];
+  for (const u of urls) {
+    try {
+      const res = await fetch(u, { method: "GET", headers: { Accept: "application/json" }, cache: "no-store" });
+      if (!res.ok) continue;
+      const json = await res.json().catch(() => null);
+      const rows = Array.isArray(json) ? json : json?.Items || json?.items || json?.Rows || json?.results || [];
+      if (Array.isArray(rows) && rows.length) return rows;
+    } catch {}
+  }
+  return [] as any[];
+}
+
+function parseActivityEntryToPlayback(entry: any, username: string) {
+  const text = [pickString(entry, ["Overview", "overview"]), pickString(entry, ["Name", "name"]), pickString(entry, ["ShortOverview", "shortOverview"])]
+    .filter(Boolean)
+    .join(" ");
+  if (!text) return null;
+  if (!text.toLowerCase().includes(String(username).toLowerCase())) return null;
+
+  const isStart = /(开始播放|start\s*playing|playing)/i.test(text) && !/(已停止播放|stopped|stop\s*playing)/i.test(text);
+  const isStop = /(已停止播放|stopped|stop\s*playing)/i.test(text);
+  if (!isStart && !isStop) return null;
+
+  let userName = "";
+  let mediaName = "";
+  let client = "-";
+
+  let m = text.match(/^\s*(.+?)\s*在\s*(.+?)\s*上开始播放\s*(.+)$/);
+  if (m) {
+    userName = (m[1] || "").trim();
+    client = (m[2] || "").trim() || "-";
+    mediaName = (m[3] || "").trim();
+  }
+  if (!mediaName) {
+    m = text.match(/^\s*(.+?)\s*上\s*(.+?)\s*已停止播放\s*(.+)$/);
+    if (m) {
+      client = (m[1] || "").trim() || client;
+      userName = (m[2] || "").trim() || userName;
+      mediaName = (m[3] || "").trim();
+    }
+  }
+  if (!mediaName) {
+    m = text.match(/(?:开始播放|已停止播放|start\s*playing|stopped)\s*(.+)$/i);
+    if (m) mediaName = (m[1] || "").trim();
+  }
+  if (!userName) {
+    m = text.match(/^\s*(.+?)\s*(?:在|已)/);
+    if (m) userName = (m[1] || "").trim();
+  }
+
+  const occurredAt = pickDate(entry);
+  if (!occurredAt || !mediaName) return null;
+
+  return {
+    eventType: isStart ? "start" : "stop",
+    userName: userName || null,
+    mediaName,
+    mediaKey: normalizeMediaKey(mediaName),
+    client,
+    ip: normalizeIp(pickString(entry, ["RemoteEndPoint", "remoteEndPoint", "RemoteAddress", "remoteAddress", "IpAddress", "ipAddress", "IPAddress"])),
+    occurredAt,
+  };
+}
+
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -83,7 +170,7 @@ export async function GET(req: Request) {
         select: {
           embyServerId: true,
           embyUserId: true,
-          embyServer: { select: { id: true, name: true, enabled: true } },
+          embyServer: { select: { id: true, name: true, baseUrl: true, enabled: true, apiKey: true, apiKeyEnc: true, apiKeyIv: true, apiKeyTag: true } },
         },
       },
     },
@@ -120,9 +207,8 @@ export async function GET(req: Request) {
       events = [];
     }
 
-    if (!events.length) continue;
-
     const starts = new Map<string, Date[]>();
+    let pushedFromDb = 0;
 
     for (const ev of events) {
       const mediaKey = normalizeMediaKey(ev.mediaKey || ev.mediaName);
@@ -159,6 +245,53 @@ export async function GET(req: Request) {
         ip,
         lastPlayedAt: ev.occurredAt.toISOString(),
       });
+      pushedFromDb += 1;
+    }
+
+    // live fallback: when collector has no data yet, read Activity directly
+    if (pushedFromDb === 0) {
+      const apiKey = getEmbyApiKeyForServer(link.embyServer as any);
+      if (apiKey) {
+        const live = await fetchActivityEntries(link.embyServer.baseUrl, apiKey, 1000);
+        if (live.length) {
+          const parsed = live
+            .map((x) => parseActivityEntryToPlayback(x, user.username))
+            .filter(Boolean) as Array<{ eventType: "start" | "stop"; mediaName: string; mediaKey: string; client: string; ip: string; occurredAt: Date }>;
+
+          parsed.sort((a, b) => a.occurredAt.getTime() - b.occurredAt.getTime());
+          const liveStarts = new Map<string, Date[]>();
+          for (const ev of parsed) {
+            if (ev.occurredAt < since) continue;
+            const k = `${ev.mediaKey}|${ev.client}|${ev.ip}`;
+            if (ev.eventType === "start") {
+              const arr = liveStarts.get(k) ?? [];
+              arr.push(ev.occurredAt);
+              liveStarts.set(k, arr);
+              continue;
+            }
+
+            const arr = liveStarts.get(k) ?? [];
+            let durationSeconds = 0;
+            if (arr.length) {
+              const st = arr.pop()!;
+              liveStarts.set(k, arr);
+              durationSeconds = Math.max(0, Math.round((ev.occurredAt.getTime() - st.getTime()) / 1000));
+              if (durationSeconds > 24 * 3600) durationSeconds = 0;
+            }
+
+            rows.push({
+              serverId: link.embyServerId,
+              serverName: link.embyServer.name,
+              mediaName: ev.mediaName,
+              mediaKey: ev.mediaKey,
+              durationSeconds,
+              client: ev.client || "-",
+              ip: ev.ip || "-",
+              lastPlayedAt: ev.occurredAt.toISOString(),
+            });
+          }
+        }
+      }
     }
   }
 
