@@ -111,6 +111,17 @@ function serverBadgeText(r: UserRow) {
   return `${total}台服务器（${online}在线）`;
 }
 
+function findScrollableParent(el: HTMLElement | null): HTMLElement | null {
+  let p = el?.parentElement ?? null;
+  while (p) {
+    const style = window.getComputedStyle(p);
+    const overflowY = style.overflowY;
+    if ((overflowY === "auto" || overflowY === "scroll") && p.scrollHeight > p.clientHeight) return p;
+    p = p.parentElement;
+  }
+  return null;
+}
+
 export function UsersClient() {
   const [q, setQ] = useState("");
   const [filterPlanId, setFilterPlanId] = useState("");
@@ -184,6 +195,7 @@ export function UsersClient() {
   const [importEmbyUsersLoaded, setImportEmbyUsersLoaded] = useState(false);
   const [importSelectedEmbyUsers, setImportSelectedEmbyUsers] = useState<Record<string, boolean>>({});
   const [openServerDetailUserId, setOpenServerDetailUserId] = useState<string | null>(null);
+  const usersTableWrapRef = useRef<HTMLDivElement | null>(null);
 
   const [newUsername, setNewUsername] = useState("");
   const [newEmail, setNewEmail] = useState("");
@@ -304,6 +316,29 @@ export function UsersClient() {
       document.body.style.overflow = prev;
     };
   }, [edit.open]);
+
+  function ensureServerPopoverVisible(popKey: string) {
+    requestAnimationFrame(() => {
+      const pop = document.querySelector(`[data-server-pop-key="${popKey}"]`) as HTMLElement | null;
+      if (!pop) return;
+      const popRect = pop.getBoundingClientRect();
+
+      const scroller = findScrollableParent(pop) || usersTableWrapRef.current;
+      if (scroller) {
+        const sRect = scroller.getBoundingClientRect();
+        const overflow = popRect.bottom - sRect.bottom;
+        if (overflow > 0) {
+          scroller.scrollBy({ top: overflow + 10, behavior: "smooth" });
+          return;
+        }
+      }
+
+      const viewportOverflow = popRect.bottom - window.innerHeight;
+      if (viewportOverflow > 0) {
+        window.scrollBy({ top: viewportOverflow + 10, behavior: "smooth" });
+      }
+    });
+  }
 
   useEffect(() => {
     function onDocMouseDown(e: MouseEvent) {
@@ -519,7 +554,7 @@ export function UsersClient() {
       {error ? <pre className="text-xs text-red-600 whitespace-pre-wrap">{error}</pre> : null}
       {loading ? <div className="text-sm text-gray-500">加载中…</div> : null}
 
-      <div className="overflow-x-auto overflow-y-visible bg-white">
+      <div ref={usersTableWrapRef} className="overflow-x-auto overflow-y-visible bg-white">
         <table className="min-w-[1200px] w-full text-sm">
           <thead className="text-left text-gray-600 border-y bg-white">
             <tr>
@@ -598,12 +633,16 @@ export function UsersClient() {
                           "inline-flex items-center rounded border px-2.5 py-1 text-sm " +
                           (r.serverHasConflict ? "border-amber-300 text-amber-700 bg-amber-50" : "border-gray-300 text-gray-800")
                         }
-                        onClick={() => setOpenServerDetailUserId((prev) => (prev === r.id ? null : r.id))}
+                        onClick={() => {
+                          const next = openServerDetailUserId === r.id ? null : r.id;
+                          setOpenServerDetailUserId(next);
+                          if (next) ensureServerPopoverVisible(next);
+                        }}
                       >
                         {serverBadgeText(r)}
                       </button>
                       {openServerDetailUserId === r.id ? (
-                        <div className="absolute left-0 top-full z-20 mt-2 w-[320px] rounded-xl border bg-white p-3 shadow-xl">
+                        <div data-server-pop-key={r.id} className="absolute left-0 top-full z-20 mt-2 w-[320px] rounded-xl border bg-white p-3 shadow-xl">
                           <div className="space-y-2 max-h-[360px] overflow-auto">
                             {r.servers.map((sv) => (
                               <div key={sv.embyServerId} className="border-b last:border-b-0 pb-2 last:pb-0">
