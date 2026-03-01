@@ -226,7 +226,7 @@ export async function GET(req: Request) {
       events = [];
     }
 
-    const starts = new Map<string, Array<{ at: Date; client: string; ip: string }>>();
+    const startsByMedia = new Map<string, Array<{ at: Date; client: string; ip: string }>>();
     let pushedFromDb = 0;
 
     for (const ev of events) {
@@ -234,12 +234,10 @@ export async function GET(req: Request) {
       const mediaName = String(ev.mediaName || "未知媒体");
       const client = toDetailedClient(String(ev.client || "-"), ev.sourceJson);
       const ip = normalizeIp(ev.ip);
-      const k = `${mediaKey}|${client}|${ip}`;
-
       if (ev.eventType === "start") {
-        const arr = starts.get(k) ?? [];
+        const arr = startsByMedia.get(mediaKey) ?? [];
         arr.push({ at: ev.occurredAt, client, ip });
-        starts.set(k, arr);
+        startsByMedia.set(mediaKey, arr);
         continue;
       }
 
@@ -248,14 +246,36 @@ export async function GET(req: Request) {
       let durationSeconds = 0;
       let resolvedClient = client;
       let resolvedIp = ip;
-      const arr = starts.get(k) ?? [];
+
+      const arr = startsByMedia.get(mediaKey) ?? [];
       if (arr.length) {
-        const st = arr.pop()!;
-        starts.set(k, arr);
-        durationSeconds = Math.max(0, Math.round((ev.occurredAt.getTime() - st.at.getTime()) / 1000));
-        if (durationSeconds > 24 * 3600) durationSeconds = 0;
-        if (isGenericClient(resolvedClient) && !isGenericClient(st.client)) resolvedClient = st.client;
-        if (resolvedIp === "-" && st.ip && st.ip !== "-") resolvedIp = st.ip;
+        // pick best candidate from newest -> oldest (prefer same client+ip)
+        let pickIndex = -1;
+        let bestScore = -1;
+        for (let i = arr.length - 1; i >= 0; i--) {
+          const st = arr[i];
+          if (st.at.getTime() > ev.occurredAt.getTime()) continue;
+          const ageSec = (ev.occurredAt.getTime() - st.at.getTime()) / 1000;
+          if (ageSec > 24 * 3600) continue;
+          let score = 0;
+          if (st.client === client) score += 2;
+          if (st.ip === ip && ip !== "-") score += 2;
+          if (st.client && !isGenericClient(st.client) && isGenericClient(client)) score += 1;
+          if (score > bestScore) {
+            bestScore = score;
+            pickIndex = i;
+            if (score >= 4) break;
+          }
+        }
+
+        if (pickIndex >= 0) {
+          const [st] = arr.splice(pickIndex, 1);
+          startsByMedia.set(mediaKey, arr);
+          durationSeconds = Math.max(0, Math.round((ev.occurredAt.getTime() - st.at.getTime()) / 1000));
+          if (durationSeconds > 24 * 3600) durationSeconds = 0;
+          if (isGenericClient(resolvedClient) && !isGenericClient(st.client)) resolvedClient = st.client;
+          if (resolvedIp === "-" && st.ip && st.ip !== "-") resolvedIp = st.ip;
+        }
       }
 
       rows.push({
@@ -282,24 +302,27 @@ export async function GET(req: Request) {
             .filter(Boolean) as Array<{ eventType: "start" | "stop"; mediaName: string; mediaKey: string; client: string; ip: string; occurredAt: Date }>;
 
           parsed.sort((a, b) => a.occurredAt.getTime() - b.occurredAt.getTime());
-          const liveStarts = new Map<string, Date[]>();
+          const liveStartsByMedia = new Map<string, Array<{ at: Date; client: string; ip: string }>>();
           for (const ev of parsed) {
             if (ev.occurredAt < since) continue;
-            const k = `${ev.mediaKey}|${ev.client}|${ev.ip}`;
             if (ev.eventType === "start") {
-              const arr = liveStarts.get(k) ?? [];
-              arr.push(ev.occurredAt);
-              liveStarts.set(k, arr);
+              const arr = liveStartsByMedia.get(ev.mediaKey) ?? [];
+              arr.push({ at: ev.occurredAt, client: ev.client || "-", ip: ev.ip || "-" });
+              liveStartsByMedia.set(ev.mediaKey, arr);
               continue;
             }
 
-            const arr = liveStarts.get(k) ?? [];
+            const arr = liveStartsByMedia.get(ev.mediaKey) ?? [];
             let durationSeconds = 0;
+            let resolvedClient = ev.client || "-";
+            let resolvedIp = ev.ip || "-";
             if (arr.length) {
               const st = arr.pop()!;
-              liveStarts.set(k, arr);
-              durationSeconds = Math.max(0, Math.round((ev.occurredAt.getTime() - st.getTime()) / 1000));
+              liveStartsByMedia.set(ev.mediaKey, arr);
+              durationSeconds = Math.max(0, Math.round((ev.occurredAt.getTime() - st.at.getTime()) / 1000));
               if (durationSeconds > 24 * 3600) durationSeconds = 0;
+              if (isGenericClient(resolvedClient) && !isGenericClient(st.client)) resolvedClient = st.client;
+              if (resolvedIp === "-" && st.ip && st.ip !== "-") resolvedIp = st.ip;
             }
 
             rows.push({
@@ -308,8 +331,8 @@ export async function GET(req: Request) {
               mediaName: ev.mediaName,
               mediaKey: ev.mediaKey,
               durationSeconds,
-              client: ev.client || "-",
-              ip: ev.ip || "-",
+              client: resolvedClient,
+              ip: resolvedIp,
               lastPlayedAt: ev.occurredAt.toISOString(),
             });
           }
