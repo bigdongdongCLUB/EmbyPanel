@@ -75,22 +75,22 @@ export function PortalClient() {
       {loading ? <div className="text-sm text-gray-500">加载中…</div> : null}
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
-        <div className="rounded-xl border border-transparent bg-[#f8f9fa] p-6">
+        <div className="rounded-2xl border border-transparent bg-[#f8f9fa] p-6">
           <div className="text-sm text-gray-500">账户余额</div>
           <div className="text-2xl font-bold text-[#222] mt-2">{(data?.dashboard.balanceYuan ?? 0).toFixed(2)} <span className="text-sm font-normal">元</span></div>
         </div>
-        <div className="rounded-xl border border-transparent bg-[#f8f9fa] p-6">
+        <div className="rounded-2xl border border-transparent bg-[#f8f9fa] p-6">
           <div className="text-sm text-gray-500">订阅到期日</div>
           <div className="mt-2 flex items-center gap-2">
             <div className={`text-2xl font-bold ${nearExpiry ? "text-[#e3001b]" : "text-[#222]"}`}>{fmtDateYmd(data?.dashboard.subscriptionEndAt)}</div>
             {isExpired ? <div className="inline-flex items-center rounded border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-medium text-red-600">已过期</div> : null}
           </div>
         </div>
-        <div className="rounded-xl border border-transparent bg-[#f8f9fa] p-6">
+        <div className="rounded-2xl border border-transparent bg-[#f8f9fa] p-6">
           <div className="text-sm text-gray-500">订阅计划</div>
           <div className="text-2xl font-bold text-[#222] mt-2">{data?.dashboard.subscriptionPlan ?? "无订阅"}</div>
         </div>
-        <div className="relative rounded-xl border p-6 bg-white border-[#e3001b] shadow-[0_8px_24px_rgba(227,0,27,0.08)]">
+        <div className="relative rounded-2xl border p-6 bg-white border-[#e3001b] shadow-[0_8px_24px_rgba(227,0,27,0.08)]">
           {nearExpiry ? <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#e3001b] text-white text-xs px-3 py-1 rounded-full">即将到期</div> : null}
           <div className="text-sm text-gray-500">剩余时间</div>
           <div className="text-2xl font-bold text-[#e3001b] mt-2">{data?.dashboard.remainingDays ?? 0} <span className="text-sm font-normal">天</span></div>
@@ -98,7 +98,7 @@ export function PortalClient() {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-        <div className="rounded-xl border border-gray-200 bg-white p-7 text-center">
+        <div className="rounded-2xl border border-gray-200 bg-white p-7 text-center">
           <div className="text-base font-bold text-[#222] mb-4">系统公告</div>
           <div className="text-[15px] font-semibold text-center">{notices[noticeIndex]?.title ?? "系统公告"}</div>
           <div className="text-sm text-gray-600 mt-2 whitespace-pre-wrap min-h-[56px] text-center leading-6">{notices[noticeIndex]?.content ?? "暂无公告"}</div>
@@ -118,7 +118,7 @@ export function PortalClient() {
           ) : null}
         </div>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-7 text-center">
+        <div className="rounded-2xl border border-gray-200 bg-white p-7 text-center">
           <div className="text-base font-bold text-[#222] mb-2">卡密兑换</div>
           <div className="text-sm text-gray-500 text-center mb-4">输入卡密可快速充值余额或激活订阅。</div>
           <div className="space-y-4">
@@ -157,7 +157,7 @@ export function PortalClient() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-4">
+      <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-4">
         {(() => {
           const tv = data?.recentUpdatesTv ?? data?.recentUpdates?.filter((x) => x.type === "TV") ?? [];
           const movie = data?.recentUpdatesMovie ?? data?.recentUpdates?.filter((x) => x.type === "MOVIE") ?? [];
