@@ -12,9 +12,10 @@ function Item({ href, label, icon, collapsed }: { href: string; label: string; i
       href={href}
       title={label}
       className={
-        "px-4 py-3.5 rounded-lg transition-colors flex items-center gap-2.5 " +
-        (active ? "bg-[#fff0f1] text-[#e3001b] font-bold" : "text-[#888] hover:bg-[#f4f5f7] hover:text-[#222]") +
-        (collapsed ? " justify-center" : "")
+        "rounded-lg transition-colors flex items-center " +
+        (collapsed ? "w-10 h-10 mx-auto justify-center" : "px-4 py-3.5 gap-2.5") +
+        " " +
+        (active ? "bg-[#fff0f1] text-[#e3001b] font-bold" : "text-[#888] hover:bg-[#f4f5f7] hover:text-[#222]")
       }
     >
       <img src={icon} alt="" className={"h-4 w-4 shrink-0 " + (active ? "opacity-90" : "opacity-80")} />
