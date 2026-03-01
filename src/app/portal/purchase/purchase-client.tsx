@@ -191,18 +191,18 @@ export function PortalPurchaseClient() {
       {!loading && plans.length === 0 ? <div className="text-sm text-gray-500">暂无可用订阅计划</div> : null}
 
       {modalOpen ? (
-        <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4">
-          <div className="w-full max-w-3xl max-h-[85vh] overflow-auto rounded-lg bg-white p-4 space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/35 flex items-center justify-center p-4">
+          <div className="w-full max-w-3xl max-h-[88vh] overflow-auto rounded-2xl bg-white p-5 space-y-4">
             {step === "plan" ? (
               <div className="space-y-4">
                 <h2 className="text-xl font-semibold">购买信息</h2>
 
                 {planLoading ? <div className="text-sm text-gray-500">加载中…</div> : null}
 
-                <div className="border rounded-xl bg-white overflow-hidden">
-                  <div className="px-5 py-4 border-b text-lg font-semibold">🛒 购买信息 · {planDetail?.plan.name ?? ""}</div>
-                  <div className="p-5 space-y-4">
-                    <div className="text-sm text-red-500">* 选择支付周期</div>
+                <div className="border border-gray-200 rounded-2xl bg-white overflow-hidden">
+                  <div className="px-6 py-4 border-b border-gray-200 text-xl font-semibold text-[#222]">🛒 购买信息 · {planDetail?.plan.name ?? ""}</div>
+                  <div className="p-6 space-y-4">
+                    <div className="text-sm text-[#e3001b]">* 选择支付周期</div>
 
                     {(planDetail?.cycles ?? [])
                       .filter((c) => c.key === "TRIAL" || c.available)
@@ -216,7 +216,7 @@ export function PortalPurchaseClient() {
                             onClick={() => setSelectedCycle(c.key)}
                             className={
                               "w-full border rounded-xl p-4 text-left flex items-center justify-between " +
-                              (active ? "border-blue-500 bg-blue-50" : unavailable ? "opacity-40 cursor-not-allowed" : "hover:bg-gray-50")
+                              (active ? "border-[#e3001b] bg-[#fff5f6]" : unavailable ? "opacity-40 cursor-not-allowed" : "hover:bg-gray-50")
                             }
                           >
                             <div>
@@ -232,13 +232,13 @@ export function PortalPurchaseClient() {
                         );
                       })}
 
-                    <div className="border rounded-xl p-4 bg-blue-50 text-gray-700">
-                      <div className="font-semibold text-xl mb-1">✅ 安全提示</div>
+                    <div className="border border-[#f3d4d8] rounded-xl p-4 bg-[#fff7f8] text-[#444]">
+                      <div className="font-semibold text-lg mb-1">✅ 安全提示</div>
                       <div>您的支付信息将通过 SSL 加密传输，我们不会存储您的支付密码。</div>
                     </div>
 
                     <button
-                      className="w-full bg-gray-700 text-white rounded-xl px-4 py-3 text-2xl font-semibold disabled:opacity-50"
+                      className="w-full bg-[#e3001b] hover:bg-[#c20017] text-white rounded-xl px-4 py-3 text-xl font-semibold disabled:opacity-50"
                       disabled={!currentCycle || !currentCycle.available}
                       onClick={async () => {
                         const res = await fetch("/api/portal/orders", {
@@ -264,7 +264,7 @@ export function PortalPurchaseClient() {
                       创建订单 ¥{currentCycle?.priceYuan ?? 0}
                     </button>
 
-                    <button className="w-full border bg-white rounded-xl px-4 py-3 text-xl" onClick={() => setModalOpen(false)}>
+                    <button className="w-full border border-gray-200 bg-white rounded-xl px-4 py-3 text-base hover:bg-gray-50" onClick={() => setModalOpen(false)}>
                       取消
                     </button>
                   </div>
@@ -277,8 +277,8 @@ export function PortalPurchaseClient() {
 
                 {order ? (
                   <>
-                    <div className="border rounded-xl bg-white overflow-hidden">
-                      <div className="px-5 py-4 border-b text-3xl font-semibold">🛒 订单详情</div>
+                    <div className="border border-gray-200 rounded-2xl bg-white overflow-hidden">
+                      <div className="px-6 py-4 border-b border-gray-200 text-2xl font-semibold text-[#222]">🛒 订单详情</div>
                       <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
                         <div><div className="text-gray-500">订单号</div><div className="font-mono mt-1">{order.order.id}</div></div>
                         <div><div className="text-gray-500">订单状态</div><div className="mt-1">{order.order.status === "PENDING" ? "待支付" : order.order.status === "PAID" ? "已支付" : "已取消"}</div></div>
@@ -290,19 +290,19 @@ export function PortalPurchaseClient() {
                       </div>
                     </div>
 
-                    <div className="border rounded-xl bg-white overflow-hidden">
-                      <div className="px-5 py-4 border-b text-3xl font-semibold">💳 支付方式</div>
+                    <div className="border border-gray-200 rounded-2xl bg-white overflow-hidden">
+                      <div className="px-6 py-4 border-b border-gray-200 text-2xl font-semibold text-[#222]">💳 支付方式</div>
                       <div className="p-5">
-                        <div className="border-2 border-blue-500 rounded-xl p-4 flex items-center justify-between">
-                          <div className="text-2xl font-semibold">余额支付</div>
-                          <div className="text-3xl font-semibold text-red-500">¥{order.balanceYuan.toFixed(2)}</div>
+                        <div className="border-2 border-[#e3001b] rounded-xl p-4 flex items-center justify-between bg-[#fff7f8]">
+                          <div className="text-xl font-semibold">余额支付</div>
+                          <div className="text-3xl font-semibold text-[#e3001b]">¥{order.balanceYuan.toFixed(2)}</div>
                         </div>
                       </div>
                     </div>
 
-                    <div className="border rounded-xl bg-white p-5 space-y-3">
+                    <div className="border border-gray-200 rounded-2xl bg-white p-5 space-y-3">
                       <button
-                        className="w-full bg-gray-700 text-white rounded-xl px-4 py-3 text-2xl font-semibold disabled:opacity-50"
+                        className="w-full bg-[#e3001b] hover:bg-[#c20017] text-white rounded-xl px-4 py-3 text-xl font-semibold disabled:opacity-50"
                         disabled={order.order.status !== "PENDING" || order.balanceYuan < orderAmountYuan}
                         onClick={async () => {
                           const res = await fetch(`/api/portal/orders/${order.order.id}/pay`, { method: "POST" });
@@ -319,7 +319,7 @@ export function PortalPurchaseClient() {
                       </button>
 
                       <button
-                        className="w-full border border-red-400 text-red-500 rounded-xl px-4 py-3 text-2xl"
+                        className="w-full border border-red-300 text-red-600 rounded-xl px-4 py-3 text-lg hover:bg-red-50"
                         disabled={order.order.status !== "PENDING"}
                         onClick={async () => {
                           const res = await fetch(`/api/portal/orders/${order.order.id}/cancel`, { method: "POST" });
