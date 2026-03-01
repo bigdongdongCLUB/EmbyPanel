@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { PaginationBar } from "@/components/pagination-bar";
 
 type RecordRow = {
@@ -55,6 +55,7 @@ export function PortalPlaybackStatsClient() {
   const [data, setData] = useState<Data | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const tableWrapRef = useRef<HTMLDivElement | null>(null);
 
   async function refresh(days = rangeDays) {
     setLoading(true);
@@ -81,6 +82,21 @@ export function PortalPlaybackStatsClient() {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const safePage = Math.min(page, totalPages);
   const pageRows = useMemo(() => rows.slice((safePage - 1) * pageSize, safePage * pageSize), [rows, safePage, pageSize]);
+
+  function ensureTooltipVisible(el: HTMLElement) {
+    const wrap = tableWrapRef.current;
+    if (!wrap) return;
+
+    const rowRect = el.getBoundingClientRect();
+    const wrapRect = wrap.getBoundingClientRect();
+    const tooltipEstimatedHeight = 52;
+    const extraGap = 8;
+    const overflowBottom = rowRect.bottom + tooltipEstimatedHeight + extraGap - wrapRect.bottom;
+
+    if (overflowBottom > 0) {
+      wrap.scrollBy({ top: overflowBottom + 6, behavior: "smooth" });
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -125,7 +141,7 @@ export function PortalPlaybackStatsClient() {
 
       <div className="border rounded-lg overflow-hidden">
         <div className="px-4 py-3 border-b font-medium">我的播放记录</div>
-        <div className="overflow-auto">
+        <div ref={tableWrapRef} className="overflow-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-gray-700">
               <tr>
@@ -148,7 +164,14 @@ export function PortalPlaybackStatsClient() {
                     <td className="px-4 py-2">{r.serverName}</td>
                     <td className="px-4 py-2">
                       <div className="relative group inline-block max-w-[520px] align-middle">
-                        <span title={r.mediaName}>{trimTitle(r.mediaName, 40)}</span>
+                        <span
+                          title={r.mediaName}
+                          onMouseEnter={(e) => {
+                            if (isTrimmed(r.mediaName, 40)) ensureTooltipVisible(e.currentTarget as HTMLElement);
+                          }}
+                        >
+                          {trimTitle(r.mediaName, 40)}
+                        </span>
                         {isTrimmed(r.mediaName, 40) ? (
                           <div className="pointer-events-none absolute left-0 top-full z-20 mt-1 hidden min-w-[260px] max-w-[560px] rounded border bg-black px-2 py-1 text-xs text-white shadow-lg group-hover:block">
                             {r.mediaName}
