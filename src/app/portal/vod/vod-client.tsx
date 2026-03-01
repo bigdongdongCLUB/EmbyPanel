@@ -151,7 +151,7 @@ function DetailModal({
   return (
     <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-[520px] max-h-[90vh] overflow-y-auto overscroll-contain">
+      <div className="relative bg-white rounded-2xl border border-[#eaeaea] shadow-2xl w-full max-w-[520px] max-h-[90vh] overflow-y-auto overscroll-contain">
         <div className="p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="text-base font-semibold text-gray-800">确认点播请求</div>
@@ -178,7 +178,7 @@ function DetailModal({
               <div className="font-semibold text-gray-900 text-base leading-snug">{d.title}</div>
               <div className="text-sm text-gray-500 mt-0.5">{d.titleOriginal}</div>
               <div className="flex flex-wrap gap-1.5 mt-2">
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isTv ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"}`}>
+                <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-[#fff0f1] text-[#e3001b]">
                   {isTv ? "电视剧" : "电影"}
                 </span>
                 {d.year ? <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{d.year}</span> : null}
@@ -271,7 +271,7 @@ function DetailModal({
                 选择季度 <span className="text-red-500">*</span>
               </label>
               <select
-                className="w-full border rounded-lg px-3 py-2 text-sm"
+                className="w-full border border-[#eaeaea] rounded-lg px-3 py-2 text-sm focus:border-[#e3001b] outline-none"
                 value={selectedSeason}
                 onChange={(e) => setSelectedSeason(e.target.value === "" ? "" : Number(e.target.value))}
                 disabled={submitting}
@@ -290,7 +290,7 @@ function DetailModal({
           <div className="mb-4">
             <label className="text-sm font-medium text-gray-700 mb-1.5 block">备注（可选）</label>
             <textarea
-              className="w-full border rounded-lg px-3 py-2 text-sm resize-none"
+              className="w-full border border-[#eaeaea] rounded-lg px-3 py-2 text-sm resize-none focus:border-[#e3001b] outline-none"
               rows={3}
               maxLength={20}
               placeholder="可填写简短备注（最多20字）"
@@ -304,9 +304,9 @@ function DetailModal({
           {submitError && <div className="text-sm text-red-600 mb-3">{submitError}</div>}
 
           <div className="flex justify-end gap-2">
-            <button className="px-4 py-2 rounded-lg border bg-white text-gray-700 text-sm hover:bg-gray-50" onClick={onClose}>取消</button>
+            <button className="px-4 py-2 rounded-lg border border-[#eaeaea] bg-white text-[#666] text-sm hover:bg-gray-50" onClick={onClose}>取消</button>
             <button
-              className="px-4 py-2 rounded-lg bg-gray-700 text-white text-sm hover:bg-gray-800 disabled:opacity-50"
+              className="px-4 py-2 rounded-lg bg-[#e3001b] text-white text-sm font-bold hover:bg-[#c20017] disabled:opacity-50"
               disabled={!canSubmit}
               onClick={handleSubmit}
             >
@@ -604,12 +604,12 @@ export function VodClient() {
       {showMyRequests && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50" onClick={() => setShowMyRequests(false)} />
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto p-5">
+          <div className="relative bg-white rounded-2xl border border-[#eaeaea] shadow-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto p-5">
             <div className="flex items-center justify-between mb-4">
               <div className="font-semibold text-gray-800">我的点播记录</div>
               <div className="flex items-center gap-2">
                 <button
-                  className="text-xs border rounded px-2 py-1 text-gray-600 hover:bg-gray-50 disabled:opacity-40"
+                  className="text-xs border border-[#eaeaea] rounded px-2 py-1 text-[#666] hover:bg-gray-50 disabled:opacity-40"
                   disabled={myReqLoading}
                   onClick={async () => {
                     try { await clearCompletedRequests(); } catch {}
@@ -627,7 +627,7 @@ export function VodClient() {
             ) : (
               <div className="space-y-2">
                 {myRequests.map((r) => (
-                  <div key={r.id} className="flex items-center gap-3 p-3 border rounded-xl">
+                  <div key={r.id} className="flex items-center gap-3 p-3 border border-[#eaeaea] rounded-xl bg-white">
                     {r.posterPath ? (
                       <img src={r.posterPath} className="w-10 h-14 rounded object-cover shrink-0" alt={r.title} />
                     ) : (
@@ -641,7 +641,7 @@ export function VodClient() {
                       <div className="text-xs mt-0.5">
                         <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium ${
                           r.bizStatus === "COMPLETED" ? "bg-green-50 text-green-700" :
-                          r.bizStatus === "PENDING" ? "bg-blue-50 text-blue-700" :
+                          r.bizStatus === "PENDING" ? "bg-[#fff0f1] text-[#e3001b]" :
                           r.bizStatus === "NO_RESOURCE" ? "bg-red-50 text-red-600" :
                           r.bizStatus === "CANNOT_UPDATE" ? "bg-purple-50 text-purple-700" :
                           "bg-amber-50 text-amber-700"
