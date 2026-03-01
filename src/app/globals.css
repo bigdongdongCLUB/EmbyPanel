@@ -100,3 +100,6 @@ body {
 .docs-content h1, .docs-content h2, .docs-content h3, .docs-content h4 { font-weight: 600; margin: 10px 0 6px; }
 .docs-content code { background: #f3f4f6; border-radius: 4px; padding: 0 4px; }
 .docs-content a { color: #2563eb; text-decoration: underline; }
+.docs-content table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+.docs-content th, .docs-content td { border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left; vertical-align: top; }
+.docs-content thead th { background: #f9fafb; font-weight: 600; }
