@@ -127,7 +127,6 @@ export function DocsAdminClient() {
             <thead className="bg-gray-50 text-gray-700">
               <tr>
                 <th className="text-left px-4 py-3 font-medium">标题</th>
-                <th className="text-left px-4 py-3 font-medium">类型</th>
                 <th className="text-left px-4 py-3 font-medium">排序</th>
                 <th className="text-left px-4 py-3 font-medium">状态</th>
                 <th className="text-left px-4 py-3 font-medium">创建时间</th>
@@ -137,13 +136,13 @@ export function DocsAdminClient() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td className="px-4 py-4 text-gray-500" colSpan={6}>
+                  <td className="px-4 py-4 text-gray-500" colSpan={5}>
                     加载中…
                   </td>
                 </tr>
               ) : items.length === 0 ? (
                 <tr>
-                  <td className="px-4 py-4 text-gray-500" colSpan={6}>
+                  <td className="px-4 py-4 text-gray-500" colSpan={5}>
                     暂无文档
                   </td>
                 </tr>
@@ -151,9 +150,6 @@ export function DocsAdminClient() {
                 items.map((d) => (
                   <tr key={d.id} className="border-t">
                     <td className="px-4 py-3">{d.title}</td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center rounded border px-2 py-0.5 text-xs text-gray-600">未分类</span>
-                    </td>
                     <td className="px-4 py-3">0</td>
                     <td className="px-4 py-3">
                       {d.published ? (
