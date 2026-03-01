@@ -36,11 +36,26 @@ export function PortalSidebarClient({ collapsed, siteName, siteLogoDataUrl, clas
       <nav className="flex-1 p-3 text-sm">
         <div className="space-y-1">
           <Item href="/portal" label="仪表盘" icon="/icons/dashboard.svg" collapsed={collapsed} />
+        </div>
+
+        <div className="sidebar-divider my-3 border-t border-[rgb(41,41,41)]" />
+
+        <div className="space-y-1">
           <Item href="/portal/purchase" label="购买服务" icon="/icons/purchase.svg" collapsed={collapsed} />
-          <Item href="/portal/vod" label="点播功能" icon="/icons/vod.svg" collapsed={collapsed} />
           <Item href="/portal/invites" label="我的邀请" icon="/icons/invites.svg" collapsed={collapsed} />
+        </div>
+
+        <div className="sidebar-divider my-3 border-t border-[rgb(41,41,41)]" />
+
+        <div className="space-y-1">
           <Item href="/portal/emby-services" label="Emby 服务" icon="/icons/emby-services.svg" collapsed={collapsed} />
+          <Item href="/portal/vod" label="点播功能" icon="/icons/vod.svg" collapsed={collapsed} />
           <Item href="/portal/playback-stats" label="播放统计" icon="/icons/playback-stats.svg" collapsed={collapsed} />
+        </div>
+
+        <div className="sidebar-divider my-3 border-t border-[rgb(41,41,41)]" />
+
+        <div className="space-y-1">
           <Item href="/portal/docs" label="使用文档" icon="/icons/docs.svg" collapsed={collapsed} />
         </div>
       </nav>
