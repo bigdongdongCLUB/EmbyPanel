@@ -120,12 +120,6 @@ export function DocsAdminClient() {
           <button className="bg-blue-600 text-white rounded px-3 py-2 text-sm" onClick={openCreate}>
             + 新建文档
           </button>
-          <button
-            className="bg-blue-600/90 text-white rounded px-3 py-2 text-sm"
-            onClick={() => alert("按你的要求，文档类型功能本期不做。")}
-          >
-            管理文档类型
-          </button>
         </div>
 
         <div className="overflow-x-auto">
