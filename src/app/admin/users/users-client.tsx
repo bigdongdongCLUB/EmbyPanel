@@ -757,8 +757,8 @@ export function UsersClient() {
       </div>
 
       {edit.open ? (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 overflow-y-auto overscroll-contain z-50">
-          <div className="bg-white rounded-lg w-full max-w-[470px] p-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/45 flex items-center justify-center p-4 overflow-y-auto overscroll-contain z-50">
+          <div className="bg-white border border-[#eaeaea] rounded-2xl w-full max-w-[470px] p-5 max-h-[90vh] overflow-y-auto shadow-sm">
             <div className="font-semibold">编辑用户</div>
 
             {edit.loading ? <div className="mt-3 text-sm text-gray-500">加载中…</div> : null}
@@ -768,11 +768,11 @@ export function UsersClient() {
               <div className="space-y-3">
                 <div>
                   <label className="text-sm">用户名</label>
-                  <input className="mt-1 w-full border rounded px-3 py-2 bg-gray-50" value={edit.username} disabled />
+                  <input className="mt-1 w-full border border-[#eaeaea] rounded-lg px-3 py-2 bg-[#f4f5f7]" value={edit.username} disabled />
                 </div>
                 <div>
                   <label className="text-sm">邮箱</label>
-                  <input className="mt-1 w-full border rounded px-3 py-2" value={edit.email} onChange={(e) => setEdit({ ...edit, email: e.target.value })} />
+                  <input className="mt-1 w-full border border-[#eaeaea] rounded-lg px-3 py-2 bg-[#f4f5f7] focus:border-[#e3001b] outline-none" value={edit.email} onChange={(e) => setEdit({ ...edit, email: e.target.value })} />
                 </div>
                 <div>
                   <label className="text-sm">修改密码</label>
@@ -786,7 +786,7 @@ export function UsersClient() {
                   </div>
                   {edit.changePassword ? (
                     <input
-                      className="mt-2 w-full border rounded px-3 py-2"
+                      className="mt-2 w-full border border-[#eaeaea] rounded-lg px-3 py-2 bg-[#f4f5f7] focus:border-[#e3001b] outline-none"
                       type="password"
                       placeholder="新密码（>=6位）"
                       value={edit.newPassword}
@@ -796,14 +796,14 @@ export function UsersClient() {
                 </div>
                 <div>
                   <label className="text-sm">角色（面板）</label>
-                  <select className="mt-1 w-full border rounded px-3 py-2" value={edit.role} onChange={(e) => setEdit({ ...edit, role: e.target.value as any })}>
+                  <select className="mt-1 w-full border border-[#eaeaea] rounded-lg px-3 py-2 bg-[#f4f5f7] focus:border-[#e3001b] outline-none" value={edit.role} onChange={(e) => setEdit({ ...edit, role: e.target.value as any })}>
                     <option value="ADMIN">管理员</option>
                     <option value="USER">用户</option>
                   </select>
                 </div>
                 <div>
                   <label className="text-sm">账户余额</label>
-                  <input className="mt-1 w-full border rounded px-3 py-2" value={edit.balance} onChange={(e) => setEdit({ ...edit, balance: e.target.value })} />
+                  <input className="mt-1 w-full border border-[#eaeaea] rounded-lg px-3 py-2 bg-[#f4f5f7] focus:border-[#e3001b] outline-none" value={edit.balance} onChange={(e) => setEdit({ ...edit, balance: e.target.value })} />
                 </div>
                 <div className="flex items-center gap-2">
                   <input
@@ -830,7 +830,7 @@ export function UsersClient() {
                 <div>
                   <label className="text-sm">订阅计划</label>
                   <select
-                    className="mt-1 w-full border rounded px-3 py-2"
+                    className="mt-1 w-full border border-[#eaeaea] rounded-lg px-3 py-2 bg-[#f4f5f7] focus:border-[#e3001b] outline-none"
                     value={edit.planId}
                     onChange={(e) => setEdit({ ...edit, planId: e.target.value })}
                   >
@@ -847,7 +847,7 @@ export function UsersClient() {
                 <div>
                   <label className="text-sm">订阅开始日期</label>
                   <input
-                    className="mt-1 w-full border rounded px-3 py-2"
+                    className="mt-1 w-full border border-[#eaeaea] rounded-lg px-3 py-2 bg-[#f4f5f7] focus:border-[#e3001b] outline-none"
                     type="text"
                     placeholder="YYYY-MM-DD"
                     value={edit.startAt}
@@ -858,7 +858,7 @@ export function UsersClient() {
                 <div>
                   <label className="text-sm">订阅结束日期</label>
                   <input
-                    className="mt-1 w-full border rounded px-3 py-2"
+                    className="mt-1 w-full border border-[#eaeaea] rounded-lg px-3 py-2 bg-[#f4f5f7] focus:border-[#e3001b] outline-none"
                     type="text"
                     placeholder="YYYY-MM-DD"
                     value={edit.endAt}
@@ -870,7 +870,7 @@ export function UsersClient() {
 
             <div className="mt-5 flex gap-2">
               <button
-                className="bg-gray-700 text-white rounded px-3 py-2 disabled:opacity-50"
+                className="bg-[#e3001b] hover:bg-[#c20017] text-white rounded-lg px-3 py-2 disabled:opacity-50"
                 disabled={edit.loading || editSaving}
                 onClick={async () => {
                   if (editSaving) return;
@@ -993,7 +993,7 @@ export function UsersClient() {
                 取消
               </button>
               <button
-                className="bg-gray-700 text-white rounded px-3 py-1 text-sm disabled:opacity-60"
+                className="bg-[#e3001b] hover:bg-[#c20017] text-white rounded-lg px-3 py-1 text-sm disabled:opacity-60"
                 disabled={deleteLoading}
                 onClick={async () => {
                   setDeleteLoading(true);
@@ -1059,7 +1059,7 @@ export function UsersClient() {
 
             <div className="mt-5 flex gap-2">
               <button
-                className="bg-gray-700 text-white rounded px-3 py-2 disabled:opacity-50"
+                className="bg-[#e3001b] hover:bg-[#c20017] text-white rounded-lg px-3 py-2 disabled:opacity-50"
                 disabled={bulkAddLoading}
                 onClick={async () => {
                   const addDays = Number(bulkAddDays);
@@ -1131,7 +1131,7 @@ export function UsersClient() {
                 取消
               </button>
               <button
-                className="bg-gray-700 text-white rounded px-3 py-1 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                className="bg-[#e3001b] hover:bg-[#c20017] text-white rounded-lg px-3 py-1 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
                 disabled={bulkDeleteLoading || !selectedIds.length || hasSelectedAdmin}
                 onClick={async () => {
                   setBulkDeleteLoading(true);
@@ -1355,7 +1355,7 @@ export function UsersClient() {
                 取消
               </button>
               <button
-                className="bg-gray-700 text-white rounded px-3 py-2 disabled:opacity-50"
+                className="bg-[#e3001b] hover:bg-[#c20017] text-white rounded-lg px-3 py-2 disabled:opacity-50"
                 disabled={
                   !importServerId ||
                   importDefaultPassword.trim().length < 6 ||
@@ -1514,7 +1514,7 @@ export function UsersClient() {
                 取消
               </button>
               <button
-                className="bg-gray-700 text-white rounded px-3 py-2 disabled:opacity-50"
+                className="bg-[#e3001b] hover:bg-[#c20017] text-white rounded-lg px-3 py-2 disabled:opacity-50"
                 disabled={!csvText.trim() || csvImportLoading}
                 onClick={async () => {
                   setCsvImportLoading(true);
@@ -1649,7 +1649,7 @@ export function UsersClient() {
             <div className="mt-4 flex justify-end gap-2">
               <button className="border bg-white rounded px-3 py-2" onClick={() => setTrialOpen(false)} disabled={trialLoading}>取消</button>
               <button
-                className="bg-gray-700 text-white rounded px-3 py-2 disabled:opacity-50"
+                className="bg-[#e3001b] hover:bg-[#c20017] text-white rounded-lg px-3 py-2 disabled:opacity-50"
                 disabled={trialLoading || !trialPlanId}
                 onClick={async () => {
                   setTrialLoading(true);
@@ -1742,7 +1742,7 @@ export function UsersClient() {
 
             <div className="mt-4 flex gap-2">
               <button
-                className="bg-gray-700 text-white rounded px-3 py-2 disabled:opacity-50"
+                className="bg-[#e3001b] hover:bg-[#c20017] text-white rounded-lg px-3 py-2 disabled:opacity-50"
                 disabled={!canCreate}
                 onClick={async () => {
                   const balanceNum = Number(newBalance);
