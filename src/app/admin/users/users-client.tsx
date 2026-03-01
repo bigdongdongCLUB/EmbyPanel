@@ -456,6 +456,9 @@ export function UsersClient() {
             placeholder="搜索用户/邮箱"
             value={q}
             onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") refresh();
+            }}
           />
 
           <select className="border rounded px-3 py-2" value={filterPlanId} onChange={(e) => setFilterPlanId(e.target.value)}>
