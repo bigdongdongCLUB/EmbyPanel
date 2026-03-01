@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { PortalProfileModalClient } from "./profile-modal-client";
 import { PortalFrameClient } from "./frame-client";
+import pkg from "../../../package.json";
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
@@ -17,9 +18,11 @@ export default async function PortalLayout({ children }: { children: React.React
   const siteName = site.siteName || "EmbyPanel";
   const siteLogoDataUrl = site.siteLogoDataUrl ?? null;
 
+  const appVersion = `v${pkg.version}`;
+
   return (
     <>
-      <PortalFrameClient username={username} role={role} siteName={siteName} siteLogoDataUrl={siteLogoDataUrl}>
+      <PortalFrameClient username={username} role={role} siteName={siteName} siteLogoDataUrl={siteLogoDataUrl} appVersion={appVersion}>
         {children}
       </PortalFrameClient>
       <PortalProfileModalClient />

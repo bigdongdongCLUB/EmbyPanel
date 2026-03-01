@@ -6,7 +6,7 @@ import { PortalHeaderClient } from "./header-client";
 
 const KEY = "embypanel_portal_sidebar_collapsed";
 
-export function PortalFrameClient({ username, role, siteName, siteLogoDataUrl, children }: { username: string; role: string; siteName: string; siteLogoDataUrl: string | null; children: React.ReactNode }) {
+export function PortalFrameClient({ username, role, siteName, siteLogoDataUrl, appVersion, children }: { username: string; role: string; siteName: string; siteLogoDataUrl: string | null; appVersion: string; children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -42,6 +42,7 @@ export function PortalFrameClient({ username, role, siteName, siteLogoDataUrl, c
         collapsed={isMobile ? false : collapsed}
         siteName={siteName}
         siteLogoDataUrl={siteLogoDataUrl}
+        appVersion={appVersion}
         className={isMobile ? `transition-transform duration-200 ${mobileOpen ? "translate-x-0" : "-translate-x-full"}` : ""}
       />
       {isMobile && mobileOpen ? <div className="fixed inset-0 z-20 bg-black/30" onClick={() => setMobileOpen(false)} /> : null}

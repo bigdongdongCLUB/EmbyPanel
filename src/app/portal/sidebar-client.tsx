@@ -24,7 +24,7 @@ function Item({ href, label, icon, collapsed }: { href: string; label: string; i
   );
 }
 
-export function PortalSidebarClient({ collapsed, siteName, siteLogoDataUrl, className }: { collapsed?: boolean; siteName: string; siteLogoDataUrl: string | null; className?: string }) {
+export function PortalSidebarClient({ collapsed, siteName, siteLogoDataUrl, appVersion, className }: { collapsed?: boolean; siteName: string; siteLogoDataUrl: string | null; appVersion: string; className?: string }) {
   return (
     <aside className={(collapsed ? "w-16" : "w-60") + " fixed inset-y-0 left-0 bg-white text-gray-700 border-r border-gray-200 flex flex-col z-30 " + (className || "")}>
       <div className="h-16 flex items-center px-5 border-b border-gray-200">
@@ -45,6 +45,10 @@ export function PortalSidebarClient({ collapsed, siteName, siteLogoDataUrl, clas
           <Item href="/portal/docs" label="使用文档" icon="/icons/docs.svg" collapsed={collapsed} />
         </div>
       </nav>
+
+      <div className={"border-t border-gray-200 text-[#9aa0a6] " + (collapsed ? "py-2 px-1 text-[10px] text-center" : "px-5 py-3 text-xs")}>
+        {appVersion}
+      </div>
     </aside>
   );
 }

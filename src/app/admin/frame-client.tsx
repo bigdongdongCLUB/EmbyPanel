@@ -11,10 +11,12 @@ export function AdminFrameClient({
   siteName,
   siteLogoDataUrl,
   children,
+  appVersion,
 }: {
   username: string;
   siteName: string;
   siteLogoDataUrl: string | null;
+  appVersion: string;
   children: React.ReactNode;
 }) {
   const [collapsed, setCollapsed] = useState(true);
@@ -51,6 +53,7 @@ export function AdminFrameClient({
       <AdminSidebarClient
         siteName={siteName}
         siteLogoDataUrl={siteLogoDataUrl}
+        appVersion={appVersion}
         collapsed={isMobile ? false : collapsed}
         className={isMobile ? `transition-transform duration-200 ${mobileOpen ? "translate-x-0" : "-translate-x-full"}` : ""}
       />

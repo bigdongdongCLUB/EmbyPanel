@@ -27,11 +27,13 @@ function Item({ href, label, icon, collapsed }: { href: string; label: string; i
 export function AdminSidebarClient({
   siteName,
   siteLogoDataUrl,
+  appVersion,
   collapsed,
   className,
 }: {
   siteName: string;
   siteLogoDataUrl: string | null;
+  appVersion: string;
   collapsed?: boolean;
   className?: string;
 }) {
@@ -62,6 +64,10 @@ export function AdminSidebarClient({
           <Item href="/admin/settings" label="系统设置" icon="/icons/settings.svg" collapsed={collapsed} />
         </div>
       </nav>
+
+      <div className={"border-t border-gray-200 text-[#9aa0a6] " + (collapsed ? "py-2 px-1 text-[10px] text-center" : "px-5 py-3 text-xs")}>
+        {appVersion}
+      </div>
     </aside>
   );
 }
