@@ -448,11 +448,11 @@ export function UsersClient() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
-        <div className="flex flex-wrap gap-2 items-center">
+        <div className="flex flex-wrap gap-2 items-center bg-white border border-[#eaeaea] rounded-xl p-2 shadow-sm">
           <input
-            className="w-full md:w-72 border rounded px-3 py-2"
+            className="w-full md:w-72 border border-transparent bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none"
             placeholder="搜索用户/邮箱"
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -461,7 +461,7 @@ export function UsersClient() {
             }}
           />
 
-          <select className="border rounded px-3 py-2" value={filterPlanId} onChange={(e) => setFilterPlanId(e.target.value)}>
+          <select className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={filterPlanId} onChange={(e) => setFilterPlanId(e.target.value)}>
             <option value="">选择订阅计划</option>
             {filterPlans.map((p) => (
               <option key={p.id} value={p.id}>
@@ -470,24 +470,24 @@ export function UsersClient() {
             ))}
           </select>
 
-          <select className="border rounded px-3 py-2" value={filterSubStatus} onChange={(e) => setFilterSubStatus(e.target.value as any)}>
+          <select className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={filterSubStatus} onChange={(e) => setFilterSubStatus(e.target.value as any)}>
             <option value="">选择订阅状态</option>
             <option value="valid">有效</option>
             <option value="expired">已过期</option>
             <option value="none">无订阅</option>
           </select>
 
-          <button className="border rounded px-3 py-2" onClick={() => refresh()}>
+          <button className="bg-[#e3001b] hover:bg-[#c20017] text-white rounded-lg px-4 py-2" onClick={() => refresh()}>
             查询
           </button>
         </div>
         <div className="flex gap-2 items-center">
-          <button className="bg-blue-600 text-white rounded px-3 py-2" onClick={() => setCreateOpen(true)}>
+          <button className="bg-[#e3001b] hover:bg-[#c20017] text-white rounded-lg px-3 py-2" onClick={() => setCreateOpen(true)}>
             + 创建用户
           </button>
 
           <div ref={moreRef} className="relative">
-            <button className="cursor-pointer select-none border rounded px-3 py-2" onClick={() => setMoreOpen((v) => !v)}>
+            <button className="cursor-pointer select-none border border-[#eaeaea] bg-white rounded-lg px-3 py-2 hover:bg-[#f4f5f7]" onClick={() => setMoreOpen((v) => !v)}>
               更多 ▾
             </button>
             {moreOpen ? (
@@ -557,9 +557,9 @@ export function UsersClient() {
       {error ? <pre className="text-xs text-red-600 whitespace-pre-wrap">{error}</pre> : null}
       {loading ? <div className="text-sm text-gray-500">加载中…</div> : null}
 
-      <div ref={usersTableWrapRef} className="overflow-x-auto overflow-y-visible bg-white">
+      <div ref={usersTableWrapRef} className="overflow-x-auto overflow-y-visible bg-white border border-[#eaeaea] rounded-2xl shadow-sm">
         <table className="min-w-[1200px] w-full text-sm">
-          <thead className="text-left text-gray-600 border-y bg-white">
+          <thead className="text-left text-[#666] border-y border-[#eaeaea] bg-[#f8f9fa]">
             <tr>
               <th className="py-2 px-3">
                 <input
@@ -591,7 +591,7 @@ export function UsersClient() {
           </thead>
           <tbody>
             {pageRows.map((r) => (
-              <tr key={r.id} className="border-b last:border-b-0">
+              <tr key={r.id} className="border-b border-[#eaeaea] last:border-b-0">
                 <td className="py-2 px-3">
                   <input
                     type="checkbox"
