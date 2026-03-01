@@ -167,7 +167,7 @@ export function PortalClient() {
           }
 
           const renderGrid = (items: typeof tv) => (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-4">
+            <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-3 md:gap-4">
               {items.map((it) => (
                 <div key={`${it.type}-${it.title}`} className="group cursor-pointer">
                   <div className="relative rounded-lg overflow-hidden aspect-[2/3] bg-gradient-to-br from-[#f5f7fa] to-[#c3cfe2]">
