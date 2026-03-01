@@ -162,28 +162,28 @@ export function VodRequestsAdminClient() {
   const visibleRows = useMemo(() => rows, [rows]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <h1 className="text-xl font-semibold">点播管理</h1>
 
       <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-        <div className="border rounded p-3"><div className="text-xs text-gray-500">总计</div><div className="text-2xl text-gray-800">{summary.total}</div></div>
-        <div className="border rounded p-3"><div className="text-xs text-gray-500">待处理</div><div className="text-2xl text-[#e3001b]">{summary.pending}</div></div>
-        <div className="border rounded p-3"><div className="text-xs text-gray-500">无资源</div><div className="text-2xl text-red-600">{summary.noResource}</div></div>
-        <div className="border rounded p-3"><div className="text-xs text-gray-500">进行中</div><div className="text-2xl text-amber-600">{summary.processing}</div></div>
-        <div className="border rounded p-3"><div className="text-xs text-gray-500">无法更新</div><div className="text-2xl text-purple-600">{summary.cannotUpdate}</div></div>
-        <div className="border rounded p-3"><div className="text-xs text-gray-500">已完成</div><div className="text-2xl text-green-600">{summary.completed}</div></div>
+        <div className="border border-[#eaeaea] bg-white rounded-2xl p-4 shadow-sm"><div className="text-xs text-gray-500">总计</div><div className="text-2xl text-gray-800">{summary.total}</div></div>
+        <div className="border border-[#eaeaea] bg-white rounded-2xl p-4 shadow-sm"><div className="text-xs text-gray-500">待处理</div><div className="text-2xl text-[#e3001b]">{summary.pending}</div></div>
+        <div className="border border-[#eaeaea] bg-white rounded-2xl p-4 shadow-sm"><div className="text-xs text-gray-500">无资源</div><div className="text-2xl text-red-600">{summary.noResource}</div></div>
+        <div className="border border-[#eaeaea] bg-white rounded-2xl p-4 shadow-sm"><div className="text-xs text-gray-500">进行中</div><div className="text-2xl text-amber-600">{summary.processing}</div></div>
+        <div className="border border-[#eaeaea] bg-white rounded-2xl p-4 shadow-sm"><div className="text-xs text-gray-500">无法更新</div><div className="text-2xl text-purple-600">{summary.cannotUpdate}</div></div>
+        <div className="border border-[#eaeaea] bg-white rounded-2xl p-4 shadow-sm"><div className="text-xs text-gray-500">已完成</div><div className="text-2xl text-green-600">{summary.completed}</div></div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="border rounded p-3 bg-white">
+        <div className="border border-[#eaeaea] bg-white rounded-2xl p-4 shadow-sm">
           <div className="text-xs text-gray-500">近30日电视剧点播数量</div>
           <div className="text-2xl text-purple-700">{summary.recentTvCount}</div>
         </div>
-        <div className="border rounded p-3 bg-white">
+        <div className="border border-[#eaeaea] bg-white rounded-2xl p-4 shadow-sm">
           <div className="text-xs text-gray-500">近30日电影点播数量</div>
           <div className="text-2xl text-[#e3001b]">{summary.recentMovieCount}</div>
         </div>
-        <div className="border rounded p-3 bg-white">
+        <div className="border border-[#eaeaea] bg-white rounded-2xl p-4 shadow-sm">
           <div className="text-xs text-gray-500">近30日提交最多用户</div>
           <div className="text-base font-medium text-gray-800 truncate">{summary.recentTopUser}</div>
           <div className="text-xs text-gray-500 mt-1">{summary.recentTopUserCount} 条</div>
@@ -192,9 +192,9 @@ export function VodRequestsAdminClient() {
 
       {error ? <div className="text-sm text-red-600">{error}</div> : null}
 
-      <div className="flex flex-wrap items-center gap-2">
-        <input className="w-full md:w-72 h-8 border rounded px-3 text-sm" placeholder="搜索标题或用户名" value={q} onChange={(e) => setQ(e.target.value)} />
-        <select className="h-8 border rounded px-3 text-sm" value={bizStatus} onChange={(e) => setBizStatus(e.target.value)}>
+      <div className="flex flex-wrap items-center gap-2 bg-white border border-[#eaeaea] rounded-xl p-2 shadow-sm">
+        <input className="w-full md:w-72 h-8 border border-transparent bg-[#f4f5f7] rounded-lg px-3 text-sm focus:border-[#e3001b] outline-none" placeholder="搜索标题或用户名" value={q} onChange={(e) => setQ(e.target.value)} />
+        <select className="h-8 border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 text-sm focus:border-[#e3001b] outline-none" value={bizStatus} onChange={(e) => setBizStatus(e.target.value)}>
           <option value="">选择状态</option>
           <option value="PENDING">待处理</option>
           <option value="NO_RESOURCE">无资源</option>
@@ -202,16 +202,16 @@ export function VodRequestsAdminClient() {
           <option value="CANNOT_UPDATE">无法更新</option>
           <option value="COMPLETED">已完成</option>
         </select>
-        <select className="h-8 border rounded px-3 text-sm" value={mediaType} onChange={(e) => setMediaType(e.target.value)}>
+        <select className="h-8 border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 text-sm focus:border-[#e3001b] outline-none" value={mediaType} onChange={(e) => setMediaType(e.target.value)}>
           <option value="">选择类型</option>
           <option value="MOVIE">电影</option>
           <option value="TV">电视剧</option>
         </select>
       </div>
 
-      <div className="border rounded overflow-auto bg-white">
+      <div className="bg-white border border-[#eaeaea] rounded-2xl overflow-auto shadow-sm">
         <table className="min-w-[1100px] w-full text-sm">
-          <thead className="border-b text-left text-gray-600 bg-gray-50">
+          <thead className="border-b border-[#eaeaea] text-left text-[#666] bg-[#f8f9fa]">
             <tr>
               <th className="px-3 py-2">媒体信息</th>
               <th className="px-3 py-2">用户</th>
@@ -223,7 +223,7 @@ export function VodRequestsAdminClient() {
           </thead>
           <tbody>
             {visibleRows.map((r) => (
-              <tr key={r.id} className="border-b align-top">
+              <tr key={r.id} className="border-b border-[#eaeaea] align-top">
                 <td className="px-3 py-3">
                   <div className="flex items-start gap-2 min-w-[260px]">
                     {r.posterPath ? <img src={r.posterPath} alt={r.title} className="w-10 h-14 rounded object-cover" /> : <div className="w-10 h-14 rounded bg-gray-100" />}
@@ -241,7 +241,7 @@ export function VodRequestsAdminClient() {
                 <td className="px-3 py-3 text-xs text-gray-600 max-w-[220px]">{r.note || "-"}</td>
                 <td className="px-3 py-3 min-w-[220px]">
                   <input
-                    className="w-full h-8 border rounded px-2 text-xs"
+                    className="w-full h-8 border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-2 text-xs focus:border-[#e3001b] outline-none"
                     maxLength={20}
                     value={replyMap[r.id] ?? ""}
                     onChange={(e) => {
@@ -257,7 +257,7 @@ export function VodRequestsAdminClient() {
                 <td className="px-3 py-3 whitespace-nowrap">
                   <div className="flex items-center gap-2">
                     <select
-                      className="h-8 border rounded px-2 text-xs"
+                      className="h-8 border border-[#eaeaea] bg-white rounded-lg px-2 text-xs focus:border-[#e3001b] outline-none"
                       value={actionMap[r.id] ?? ""}
                       disabled={loading}
                       onChange={(e) => {
