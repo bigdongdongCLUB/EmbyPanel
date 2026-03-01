@@ -145,29 +145,41 @@ export function PortalPurchaseClient() {
       {error ? <div className="text-sm text-red-600">{error}</div> : null}
       {loading ? <div className="text-sm text-gray-500">加载中…</div> : null}
 
-      <div className="text-center py-2.5">
-        <div className="text-[28px] font-semibold">选择适合你的服务计划</div>
-        <div className="text-sm text-gray-500 mt-1">选择计划后，您可以查看详细的服务列表和支付方式。</div>
+      <div className="text-center py-3 mb-1">
+        <div className="text-[28px] font-semibold text-[#222]">选择适合你的服务计划</div>
+        <div className="text-sm text-[#888] mt-1.5">选择计划后，您可以查看详细的服务列表和支付方式。</div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 max-w-[1000px] mx-auto">
         {plans.map((p) => {
           const main = pickMainPrice(p);
+          const highlight = p.prices.trialYuan !== null;
           return (
-            <div key={p.id} className="border rounded-xl p-3 space-y-2.5 bg-white shadow-sm max-w-[320px]">
-              <div className="flex items-start justify-between gap-2">
-                <div className="text-2xl font-semibold leading-tight">{p.name}</div>
-                {p.prices.trialYuan !== null ? <div className="text-xs shrink-0 pt-0.5 inline-flex items-center rounded border border-green-200 bg-green-50 px-2 py-0.5 text-green-600">可试用</div> : null}
+            <div
+              key={p.id}
+              className={
+                "relative rounded-xl p-7 flex flex-col transition-all " +
+                (highlight
+                  ? "bg-white border-2 border-[#e3001b] shadow-[0_8px_24px_rgba(227,0,27,0.08)]"
+                  : "bg-[#f4f5f7] border-2 border-transparent hover:border-gray-300 hover:bg-[#f0f1f3]")
+              }
+            >
+              {highlight ? <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#e3001b] text-white text-xs px-3 py-1 rounded-full">可试用</div> : null}
+
+              <div className="text-[22px] font-bold text-[#222] leading-tight mb-4">{p.name}</div>
+
+              <div className="mb-7 flex items-end gap-1.5 flex-wrap">
+                <span className="text-[#e3001b] text-2xl font-bold leading-none">¥</span>
+                <span className="text-[#e3001b] text-[40px] font-bold leading-none">{main.price}</span>
+                <span className="text-[13px] text-[#888] pb-0.5">/{main.cycle} 起，更多周期可选</span>
               </div>
 
-              <div className="flex items-end gap-2 flex-wrap">
-                <span className="text-4xl font-bold">¥{main.price}</span>
-                <span className="text-sm text-gray-500 pb-0.5">/{main.cycle}</span>
-                <span className="text-sm text-gray-500 pb-0.5">起，更多周期可选</span>
-              </div>
-              {p.description ? <div className="text-sm text-gray-600 whitespace-pre-wrap">{p.description}</div> : null}
+              {p.description ? <div className="text-sm text-[#666] whitespace-pre-wrap mb-4">{p.description}</div> : null}
 
-              <button className="w-full bg-blue-600 text-white rounded px-2.5 py-2 text-sm inline-flex items-center justify-center gap-1.5" onClick={() => openPlanModal(p.id)}>
+              <button
+                className="mt-auto w-full bg-[#e3001b] hover:bg-[#c20017] text-white rounded-lg px-3 py-3 text-[15px] font-bold inline-flex items-center justify-center gap-2"
+                onClick={() => openPlanModal(p.id)}
+              >
                 <img src="/icons/shopping.svg" alt="" className="h-4 w-4 invert" />
                 <span>立即购买</span>
               </button>
