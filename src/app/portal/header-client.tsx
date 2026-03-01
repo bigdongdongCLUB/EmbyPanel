@@ -30,13 +30,13 @@ export function PortalHeaderClient({ username, role }: { username: string; role:
     <div ref={rootRef} className="relative">
       <button
         type="button"
-        className="cursor-pointer select-none flex items-center gap-2 rounded-full px-2 py-1 hover:bg-gray-100"
+        className="cursor-pointer select-none flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-gray-100"
         onClick={() => setOpen((v) => !v)}
       >
         <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-cyan-400 text-white text-sm font-semibold">
           {initials}
         </span>
-        <span className="text-sm text-gray-800">{username}</span>
+        <span className="text-sm font-medium text-gray-800">{username}</span>
       </button>
 
       {open ? (

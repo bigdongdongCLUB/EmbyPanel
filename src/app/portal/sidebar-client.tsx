@@ -26,14 +26,14 @@ export function PortalSidebarClient({ collapsed, siteName, siteLogoDataUrl, clas
   const appVersion = process.env.NEXT_PUBLIC_APP_VERSION || "v00.00.0";
   return (
     <aside className={(collapsed ? "w-16" : "w-60") + " fixed inset-y-0 left-0 bg-white text-gray-700 border-r border-gray-200 flex flex-col z-30 " + (className || "")}>
-      <div className="sidebar-divider h-16 flex items-center justify-center px-2 border-b border-gray-200">
+      <div className="sidebar-divider h-16 flex items-center justify-center px-4 border-b border-gray-200">
         <Link href="/portal" className="flex items-center gap-2 min-w-0">
           <img src={siteLogoDataUrl || "/logo.png"} alt="logo" className="h-8 w-8 rounded-full object-cover shrink-0" />
           {!collapsed ? <span className="font-semibold text-base tracking-wide leading-none text-center truncate text-gray-900">{siteName || "EmbyPanel"}</span> : null}
         </Link>
       </div>
 
-      <nav className="flex-1 p-2 text-sm">
+      <nav className="flex-1 px-4 py-5 text-sm">
         <div className="space-y-1">
           <Item href="/portal" label="仪表盘" icon="/icons/dashboard.svg" collapsed={collapsed} />
         </div>
