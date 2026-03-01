@@ -307,6 +307,41 @@ wait_for_postgres() {
   return 1
 }
 
+ensure_uploads_dir_permissions() {
+  # 文档图片上传目录（与 docker-compose 挂载一致）
+  run_as_root "mkdir -p '$APP_DIR/data/uploads'"
+  # 容器内 web 进程 uid=1001（nextjs）
+  run_as_root "chown -R 1001:1001 '$APP_DIR/data/uploads'"
+  run_as_root "chmod -R 775 '$APP_DIR/data/uploads'"
+  ok "已确保上传目录权限：$APP_DIR/data/uploads"
+}
+
+check_nginx_uploads_mapping() {
+  # 仅提示，不强改用户 nginx
+  local conf=""
+  if [ -f /etc/nginx/sites-enabled/panel.bestemby.com.conf ]; then
+    conf="/etc/nginx/sites-enabled/panel.bestemby.com.conf"
+  elif [ -f /etc/nginx/sites-available/panel.bestemby.com.conf ]; then
+    conf="/etc/nginx/sites-available/panel.bestemby.com.conf"
+  fi
+
+  if [ -n "$conf" ]; then
+    if grep -q "location /uploads/" "$conf" && grep -q "alias /opt/embypanel/data/uploads/;" "$conf"; then
+      ok "Nginx 已检测到 /uploads 静态映射"
+    else
+      warn "检测到 Nginx，但未发现 /uploads 静态映射，文档图片可能 404。"
+      warn "请在 Nginx 对应 server 块加入："
+      echo "location /uploads/ {"
+      echo "    alias /opt/embypanel/data/uploads/;"
+      echo "    access_log off;"
+      echo "    expires 30d;"
+      echo "    add_header Cache-Control \"public, max-age=2592000\";"
+      echo "    try_files \$uri =404;"
+      echo "}"
+    fi
+  fi
+}
+
 run_integrity_checks() {
   log "执行完整性/功能性（健康）检查..."
 
@@ -385,6 +420,7 @@ main() {
   fi
 
   init_env
+  ensure_uploads_dir_permissions
 
   log "启动数据库与 Redis..."
   dc up -d db redis
@@ -398,6 +434,7 @@ main() {
   dc run --rm web npx prisma migrate deploy
 
   run_integrity_checks
+  check_nginx_uploads_mapping
   save_install_cache
 
   ok "部署/升级完成"
