@@ -31,6 +31,19 @@ function pickString(obj: any, keys: string[]) {
   return "";
 }
 
+function pickStringFuzzy(obj: any, includes: string[]) {
+  if (!obj || typeof obj !== "object") return "";
+  const keys = Object.keys(obj);
+  for (const k of keys) {
+    const lk = k.toLowerCase();
+    if (includes.some((x) => lk.includes(x))) {
+      const v = obj[k];
+      if (v !== undefined && v !== null && String(v).trim()) return String(v).trim();
+    }
+  }
+  return "";
+}
+
 function pickDate(obj: any) {
   const raw = pickString(obj, ["DateCreated", "dateCreated", "LastPlayedDate", "lastPlayedDate", "StartDate", "startDate", "Date", "date"]);
   if (!raw) return "";
@@ -86,6 +99,8 @@ function normalizeMediaKey(v: string) {
     .toLowerCase()
     .replace(/[\s\u3000]+/g, "")
     .replace(/[\[\]【】()（）]/g, "")
+    .replace(/[，,。.!！?？:：；;]+/g, "")
+    .replace(/-s\d+[,，]?e?p?\d+.*$/i, "")
     .trim();
 }
 
@@ -113,6 +128,15 @@ function parseActivityEntryToPlayback(entry: any, username: string) {
   if (m) {
     client = (m[1] || "").trim() || "-";
     mediaName = (m[2] || "").trim();
+  }
+
+  // 兼容: "Mac 上 test07 已停止播放 xxx"
+  if (!mediaName) {
+    m = text.match(/^\s*(.+?)\s*上\s*.+?\s*已停止播放\s*(.+)$/);
+    if (m) {
+      client = (m[1] || "").trim() || client;
+      mediaName = (m[2] || "").trim();
+    }
   }
 
   if (!mediaName) {
@@ -229,10 +253,20 @@ export async function GET(req: Request) {
     for (const r of rows) {
       const mediaName = pickString(r, ["ItemName", "itemName", "Name", "name", "Item", "item", "NowPlayingItemName"]);
       const lastPlayedAt = pickDate(r);
-      const durationSeconds = normalizeDurationSeconds(r?.PlaybackDuration ?? r?.playbackDuration ?? r?.Duration ?? r?.PlayDuration ?? 0);
-      const itemId = pickString(r, ["ItemId", "itemId", "MediaId", "mediaId"]) || null;
-      const client = pickString(r, ["ClientName", "clientName", "Client", "client", "DeviceName", "deviceName"]) || "-";
-      const ip = pickString(r, ["RemoteAddress", "remoteAddress", "IpAddress", "ipAddress", "IPAddress", "RemoteEndPoint"]) || "-";
+      const startDate = pickString(r, ["StartDate", "startDate", "DateStarted", "dateStarted"]);
+      const endDate = pickString(r, ["EndDate", "endDate", "DateStopped", "dateStopped", "StopDate", "stopDate"]);
+      let durationSeconds = normalizeDurationSeconds(r?.PlaybackDuration ?? r?.playbackDuration ?? r?.Duration ?? r?.PlayDuration ?? r?.RunTime ?? 0);
+      if (durationSeconds <= 0 && startDate && endDate) {
+        const st = new Date(startDate).getTime();
+        const ed = new Date(endDate).getTime();
+        if (Number.isFinite(st) && Number.isFinite(ed) && ed > st) {
+          durationSeconds = Math.round((ed - st) / 1000);
+        }
+      }
+      const itemId = pickString(r, ["ItemId", "itemId", "MediaId", "mediaId"]) || pickStringFuzzy(r, ["itemid", "mediaid"]) || null;
+      const client = pickString(r, ["ClientName", "clientName", "Client", "client", "DeviceName", "deviceName"]) || pickStringFuzzy(r, ["client", "device"]) || "-";
+      const ip = pickString(r, ["RemoteAddress", "remoteAddress", "IpAddress", "ipAddress", "IPAddress", "RemoteEndPoint"])
+        || pickStringFuzzy(r, ["remote", "ip", "endpoint", "address"]) || "-";
 
       if (!mediaName && !itemId) continue;
       if (!lastPlayedAt) continue;
