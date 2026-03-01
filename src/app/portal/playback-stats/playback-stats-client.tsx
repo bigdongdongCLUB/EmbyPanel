@@ -38,6 +38,12 @@ function fmtTime(v: string) {
   return d.toLocaleString("zh-CN", { hour12: false, timeZone: "Asia/Shanghai" });
 }
 
+function trimTitle(v: string, max = 40) {
+  const s = String(v || "");
+  if (s.length <= max) return s;
+  return s.slice(0, max) + "...";
+}
+
 export function PortalPlaybackStatsClient() {
   const [rangeDays, setRangeDays] = useState<7 | 30 | 90>(30);
   const [loading, setLoading] = useState(true);
@@ -136,7 +142,7 @@ export function PortalPlaybackStatsClient() {
                 pageRows.map((r, i) => (
                   <tr key={`${r.serverName}_${r.mediaName}_${r.lastPlayedAt}_${i}`} className="border-t">
                     <td className="px-4 py-2">{r.serverName}</td>
-                    <td className="px-4 py-2">{r.mediaName}</td>
+                    <td className="px-4 py-2" title={r.mediaName}>{trimTitle(r.mediaName, 40)}</td>
                     <td className="px-4 py-2">{fmtDuration(r.durationSeconds)}</td>
                     <td className="px-4 py-2">{r.client || "-"}</td>
                     <td className="px-4 py-2">{r.ip || "-"}</td>
