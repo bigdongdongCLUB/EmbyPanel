@@ -10,6 +10,7 @@ type CheckItem = {
   id: number;           // TMDB id
   title: string;
   titleOriginal: string;
+  year?: number;
   mediaType: "movie" | "tv";
 };
 
@@ -20,12 +21,15 @@ function norm(s: string) {
 
 function titleMatch(embyName: string, item: CheckItem) {
   const n = norm(embyName);
-  return (
-    n === norm(item.title) ||
-    n === norm(item.titleOriginal) ||
-    n.includes(norm(item.title)) ||
-    (item.titleOriginal && n.includes(norm(item.titleOriginal)))
-  );
+  const t = norm(item.title);
+  const o = norm(item.titleOriginal || "");
+  if (!n) return false;
+  return n === t || n === o || n.includes(t) || (!!o && n.includes(o)) || t.includes(n) || (!!o && o.includes(n));
+}
+
+function byTmdbId(entry: any, tmdbId: number) {
+  const pid = entry?.ProviderIds?.Tmdb ?? entry?.ProviderIds?.TMDB ?? entry?.ProviderIds?.tmdb;
+  return String(pid || "") === String(tmdbId);
 }
 
 export async function POST(req: Request) {
@@ -64,20 +68,31 @@ export async function POST(req: Request) {
           if (inLibraryIds.has(item.id)) return; // already found, skip
           try {
             const types = item.mediaType === "movie" ? "Movie" : "Series";
-            const url = `${base}/Items?SearchTerm=${encodeURIComponent(item.title)}&IncludeItemTypes=${types}&Recursive=true&api_key=${apiKey}&Limit=5&Fields=Name`;
-            const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+            const fields = "Name,OriginalTitle,ProductionYear,ProviderIds";
+            const url = `${base}/Items?SearchTerm=${encodeURIComponent(item.title)}&IncludeItemTypes=${types}&Recursive=true&api_key=${apiKey}&Limit=50&Fields=${encodeURIComponent(fields)}`;
+            const res = await fetch(url, { signal: AbortSignal.timeout(7000) });
             if (!res.ok) return;
             const data = await res.json();
-            const found = (data.Items ?? []).some((e: any) => titleMatch(e.Name ?? "", item));
-            if (found) inLibraryIds.add(item.id);
+            const list = data.Items ?? [];
+            let found = list.some((e: any) => byTmdbId(e, item.id));
+            if (!found) {
+              found = list.some((e: any) => titleMatch(e.Name ?? e.OriginalTitle ?? "", item));
+            }
+            if (found) {
+              inLibraryIds.add(item.id);
+              return;
+            }
             // Also try originalTitle if not found
-            if (!found && item.titleOriginal && item.titleOriginal !== item.title) {
-              const url2 = `${base}/Items?SearchTerm=${encodeURIComponent(item.titleOriginal)}&IncludeItemTypes=${types}&Recursive=true&api_key=${apiKey}&Limit=5&Fields=Name`;
-              const res2 = await fetch(url2, { signal: AbortSignal.timeout(5000) });
+            if (item.titleOriginal && item.titleOriginal !== item.title) {
+              const url2 = `${base}/Items?SearchTerm=${encodeURIComponent(item.titleOriginal)}&IncludeItemTypes=${types}&Recursive=true&api_key=${apiKey}&Limit=50&Fields=${encodeURIComponent(fields)}`;
+              const res2 = await fetch(url2, { signal: AbortSignal.timeout(7000) });
               if (!res2.ok) return;
               const data2 = await res2.json();
-              if ((data2.Items ?? []).some((e: any) => titleMatch(e.Name ?? "", item))) {
+              const list2 = data2.Items ?? [];
+              const found2 = list2.some((e: any) => byTmdbId(e, item.id)) || list2.some((e: any) => titleMatch(e.Name ?? e.OriginalTitle ?? "", item));
+              if (found2) {
                 inLibraryIds.add(item.id);
+                return;
               }
             }
           } catch {

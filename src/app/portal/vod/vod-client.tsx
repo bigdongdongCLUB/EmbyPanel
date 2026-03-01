@@ -350,7 +350,7 @@ export function VodClient() {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          items: list.map((i) => ({ id: i.id, title: i.title, titleOriginal: i.titleOriginal, mediaType: i.mediaType })),
+          items: list.map((i) => ({ id: i.id, title: i.title, titleOriginal: i.titleOriginal, year: i.year, mediaType: i.mediaType })),
         }),
       });
       const j = await r.json();
