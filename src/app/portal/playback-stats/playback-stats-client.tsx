@@ -28,6 +28,7 @@ function fmtDuration(seconds: number) {
   const h = Math.floor(s / 3600);
   const m = Math.floor((s % 3600) / 60);
   if (h > 0) return `${h}小时${m}分钟`;
+  if (s === 0) return "0分钟";
   return `${Math.max(1, m)}分钟`;
 }
 

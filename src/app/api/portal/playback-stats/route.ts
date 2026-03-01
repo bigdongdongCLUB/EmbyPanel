@@ -23,6 +23,22 @@ function normalizeDurationSeconds(raw: any) {
   return Math.round(n);
 }
 
+function pickString(obj: any, keys: string[]) {
+  for (const k of keys) {
+    const v = obj?.[k];
+    if (v !== undefined && v !== null && String(v).trim()) return String(v).trim();
+  }
+  return "";
+}
+
+function pickDate(obj: any) {
+  const raw = pickString(obj, ["DateCreated", "dateCreated", "LastPlayedDate", "lastPlayedDate", "StartDate", "startDate", "Date", "date"]);
+  if (!raw) return "";
+  const d = new Date(raw);
+  if (Number.isFinite(d.getTime())) return d.toISOString();
+  return raw;
+}
+
 function parseRows(data: any): any[] {
   if (Array.isArray(data)) return data;
   if (Array.isArray(data?.results)) return data.results;
@@ -95,7 +111,6 @@ export async function GET(req: Request) {
   if (!user) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
   const since = new Date(Date.now() - rangeDays * 24 * 60 * 60 * 1000);
-  const sinceSql = since.toISOString().slice(0, 19).replace("T", " ");
 
   const records: Array<{
     serverId: string;
@@ -114,26 +129,41 @@ export async function GET(req: Request) {
     const apiKey = getEmbyApiKeyForServer(s as any);
     if (!apiKey) continue;
 
-    const query = `SELECT ItemId, ItemName, PlaybackDuration, ClientName, DeviceName, RemoteAddress, DateCreated FROM PlaybackActivity WHERE UserId='${sqlSafe(
-      l.embyUserId
-    )}' AND DateCreated >= '${sqlSafe(sinceSql)}' ORDER BY DateCreated DESC LIMIT 1000`;
+    const qByUserId = `SELECT * FROM PlaybackActivity WHERE UserId='${sqlSafe(l.embyUserId)}' LIMIT 3000`;
+    const qByUserName = `SELECT * FROM PlaybackActivity WHERE UserName='${sqlSafe(username)}' LIMIT 3000`;
 
-    const result = await submitCustomQuery(s.baseUrl, apiKey, query);
-    if (!result.ok) continue;
+    const first = await submitCustomQuery(s.baseUrl, apiKey, qByUserId);
+    const second = await submitCustomQuery(s.baseUrl, apiKey, qByUserName);
+    const rows = [...(first.ok ? first.rows : []), ...(second.ok ? second.rows : [])];
+    if (!rows.length) continue;
 
-    for (const r of result.rows) {
-      const mediaName = String(r?.ItemName ?? r?.itemName ?? r?.Name ?? "").trim();
-      const lastPlayedAt = String(r?.DateCreated ?? r?.dateCreated ?? r?.LastPlayedDate ?? "").trim();
-      if (!mediaName || !lastPlayedAt) continue;
+    const dedupe = new Set<string>();
+    for (const r of rows) {
+      const mediaName = pickString(r, ["ItemName", "itemName", "Name", "name", "Item", "item", "NowPlayingItemName"]);
+      const lastPlayedAt = pickDate(r);
+      const durationSeconds = normalizeDurationSeconds(r?.PlaybackDuration ?? r?.playbackDuration ?? r?.Duration ?? r?.PlayDuration ?? 0);
+      const itemId = pickString(r, ["ItemId", "itemId", "MediaId", "mediaId"]) || null;
+      const client = pickString(r, ["ClientName", "clientName", "Client", "client", "DeviceName", "deviceName"]) || "-";
+      const ip = pickString(r, ["RemoteAddress", "remoteAddress", "IpAddress", "ipAddress", "IPAddress"]) || "-";
+
+      if (!mediaName && !itemId) continue;
+      if (!lastPlayedAt) continue;
+
+      const t = new Date(lastPlayedAt).getTime();
+      if (Number.isFinite(t) && t < since.getTime()) continue;
+
+      const key = `${itemId || mediaName}|${lastPlayedAt}|${client}|${ip}`;
+      if (dedupe.has(key)) continue;
+      dedupe.add(key);
 
       records.push({
         serverId: s.id,
         serverName: s.name,
-        mediaName,
-        itemId: String(r?.ItemId ?? r?.itemId ?? "").trim() || null,
-        durationSeconds: normalizeDurationSeconds(r?.PlaybackDuration ?? r?.playbackDuration ?? r?.Duration ?? 0),
-        client: String(r?.ClientName ?? r?.clientName ?? r?.DeviceName ?? r?.deviceName ?? "-").trim() || "-",
-        ip: String(r?.RemoteAddress ?? r?.remoteAddress ?? "-").trim() || "-",
+        mediaName: mediaName || "未知媒体",
+        itemId,
+        durationSeconds,
+        client,
+        ip,
         lastPlayedAt,
       });
     }
