@@ -161,36 +161,36 @@ export function CardCodesClient() {
   }, [moreOpen]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <div className="border rounded p-3"><div className="text-xs text-gray-500">卡密总数</div><div className="text-2xl text-[#e3001b]">{summary.total}</div></div>
-        <div className="border rounded p-3"><div className="text-xs text-gray-500">已使用</div><div className="text-2xl text-red-600">{summary.used}</div></div>
-        <div className="border rounded p-3"><div className="text-xs text-gray-500">未使用</div><div className="text-2xl text-amber-600">{summary.unused}</div></div>
-        <div className="border rounded p-3"><div className="text-xs text-gray-500">余额卡密总数</div><div className="text-2xl text-green-600">{summary.balanceTotal}</div></div>
-        <div className="border rounded p-3"><div className="text-xs text-gray-500">订阅卡密总数</div><div className="text-2xl text-purple-600">{summary.subTotal}</div></div>
+        <div className="border border-[#eaeaea] bg-white rounded-2xl p-4 shadow-sm"><div className="text-xs text-gray-500">卡密总数</div><div className="text-2xl text-[#e3001b]">{summary.total}</div></div>
+        <div className="border border-[#eaeaea] bg-white rounded-2xl p-4 shadow-sm"><div className="text-xs text-gray-500">已使用</div><div className="text-2xl text-red-600">{summary.used}</div></div>
+        <div className="border border-[#eaeaea] bg-white rounded-2xl p-4 shadow-sm"><div className="text-xs text-gray-500">未使用</div><div className="text-2xl text-amber-600">{summary.unused}</div></div>
+        <div className="border border-[#eaeaea] bg-white rounded-2xl p-4 shadow-sm"><div className="text-xs text-gray-500">余额卡密总数</div><div className="text-2xl text-green-600">{summary.balanceTotal}</div></div>
+        <div className="border border-[#eaeaea] bg-white rounded-2xl p-4 shadow-sm"><div className="text-xs text-gray-500">订阅卡密总数</div><div className="text-2xl text-purple-600">{summary.subTotal}</div></div>
       </div>
 
       {error ? <div className="text-sm text-red-600">{error}</div> : null}
 
-      <div className="flex flex-wrap items-center gap-2">
-        <input className="w-full md:w-72 h-7 border rounded px-3 text-xs" placeholder="搜索卡密/备注" value={q} onChange={(e) => setQ(e.target.value)} />
-        <select className="h-7 border rounded px-3 text-xs" value={type} onChange={(e) => setType(e.target.value)}>
+      <div className="flex flex-wrap items-center gap-2 bg-white border border-[#eaeaea] rounded-xl p-2 shadow-sm">
+        <input className="w-full md:w-72 h-8 border border-transparent bg-[#f4f5f7] rounded-lg px-3 text-xs focus:border-[#e3001b] outline-none" placeholder="搜索卡密/备注" value={q} onChange={(e) => setQ(e.target.value)} />
+        <select className="h-8 border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 text-xs focus:border-[#e3001b] outline-none" value={type} onChange={(e) => setType(e.target.value)}>
           <option value="">全部类型</option>
           <option value="BALANCE">余额卡密</option>
           <option value="SUBSCRIPTION">订阅卡密</option>
         </select>
-        <select className="h-7 border rounded px-3 text-xs" value={status} onChange={(e) => setStatus(e.target.value)}>
+        <select className="h-8 border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 text-xs focus:border-[#e3001b] outline-none" value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="">全部状态</option>
           <option value="UNUSED">未使用</option>
           <option value="USED">已使用</option>
           <option value="DISABLED">已禁用</option>
         </select>
-        <button className="h-7 border rounded px-3 text-xs" onClick={refresh} disabled={loading}>刷新</button>
-        <button className="h-7 bg-[#e3001b] text-white rounded px-3 text-xs ml-auto" onClick={() => setOpen(true)}>创建卡密</button>
+        <button className="h-8 border border-[#eaeaea] bg-white rounded-lg px-3 text-xs hover:bg-[#f4f5f7]" onClick={refresh} disabled={loading}>刷新</button>
+        <button className="h-8 bg-[#e3001b] hover:bg-[#c20017] text-white rounded-lg px-3 text-xs ml-auto" onClick={() => setOpen(true)}>创建卡密</button>
         <div ref={moreRef} className="relative">
-          <button className="h-7 border rounded px-3 text-xs cursor-pointer select-none flex items-center" onClick={() => setMoreOpen((v) => !v)}>更多</button>
+          <button className="h-8 border border-[#eaeaea] bg-white rounded-lg px-3 text-xs cursor-pointer select-none flex items-center hover:bg-[#f4f5f7]" onClick={() => setMoreOpen((v) => !v)}>更多</button>
           {moreOpen ? (
-            <div className="absolute right-0 mt-2 w-44 bg-white border rounded shadow z-20 p-1 text-sm">
+            <div className="absolute right-0 mt-2 w-44 bg-white border border-[#eaeaea] rounded-xl shadow-sm z-20 p-1 text-sm">
               <button
                 className="w-full text-left px-2 py-1.5 hover:bg-gray-50 disabled:opacity-50"
                 disabled={!selectedIds.length}
@@ -224,9 +224,9 @@ export function CardCodesClient() {
         </div>
       </div>
 
-      <div className="border rounded overflow-auto">
+      <div className="bg-white border border-[#eaeaea] rounded-2xl overflow-auto shadow-sm">
         <table className="min-w-[1100px] w-full text-sm">
-          <thead className="border-b text-left text-gray-600">
+          <thead className="border-b border-[#eaeaea] text-left text-[#666] bg-[#f8f9fa]">
             <tr>
               <th className="px-3 py-2 w-10"><input type="checkbox" checked={allSelected} onChange={(e) => {
                 const v = e.target.checked;
@@ -239,7 +239,7 @@ export function CardCodesClient() {
           </thead>
           <tbody>
             {pageRows.map((r) => (
-              <tr key={r.id} className="border-b">
+              <tr key={r.id} className="border-b border-[#eaeaea]">
                 <td className="px-3 py-2"><input type="checkbox" checked={!!selected[r.id]} onChange={(e) => setSelected((m) => ({ ...m, [r.id]: e.target.checked }))} /></td>
                 <td className="px-3 py-2 font-mono">{r.code}</td>
                 <td className="px-3 py-2">
@@ -323,18 +323,18 @@ export function CardCodesClient() {
       </div>
 
       {open ? (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg w-full max-w-[470px] p-4 space-y-4 max-h-[85vh] overflow-auto">
+        <div className="fixed inset-0 bg-black/45 flex items-center justify-center p-4">
+          <div className="bg-white border border-[#eaeaea] rounded-2xl w-full max-w-[470px] p-5 space-y-4 max-h-[85vh] overflow-auto shadow-sm">
             <div className="text-xl font-semibold">批量创建卡密</div>
             <div className="rounded-lg border bg-[#fff7f8] p-4 text-sm text-gray-700">支持生成余额充值卡密和订阅卡密。卡密默认16位大写英文+数字。</div>
 
             <div>
               <label className="text-sm">* 生成数量</label>
-              <input className="mt-1 w-full border rounded px-3 py-2" value={count} onChange={(e) => setCount(e.target.value)} />
+              <input className="mt-1 w-full border border-[#eaeaea] rounded-lg px-3 py-2 bg-[#f4f5f7] focus:border-[#e3001b] outline-none" value={count} onChange={(e) => setCount(e.target.value)} />
             </div>
             <div>
               <label className="text-sm">* 卡密类型</label>
-              <select className="mt-1 w-full border rounded px-3 py-2" value={createType} onChange={(e) => setCreateType(e.target.value as any)}>
+              <select className="mt-1 w-full border border-[#eaeaea] rounded-lg px-3 py-2 bg-[#f4f5f7] focus:border-[#e3001b] outline-none" value={createType} onChange={(e) => setCreateType(e.target.value as any)}>
                 <option value="BALANCE">余额卡密</option>
                 <option value="SUBSCRIPTION">订阅卡密</option>
               </select>
@@ -343,20 +343,20 @@ export function CardCodesClient() {
             {createType === "BALANCE" ? (
               <div>
                 <label className="text-sm">* 充值金额（元）</label>
-                <input className="mt-1 w-full border rounded px-3 py-2" value={amountYuan} onChange={(e) => setAmountYuan(e.target.value)} />
+                <input className="mt-1 w-full border border-[#eaeaea] rounded-lg px-3 py-2 bg-[#f4f5f7] focus:border-[#e3001b] outline-none" value={amountYuan} onChange={(e) => setAmountYuan(e.target.value)} />
               </div>
             ) : (
               <>
                 <div>
                   <label className="text-sm">* 订阅计划</label>
-                  <select className="mt-1 w-full border rounded px-3 py-2" value={planId} onChange={(e) => setPlanId(e.target.value)}>
+                  <select className="mt-1 w-full border border-[#eaeaea] rounded-lg px-3 py-2 bg-[#f4f5f7] focus:border-[#e3001b] outline-none" value={planId} onChange={(e) => setPlanId(e.target.value)}>
                     <option value="">选择计划…</option>
                     {plans.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="text-sm">订阅周期</label>
-                  <select className="mt-1 w-full border rounded px-3 py-2" value={payCycle} onChange={(e) => setPayCycle(e.target.value)}>
+                  <select className="mt-1 w-full border border-[#eaeaea] rounded-lg px-3 py-2 bg-[#f4f5f7] focus:border-[#e3001b] outline-none" value={payCycle} onChange={(e) => setPayCycle(e.target.value)}>
                     <option value="MONTHLY">月付（30天）</option>
                     <option value="QUARTERLY">季付（90天）</option>
                     <option value="HALF_YEARLY">半年付（180天）</option>
@@ -366,7 +366,7 @@ export function CardCodesClient() {
                 </div>
                 <div>
                   <label className="text-sm">订阅天数（选填，优先级更高）</label>
-                  <input className="mt-1 w-full border rounded px-3 py-2" value={subscriptionDays} onChange={(e) => setSubscriptionDays(e.target.value)} />
+                  <input className="mt-1 w-full border border-[#eaeaea] rounded-lg px-3 py-2 bg-[#f4f5f7] focus:border-[#e3001b] outline-none" value={subscriptionDays} onChange={(e) => setSubscriptionDays(e.target.value)} />
                 </div>
               </>
             )}
@@ -375,13 +375,13 @@ export function CardCodesClient() {
                           </div>
             <div>
               <label className="text-sm">备注</label>
-              <textarea className="mt-1 w-full border rounded px-3 py-2 min-h-[100px]" value={note} onChange={(e) => setNote(e.target.value)} />
+              <textarea className="mt-1 w-full border border-[#eaeaea] rounded-lg px-3 py-2 min-h-[100px] bg-[#f4f5f7] focus:border-[#e3001b] outline-none" value={note} onChange={(e) => setNote(e.target.value)} />
             </div>
 
             <div className="flex justify-end gap-2">
-              <button className="border bg-white rounded px-4 py-2" onClick={() => setOpen(false)}>取消</button>
+              <button className="border border-[#eaeaea] bg-white rounded-lg px-4 py-2 text-[#666] hover:bg-[#f4f5f7]" onClick={() => setOpen(false)}>取消</button>
               <button
-                className="bg-gray-700 text-white rounded px-4 py-2 disabled:opacity-50"
+                className="bg-[#e3001b] hover:bg-[#c20017] text-white rounded-lg px-4 py-2 disabled:opacity-50"
                 disabled={!canCreate}
                 onClick={async () => {
                   const payload: any = {
@@ -410,8 +410,8 @@ export function CardCodesClient() {
       ) : null}
 
       {resultOpen ? (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg w-full max-w-3xl p-4 space-y-4 max-h-[85vh] overflow-auto">
+        <div className="fixed inset-0 bg-black/45 flex items-center justify-center p-4">
+          <div className="bg-white border border-[#eaeaea] rounded-2xl w-full max-w-3xl p-5 space-y-4 max-h-[85vh] overflow-auto shadow-sm">
             <div className="text-2xl font-semibold">批量创建卡密</div>
             <div className="rounded-lg border border-green-200 bg-green-50 p-4">
               <div className="text-2xl font-semibold text-green-700">已生成 {createdCodes.length} 个卡密</div>
@@ -420,7 +420,7 @@ export function CardCodesClient() {
 
             <div className="flex items-center gap-2">
               <button
-                className="bg-[#e3001b] text-white rounded px-4 py-2"
+                className="bg-[#e3001b] hover:bg-[#c20017] text-white rounded-lg px-4 py-2"
                 onClick={async () => {
                   const all = createdCodes.join("\n");
                   const ok = await copyTextSafe(all);
@@ -430,21 +430,21 @@ export function CardCodesClient() {
               >
                 复制全部
               </button>
-              <button className="border rounded px-4 py-2" onClick={() => { setResultOpen(false); setOpen(true); }}>
+              <button className="border border-[#eaeaea] rounded-lg px-4 py-2 text-[#666] hover:bg-[#f4f5f7]" onClick={() => { setResultOpen(false); setOpen(true); }}>
                 再次生成
               </button>
             </div>
 
-            <div className="border rounded overflow-hidden">
+            <div className="border border-[#eaeaea] rounded-xl overflow-hidden">
               {createdCodes.map((c) => (
-                <div key={c} className="px-4 py-3 border-b last:border-b-0 font-mono text-xl font-semibold">
+                <div key={c} className="px-4 py-3 border-b border-[#eaeaea] last:border-b-0 font-mono text-xl font-semibold">
                   {c}
                 </div>
               ))}
             </div>
 
             <div className="flex justify-end gap-2">
-              <button className="border rounded px-4 py-2" onClick={() => setResultOpen(false)}>关闭</button>
+              <button className="border border-[#eaeaea] rounded-lg px-4 py-2 text-[#666] hover:bg-[#f4f5f7]" onClick={() => setResultOpen(false)}>关闭</button>
             </div>
           </div>
         </div>
