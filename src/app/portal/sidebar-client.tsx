@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-function Item({ href, label, collapsed }: { href: string; label: string; collapsed?: boolean }) {
+function Item({ href, label, icon, collapsed }: { href: string; label: string; icon: string; collapsed?: boolean }) {
   const pathname = usePathname();
   const active = href === "/portal" ? pathname === href : pathname === href || pathname.startsWith(href + "/");
 
@@ -12,35 +12,36 @@ function Item({ href, label, collapsed }: { href: string; label: string; collaps
       href={href}
       title={label}
       className={
-        "px-4 py-3.5 rounded-lg transition-colors flex items-center " +
+        "px-4 py-3.5 rounded-lg transition-colors flex items-center gap-2.5 " +
         (active ? "bg-[#fff0f1] text-[#e3001b] font-bold" : "text-[#888] hover:bg-[#f4f5f7] hover:text-[#222]") +
         (collapsed ? " justify-center" : "")
       }
     >
-      {!collapsed ? <span className="text-[15px] leading-6">{label}</span> : <span className="text-[13px] leading-5">{label.slice(0, 1)}</span>}
+      <img src={icon} alt="" className={"h-4 w-4 shrink-0 " + (active ? "opacity-90" : "opacity-70")} />
+      {!collapsed ? <span className="text-[15px] leading-6">{label}</span> : null}
     </Link>
   );
 }
 
-export function PortalSidebarClient({ collapsed, siteName, className }: { collapsed?: boolean; siteName: string; siteLogoDataUrl: string | null; className?: string }) {
+export function PortalSidebarClient({ collapsed, siteName, siteLogoDataUrl, className }: { collapsed?: boolean; siteName: string; siteLogoDataUrl: string | null; className?: string }) {
   return (
     <aside className={(collapsed ? "w-16" : "w-60") + " fixed inset-y-0 left-0 bg-white text-gray-700 border-r border-gray-200 flex flex-col z-30 " + (className || "")}>
       <div className="h-16 flex items-center px-5 border-b border-gray-200">
         <Link href="/portal" className="flex items-center gap-3 min-w-0">
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#e3001b] text-white font-bold text-base shrink-0">B</span>
-          {!collapsed ? <span className="font-bold text-[18px] tracking-wide leading-none text-[#111] truncate">{(siteName || "BESTEMBY").toUpperCase()}</span> : null}
+          <img src={siteLogoDataUrl || "/logo.png"} alt="logo" className="h-8 w-8 rounded-full object-cover shrink-0" />
+          {!collapsed ? <span className="font-semibold text-[18px] tracking-wide leading-none text-[#111] truncate">{siteName || "EmbyPanel"}</span> : null}
         </Link>
       </div>
 
       <nav className="flex-1 px-4 py-5 text-sm">
         <div className="space-y-2">
-          <Item href="/portal" label="仪表盘" collapsed={collapsed} />
-          <Item href="/portal/purchase" label="购买服务" collapsed={collapsed} />
-          <Item href="/portal/invites" label="我的邀请" collapsed={collapsed} />
-          <Item href="/portal/emby-services" label="Emby 服务" collapsed={collapsed} />
-          <Item href="/portal/vod" label="点播功能" collapsed={collapsed} />
-          <Item href="/portal/playback-stats" label="播放统计" collapsed={collapsed} />
-          <Item href="/portal/docs" label="使用文档" collapsed={collapsed} />
+          <Item href="/portal" label="仪表盘" icon="/icons/dashboard.svg" collapsed={collapsed} />
+          <Item href="/portal/purchase" label="购买服务" icon="/icons/purchase.svg" collapsed={collapsed} />
+          <Item href="/portal/invites" label="我的邀请" icon="/icons/invites.svg" collapsed={collapsed} />
+          <Item href="/portal/emby-services" label="Emby 服务" icon="/icons/emby-services.svg" collapsed={collapsed} />
+          <Item href="/portal/vod" label="点播功能" icon="/icons/vod.svg" collapsed={collapsed} />
+          <Item href="/portal/playback-stats" label="播放统计" icon="/icons/playback-stats.svg" collapsed={collapsed} />
+          <Item href="/portal/docs" label="使用文档" icon="/icons/docs.svg" collapsed={collapsed} />
         </div>
       </nav>
     </aside>
