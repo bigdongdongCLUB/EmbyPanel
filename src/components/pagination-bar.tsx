@@ -24,8 +24,8 @@ export function PaginationBar({
   onPageSizeChange,
   pageSizeOptions = [10, 20, 50, 100],
   showPageSize = true,
-  compactSinglePage = false,
-  simpleGoto = false,
+  compactSinglePage = true,
+  simpleGoto = true,
 }: Props) {
   const [goto, setGoto] = useState("");
 
