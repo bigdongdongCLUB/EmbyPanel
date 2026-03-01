@@ -6,6 +6,33 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
+async function ensurePlaybackEventTable() {
+  try {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "PlaybackEvent" (
+        "id" TEXT PRIMARY KEY,
+        "embyServerId" TEXT NOT NULL,
+        "activityId" TEXT,
+        "embyUserId" TEXT,
+        "userName" TEXT,
+        "eventType" TEXT NOT NULL,
+        "mediaName" TEXT NOT NULL,
+        "mediaKey" TEXT NOT NULL,
+        "client" TEXT,
+        "ip" TEXT,
+        "occurredAt" TIMESTAMP(3) NOT NULL,
+        "sourceJson" JSONB,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "PlaybackEvent_embyServerId_activityId_key" ON "PlaybackEvent"("embyServerId", "activityId")`);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PlaybackEvent_embyServerId_embyUserId_occurredAt_idx" ON "PlaybackEvent"("embyServerId", "embyUserId", "occurredAt")`);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PlaybackEvent_embyServerId_userName_occurredAt_idx" ON "PlaybackEvent"("embyServerId", "userName", "occurredAt")`);
+  } catch {
+    // ignore; fallback in query stage
+  }
+}
+
 function normalizeMediaKey(v: string) {
   return String(v || "")
     .toLowerCase()
@@ -64,28 +91,34 @@ export async function GET(req: Request) {
   if (!user) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
   const since = new Date(Date.now() - rangeDays * 24 * 60 * 60 * 1000);
+  await ensurePlaybackEventTable();
 
   const rows: OutputRow[] = [];
 
   for (const link of user.embyLinks) {
     if (!link.embyServer?.enabled) continue;
 
-    const events = await prisma.playbackEvent.findMany({
-      where: {
-        embyServerId: link.embyServerId,
-        occurredAt: { gte: since },
-        OR: [{ embyUserId: link.embyUserId }, { userName: { equals: user.username, mode: "insensitive" } }],
-      },
-      orderBy: { occurredAt: "asc" },
-      select: {
-        eventType: true,
-        mediaName: true,
-        mediaKey: true,
-        client: true,
-        ip: true,
-        occurredAt: true,
-      },
-    });
+    let events: Array<{ eventType: string; mediaName: string; mediaKey: string; client: string | null; ip: string | null; occurredAt: Date }> = [];
+    try {
+      events = await prisma.playbackEvent.findMany({
+        where: {
+          embyServerId: link.embyServerId,
+          occurredAt: { gte: since },
+          OR: [{ embyUserId: link.embyUserId }, { userName: { equals: user.username, mode: "insensitive" } }],
+        },
+        orderBy: { occurredAt: "asc" },
+        select: {
+          eventType: true,
+          mediaName: true,
+          mediaKey: true,
+          client: true,
+          ip: true,
+          occurredAt: true,
+        },
+      });
+    } catch {
+      events = [];
+    }
 
     if (!events.length) continue;
 
