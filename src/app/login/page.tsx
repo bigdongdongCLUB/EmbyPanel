@@ -186,13 +186,13 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-100 flex items-center justify-center p-6">
+    <main className="min-h-screen bg-[#f4f5f7] flex items-center justify-center p-6">
       <LoginRedirect />
 
       <div
         className={
-          "w-full max-w-[450px] bg-white rounded-2xl shadow-sm p-3 " +
-          (mode === "login" ? "h-[300px]" : "h-[450px] overflow-hidden")
+          "w-full max-w-[500px] bg-white rounded-2xl border border-[#eaeaea] shadow-sm p-5 " +
+          (mode === "login" ? "" : "")
         }
       >
         <div className="flex flex-col items-center text-center">
@@ -200,11 +200,11 @@ export default function LoginPage() {
             <img src={siteLogoDataUrl || "/logo.png"} alt="logo" className="h-10 w-10 rounded-full object-cover" />
             <div className="text-2xl font-semibold tracking-tight">{siteName}</div>
           </div>
-          <p className="text-gray-500 mt-1 text-sm">{siteDescription}</p>
+          <p className="text-[#888] mt-1 text-sm">{siteDescription}</p>
         </div>
 
         {mode === "login" ? (
-          <form className="mt-3 max-w-3xl mx-auto px-10" onSubmit={doLogin}>
+          <form className="mt-4 max-w-3xl mx-auto px-4 space-y-3" onSubmit={doLogin}>
             <div className="border border-gray-200 rounded-xl px-3 py-1.5 flex items-center gap-2">
               <img src="/icons/user.svg" alt="用户名" className="h-4 w-4 opacity-60" />
               <input
@@ -218,7 +218,7 @@ export default function LoginPage() {
               />
             </div>
 
-            <div className="mt-[20px] border border-gray-200 rounded-xl px-3 py-1.5 flex items-center gap-2">
+            <div className="border border-gray-200 rounded-xl px-3 py-2 flex items-center gap-2">
               <img src="/icons/lock.svg" alt="密码" className="h-4 w-4 opacity-60" />
               <input
                 name="password"
@@ -237,16 +237,16 @@ export default function LoginPage() {
 
             {loginError ? <div className="text-red-500 text-xs">{loginError}</div> : null}
 
-            <button className="mt-[20px] w-full bg-blue-600 text-white rounded-xl py-2 text-base font-semibold disabled:opacity-60" disabled={loginLoading}>
+            <button className="w-full bg-[#e3001b] hover:bg-[#c20017] text-white rounded-xl py-2.5 text-base font-semibold disabled:opacity-60" disabled={loginLoading}>
               {loginLoading ? "登录中..." : "登 录"}
             </button>
 
-            <div className="text-center text-blue-500 text-sm pt-0.5">忘记密码?</div>
+            <div className="text-center text-[#888] text-sm">忘记密码?</div>
             <div className="text-center text-sm">
               还没有账户？
               <button
                 type="button"
-                className={(openRegistration ? "text-blue-500" : "text-gray-400 cursor-not-allowed") + " ml-2"}
+                className={(openRegistration ? "text-[#e3001b]" : "text-gray-400 cursor-not-allowed") + " ml-2"}
                 onClick={() => {
                   if (!openRegistration) return;
                   setMode("register");
@@ -258,7 +258,7 @@ export default function LoginPage() {
             </div>
           </form>
         ) : (
-          <form className="mt-3 max-w-3xl mx-auto px-10 space-y-1.5" onSubmit={doRegister}>
+          <form className="mt-4 max-w-3xl mx-auto px-4 space-y-2" onSubmit={doRegister}>
             <div className={`border border-gray-200 rounded-xl px-3 py-1.5 flex items-center gap-2 ${username && usernameErrors.length ? "border-red-300 bg-red-50" : ""}`}>
               <img src="/icons/user.svg" alt="用户名" className="h-4 w-4 opacity-60" />
               <input className="w-full text-sm outline-none bg-transparent" placeholder="用户名（4位以上字母或字母+数字）" value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" />
@@ -331,7 +331,7 @@ export default function LoginPage() {
                 <input className="w-full text-sm outline-none" placeholder="邮箱验证码" value={emailCode} onChange={(e) => setEmailCode(e.target.value)} />
                 <button
                   type="button"
-                  className="text-xs text-blue-600 whitespace-nowrap disabled:text-gray-400"
+                  className="text-xs text-[#e3001b] whitespace-nowrap disabled:text-gray-400"
                   disabled={sendingCode || !email.trim()}
                   onClick={async () => {
                     if (!email.trim()) {
@@ -364,13 +364,13 @@ export default function LoginPage() {
 
             {registerError ? <div className="text-red-500 text-[11px]">{registerError}</div> : null}
 
-            <button className="w-full bg-blue-600 text-white rounded-xl py-2 text-base font-semibold disabled:opacity-60" disabled={!canRegister || registerLoading}>
+            <button className="w-full bg-[#e3001b] hover:bg-[#c20017] text-white rounded-xl py-2.5 text-base font-semibold disabled:opacity-60" disabled={!canRegister || registerLoading}>
               {!openRegistration ? "注册已关闭" : registerLoading ? "注册中..." : "注 册"}
             </button>
 
             <div className="text-center text-sm pt-0.5">
               已有账户？
-              <button type="button" className="text-blue-500 ml-2" onClick={() => setMode("login")}>
+              <button type="button" className="text-[#e3001b] ml-2" onClick={() => setMode("login")}>
                 登录
               </button>
             </div>
