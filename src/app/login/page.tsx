@@ -280,7 +280,7 @@ export default function LoginPage() {
             ) : null}
 
             <div className="border border-gray-200 rounded-xl px-3 py-1.5 flex items-center gap-2">
-              <img src="/icons/invites.svg" alt="邮箱" className="h-4 w-4 opacity-60" />
+              <img src="/icons/email.svg" alt="邮箱" className="h-4 w-4 opacity-60" />
               <input className="w-full text-sm outline-none" placeholder="邮箱（必填）" value={email} onChange={(e) => setEmail(e.target.value)} required />
             </div>
 
