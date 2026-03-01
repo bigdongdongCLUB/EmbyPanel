@@ -207,10 +207,21 @@ export function DocsAdminClient() {
                   className="w-full min-h-[260px] text-sm outline-none"
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
-                  placeholder="Markdown 文档内容（支持拖拽图片上传）"
+                  onPaste={async (e) => {
+                    const files = Array.from(e.clipboardData?.files ?? []);
+                    const img = files.find((f) => String(f.type || "").startsWith("image/"));
+                    if (!img) return;
+                    e.preventDefault();
+                    try {
+                      await insertImage(img);
+                    } catch (err: any) {
+                      alert(`图片上传失败: ${err?.message || err}`);
+                    }
+                  }}
+                  placeholder="Markdown 文档内容（支持拖拽/粘贴图片上传）"
                 />
               </div>
-              <div className="text-xs text-gray-500">提示：拖拽图片到编辑框会自动上传并插入 Markdown 图片语法。</div>
+              <div className="text-xs text-gray-500">提示：拖拽图片或 Ctrl+V / Cmd+V 粘贴图片到编辑框，会自动上传并插入 Markdown 图片语法。</div>
 
               <div className="border rounded-lg p-3">
                 <div className="text-sm font-medium mb-2">预览</div>
