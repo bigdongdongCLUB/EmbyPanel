@@ -223,9 +223,9 @@ export function VodRequestsAdminClient() {
           </thead>
           <tbody>
             {visibleRows.map((r) => (
-              <tr key={r.id} className="border-b border-[#eaeaea] align-top">
-                <td className="px-3 py-3">
-                  <div className="flex items-start gap-2 min-w-[260px]">
+              <tr key={r.id} className="border-b border-[#eaeaea] align-middle">
+                <td className="px-3 py-3 align-middle">
+                  <div className="flex items-center gap-2 min-w-[260px]">
                     {r.posterPath ? <img src={r.posterPath} alt={r.title} className="w-10 h-14 rounded object-cover" /> : <div className="w-10 h-14 rounded bg-gray-100" />}
                     <div className="min-w-0">
                       <div className="font-medium text-gray-800 truncate">{r.title}</div>
@@ -237,9 +237,9 @@ export function VodRequestsAdminClient() {
                     </div>
                   </div>
                 </td>
-                <td className="px-3 py-3 whitespace-nowrap">{r.user.username || r.user.email || "-"}</td>
-                <td className="px-3 py-3 text-xs text-gray-600 max-w-[220px]">{r.note || "-"}</td>
-                <td className="px-3 py-3 min-w-[220px]">
+                <td className="px-3 py-3 whitespace-nowrap align-middle">{r.user.username || r.user.email || "-"}</td>
+                <td className="px-3 py-3 text-xs text-gray-600 max-w-[220px] align-middle">{r.note || "-"}</td>
+                <td className="px-3 py-3 min-w-[220px] align-middle">
                   <input
                     className="w-full h-8 border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-2 text-xs focus:border-[#e3001b] outline-none"
                     maxLength={20}
@@ -253,8 +253,8 @@ export function VodRequestsAdminClient() {
                   />
                   <div className="text-[10px] text-gray-400 text-right mt-1">{(replyMap[r.id] || "").length}/20</div>
                 </td>
-                <td className="px-3 py-3 text-xs whitespace-nowrap">{fmt(r.createdAt)}</td>
-                <td className="px-3 py-3 whitespace-nowrap">
+                <td className="px-3 py-3 text-xs whitespace-nowrap align-middle">{fmt(r.createdAt)}</td>
+                <td className="px-3 py-3 whitespace-nowrap align-middle">
                   <div className="flex items-center gap-2">
                     <select
                       className="h-8 border border-[#eaeaea] bg-white rounded-lg px-2 text-xs focus:border-[#e3001b] outline-none"
