@@ -44,20 +44,20 @@ export function AppConfirmHost() {
 
   return (
     <div className="fixed inset-0 z-[520] flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/30" onClick={() => close(false)} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-[238px] max-w-[88vw] p-4">
+      <div className="absolute inset-0 bg-black/40" onClick={() => close(false)} />
+      <div className="relative bg-white border border-[#eaeaea] rounded-2xl shadow-2xl w-[260px] max-w-[88vw] p-4">
         <div className="text-sm font-semibold text-gray-800 mb-3 whitespace-pre-wrap leading-relaxed">
           {pending.message}
         </div>
         <div className="flex justify-end gap-2">
           <button
-            className="px-3 py-1.5 rounded-lg border bg-white text-gray-700 text-sm hover:bg-gray-50"
+            className="px-3 py-1.5 rounded-lg border border-[#eaeaea] bg-white text-[#666] text-sm hover:bg-gray-50"
             onClick={() => close(false)}
           >
             取消
           </button>
           <button
-            className="px-3 py-1.5 rounded-lg bg-gray-700 text-white text-sm hover:bg-gray-800"
+            className="px-3 py-1.5 rounded-lg bg-[#e3001b] text-white text-sm font-semibold hover:bg-[#c20017]"
             onClick={() => close(true)}
           >
             确认

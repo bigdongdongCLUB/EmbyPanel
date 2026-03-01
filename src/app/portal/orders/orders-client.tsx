@@ -76,7 +76,7 @@ export function PortalOrdersClient() {
                 <td className="px-3 py-2">{r.status === "PENDING" ? "待支付" : r.status === "PAID" ? "已支付" : "已取消"}</td>
                 <td className="px-3 py-2">{fmtTime(r.createdAt)}</td>
                 <td className="px-3 py-2">
-                  <Link className="text-blue-600 hover:underline" href={`/portal/orders/${r.id}`}>
+                  <Link className="text-[#e3001b] hover:underline" href={`/portal/orders/${r.id}`}>
                     查看
                   </Link>
                 </td>

@@ -66,7 +66,7 @@ export function PortalPurchaseDetailClient({ planId }: { planId: string }) {
                   onClick={() => setSelected(c.key)}
                   className={
                     "w-full border rounded-xl p-4 text-left flex items-center justify-between " +
-                    (active ? "border-blue-500 bg-blue-50" : unavailable ? "opacity-40 cursor-not-allowed" : "hover:bg-gray-50")
+                    (active ? "border-[#e3001b] bg-[#fff0f1]" : unavailable ? "opacity-40 cursor-not-allowed" : "hover:bg-gray-50")
                   }
                 >
                   <div>
@@ -84,7 +84,7 @@ export function PortalPurchaseDetailClient({ planId }: { planId: string }) {
           </div>
 
           <button
-            className="w-full bg-blue-600 text-white rounded-xl px-4 py-3 text-2xl font-semibold disabled:opacity-50"
+            className="w-full bg-[#e3001b] hover:bg-[#c20017] text-white rounded-xl px-4 py-3 text-2xl font-semibold disabled:opacity-50"
             disabled={!selectedCycle || !selectedCycle.available}
             onClick={async () => {
               const res = await fetch("/api/portal/orders", {

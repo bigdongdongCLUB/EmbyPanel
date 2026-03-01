@@ -193,7 +193,7 @@ function DetailModal({
           </div>
 
           {!allExist && (
-            <div className="flex gap-2 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 mb-4">
+            <div className="flex gap-2 rounded-xl border border-[#f3d4d8] bg-[#fff7f8] px-4 py-3 mb-4">
               <span className="text-blue-500 shrink-0 mt-0.5 text-sm">ℹ</span>
               <div className="text-sm text-gray-700">
                 <div className="font-medium text-gray-800 mb-0.5">点播说明</div>
@@ -522,7 +522,7 @@ export function VodClient() {
           )}
         </div>
         {searchTotal !== null && (
-          <div className="flex items-center gap-2 text-sm text-blue-700 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+          <div className="flex items-center gap-2 text-sm text-[#e3001b] bg-[#fff7f8] border border-[#f3d4d8] rounded-lg px-3 py-2">
             <span className="text-sm">ℹ</span>
             <span>搜索结果：{searchTotal} 条</span>
             <button className="ml-auto text-gray-400 hover:text-gray-600" onClick={clearSearch}>✕</button>

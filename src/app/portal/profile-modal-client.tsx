@@ -41,8 +41,8 @@ export function PortalProfileModalClient() {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl w-full max-w-2xl max-h-[85vh] overflow-auto p-4 space-y-2 text-[14px]">
+    <div className="fixed inset-0 bg-black/45 flex items-center justify-center p-4 z-50">
+      <div className="bg-white border border-[#eaeaea] rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-auto p-5 space-y-2 text-[14px]">
         <div className="flex items-center justify-between">
           <div className="text-xl font-semibold">账户设置</div>
           <button className="text-gray-500 hover:text-gray-700 text-xl leading-none" onClick={() => setOpen(false)}>×</button>
@@ -54,7 +54,7 @@ export function PortalProfileModalClient() {
           <div className="font-semibold">账户信息</div>
           <div>
             <label className="text-xs">电子邮箱</label>
-            <input className="mt-1 w-full border border-gray-200 rounded px-2.5 py-1.5 bg-white text-gray-800 focus:outline-none focus:border-gray-300" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="请输入邮箱" />
+            <input className="mt-1 w-full border border-[#eaeaea] rounded-lg px-2.5 py-1.5 bg-[#f4f5f7] text-gray-800 focus:outline-none focus:border-[#e3001b]" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="请输入邮箱" />
           </div>
           <div>
             <div className="text-xs font-medium flex items-center gap-2">
@@ -84,22 +84,22 @@ export function PortalProfileModalClient() {
           <div className="font-semibold">密码设置</div>
           <div>
             <label className="text-xs">当前密码</label>
-            <input type="password" className="mt-1 w-full border border-gray-200 rounded px-2.5 py-1.5 bg-white text-gray-800 focus:outline-none focus:border-gray-300" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="请输入当前密码" />
+            <input type="password" className="mt-1 w-full border border-[#eaeaea] rounded-lg px-2.5 py-1.5 bg-[#f4f5f7] text-gray-800 focus:outline-none focus:border-[#e3001b]" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="请输入当前密码" />
           </div>
           <div>
             <label className="text-xs">新密码</label>
-            <input type="password" className="mt-1 w-full border border-gray-200 rounded px-2.5 py-1.5 bg-white text-gray-800 focus:outline-none focus:border-gray-300" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="请输入新密码（至少6位）" />
+            <input type="password" className="mt-1 w-full border border-[#eaeaea] rounded-lg px-2.5 py-1.5 bg-[#f4f5f7] text-gray-800 focus:outline-none focus:border-[#e3001b]" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="请输入新密码（至少6位）" />
           </div>
           <div>
             <label className="text-xs">确认新密码</label>
-            <input type="password" className="mt-1 w-full border border-gray-200 rounded px-2.5 py-1.5 bg-white text-gray-800 focus:outline-none focus:border-gray-300" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="请再次输入新密码" />
+            <input type="password" className="mt-1 w-full border border-[#eaeaea] rounded-lg px-2.5 py-1.5 bg-[#f4f5f7] text-gray-800 focus:outline-none focus:border-[#e3001b]" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="请再次输入新密码" />
           </div>
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
-          <button className="border bg-white rounded px-3 py-1.5" onClick={() => setOpen(false)}>取消</button>
+          <button className="border border-[#eaeaea] bg-white rounded-lg px-3 py-1.5 text-[#666]" onClick={() => setOpen(false)}>取消</button>
           <button
-            className="bg-gray-700 text-white rounded px-3 py-1.5"
+            className="bg-[#e3001b] hover:bg-[#c20017] text-white rounded-lg px-3 py-1.5"
             onClick={async () => {
               const payload: any = {
                 email: email.trim() || null,

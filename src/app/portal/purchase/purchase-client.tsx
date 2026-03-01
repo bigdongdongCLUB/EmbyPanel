@@ -285,7 +285,7 @@ export function PortalPurchaseClient() {
                         <div><div className="text-gray-500">服务计划</div><div className="mt-1 text-2xl font-semibold">{order.order.plan.name}</div></div>
                         <div><div className="text-gray-500">支付周期</div><div className="mt-1">{cycleLabel(order.order.payCycle)}</div></div>
                         <div><div className="text-gray-500">服务时长</div><div className="mt-1 text-2xl font-semibold">{order.order.payCycle === "TRIAL" ? `${order.order.trialHours || (order.order.days * 24)} 小时` : `${order.order.days} 天`}</div></div>
-                        <div><div className="text-gray-500">订单金额</div><div className="mt-1 text-3xl font-semibold text-blue-600">¥{orderAmountYuan.toFixed(2)}</div></div>
+                        <div><div className="text-gray-500">订单金额</div><div className="mt-1 text-3xl font-semibold text-[#e3001b]">¥{orderAmountYuan.toFixed(2)}</div></div>
                         <div><div className="text-gray-500">创建时间</div><div className="mt-1">{fmtTime(order.order.createdAt)}</div></div>
                       </div>
                     </div>

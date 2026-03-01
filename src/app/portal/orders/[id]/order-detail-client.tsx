@@ -61,7 +61,7 @@ export function PortalOrderDetailClient({ orderId }: { orderId: string }) {
               <div><div className="text-gray-500">服务计划</div><div className="mt-1 text-2xl font-semibold">{data.order.plan.name}</div></div>
               <div><div className="text-gray-500">支付周期</div><div className="mt-1">{data.order.payCycle}</div></div>
               <div><div className="text-gray-500">服务时长</div><div className="mt-1 text-2xl font-semibold">{data.order.days} 天</div></div>
-              <div><div className="text-gray-500">订单金额</div><div className="mt-1 text-3xl font-semibold text-blue-600">¥{amountYuan.toFixed(2)}</div></div>
+              <div><div className="text-gray-500">订单金额</div><div className="mt-1 text-3xl font-semibold text-[#e3001b]">¥{amountYuan.toFixed(2)}</div></div>
               <div><div className="text-gray-500">创建时间</div><div className="mt-1">{fmtTime(data.order.createdAt)}</div></div>
             </div>
           </div>
@@ -69,7 +69,7 @@ export function PortalOrderDetailClient({ orderId }: { orderId: string }) {
           <div className="border rounded-xl bg-white overflow-hidden">
             <div className="px-5 py-4 border-b text-3xl font-semibold">💳 支付方式</div>
             <div className="p-5">
-              <div className="border-2 border-blue-500 rounded-xl p-4 flex items-center justify-between">
+              <div className="border-2 border-[#e3001b] bg-[#fff7f8] rounded-xl p-4 flex items-center justify-between">
                 <div className="text-2xl font-semibold">余额支付</div>
                 <div className="text-3xl font-semibold text-red-500">¥{data.balanceYuan.toFixed(2)}</div>
               </div>
@@ -78,7 +78,7 @@ export function PortalOrderDetailClient({ orderId }: { orderId: string }) {
 
           <div className="border rounded-xl bg-white p-5 space-y-3">
             <button
-              className="w-full bg-blue-600 text-white rounded-xl px-4 py-3 text-2xl font-semibold disabled:opacity-50"
+              className="w-full bg-[#e3001b] hover:bg-[#c20017] text-white rounded-xl px-4 py-3 text-2xl font-semibold disabled:opacity-50"
               disabled={data.order.status !== "PENDING" || data.balanceYuan < amountYuan}
               onClick={async () => {
                 const res = await fetch(`/api/portal/orders/${orderId}/pay`, { method: "POST" });

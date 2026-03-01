@@ -54,7 +54,7 @@ export function PortalProfileClient() {
 
           <div>
             <button
-              className="bg-blue-600 text-white rounded px-4 py-2 disabled:opacity-50"
+              className="bg-[#e3001b] hover:bg-[#c20017] text-white rounded-lg px-4 py-2 disabled:opacity-50"
               disabled={loading}
               onClick={async () => {
                 const res = await fetch("/api/portal/profile", {
@@ -96,7 +96,7 @@ export function PortalProfileClient() {
 
           <div>
             <button
-              className="bg-blue-600 text-white rounded px-4 py-2"
+              className="bg-[#e3001b] hover:bg-[#c20017] text-white rounded-lg px-4 py-2"
               onClick={async () => {
                 const res = await fetch("/api/portal/profile", {
                   method: "PATCH",
