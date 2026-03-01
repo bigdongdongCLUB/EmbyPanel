@@ -77,7 +77,6 @@ type OutputRow = {
   serverName: string;
   mediaName: string;
   mediaKey: string;
-  durationSeconds: number;
   client: string;
   ip: string;
   lastPlayedAt: string;
@@ -283,7 +282,6 @@ export async function GET(req: Request) {
         serverName: link.embyServer.name,
         mediaName,
         mediaKey,
-        durationSeconds,
         client: resolvedClient,
         ip: resolvedIp,
         lastPlayedAt: ev.occurredAt.toISOString(),
@@ -330,8 +328,7 @@ export async function GET(req: Request) {
               serverName: link.embyServer.name,
               mediaName: ev.mediaName,
               mediaKey: ev.mediaKey,
-              durationSeconds,
-              client: resolvedClient,
+                    client: resolvedClient,
               ip: resolvedIp,
               lastPlayedAt: ev.occurredAt.toISOString(),
             });
@@ -375,22 +372,19 @@ export async function GET(req: Request) {
   }
 
   const cleanedRows = rows.filter((r) => {
-    // drop low-quality paused/incomplete samples: 0 duration + no ip + generic client
-    if ((r.durationSeconds ?? 0) > 0) return true;
+    // drop very low-quality samples: both ip missing and generic client
     if (r.ip !== "-") return true;
     return !isGenericClient(r.client);
   });
 
   cleanedRows.sort((a, b) => new Date(b.lastPlayedAt).getTime() - new Date(a.lastPlayedAt).getTime());
 
-  const totalDurationSeconds = cleanedRows.reduce((sum, r) => sum + (Number.isFinite(r.durationSeconds) ? r.durationSeconds : 0), 0);
   const watchedItemCount = new Set(cleanedRows.map((r) => r.mediaKey || normalizeMediaKey(r.mediaName))).size;
 
   return NextResponse.json({
     ok: true,
     rangeDays,
     summary: {
-      totalDurationSeconds,
       watchedItemCount,
       totalRecords: cleanedRows.length,
     },

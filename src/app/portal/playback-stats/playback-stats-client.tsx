@@ -6,7 +6,6 @@ import { PaginationBar } from "@/components/pagination-bar";
 type RecordRow = {
   serverName: string;
   mediaName: string;
-  durationSeconds: number;
   client: string;
   ip: string;
   lastPlayedAt: string;
@@ -16,21 +15,11 @@ type Data = {
   ok: boolean;
   rangeDays: 7 | 30 | 90;
   summary: {
-    totalDurationSeconds: number;
     watchedItemCount: number;
     totalRecords: number;
   };
   records: RecordRow[];
 };
-
-function fmtDuration(seconds: number) {
-  const s = Math.max(0, Math.floor(seconds || 0));
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  if (h > 0) return `${h}小时${m}分钟`;
-  if (s === 0) return "0分钟";
-  return `${Math.max(1, m)}分钟`;
-}
 
 function fmtTime(v: string) {
   const d = new Date(v);
@@ -136,11 +125,7 @@ export function PortalPlaybackStatsClient() {
       {error ? <div className="text-sm text-red-600">{error}</div> : null}
       {loading ? <div className="text-sm text-gray-500">加载中…</div> : null}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div className="border rounded-lg p-4">
-          <div className="text-sm text-gray-500">总播放时长</div>
-          <div className="text-2xl font-semibold mt-1">{fmtDuration(data?.summary.totalDurationSeconds ?? 0)}</div>
-        </div>
+      <div className="grid grid-cols-1 gap-3">
         <div className="border rounded-lg p-4">
           <div className="text-sm text-gray-500">观看影片数量</div>
           <div className="text-2xl font-semibold mt-1">{data?.summary.watchedItemCount ?? 0} 部</div>
@@ -155,8 +140,7 @@ export function PortalPlaybackStatsClient() {
               <tr>
                 <th className="text-left px-4 py-2 whitespace-nowrap">服务器名称</th>
                 <th className="text-left px-4 py-2 whitespace-nowrap">媒体名称</th>
-                <th className="text-left px-4 py-2 whitespace-nowrap">播放时长</th>
-                <th className="text-left px-4 py-2 whitespace-nowrap">客户端</th>
+                                <th className="text-left px-4 py-2 whitespace-nowrap">客户端</th>
                 <th className="text-left px-4 py-2 whitespace-nowrap">IP地址</th>
                 <th className="text-left px-4 py-2 whitespace-nowrap">最后播放时间</th>
               </tr>
@@ -164,7 +148,7 @@ export function PortalPlaybackStatsClient() {
             <tbody>
               {pageRows.length === 0 ? (
                 <tr>
-                  <td className="px-4 py-6 text-center text-gray-500" colSpan={6}>暂无记录</td>
+                  <td className="px-4 py-6 text-center text-gray-500" colSpan={5}>暂无记录</td>
                 </tr>
               ) : (
                 pageRows.map((r, i) => (
@@ -193,7 +177,6 @@ export function PortalPlaybackStatsClient() {
                         ) : null}
                       </div>
                     </td>
-                    <td className="px-4 py-2">{fmtDuration(r.durationSeconds)}</td>
                     <td className="px-4 py-2">{r.client || "-"}</td>
                     <td className="px-4 py-2">{r.ip || "-"}</td>
                     <td className="px-4 py-2">{fmtTime(r.lastPlayedAt)}</td>
