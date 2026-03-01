@@ -352,7 +352,7 @@ export function SubscriptionsClient() {
       {error ? <pre className="text-xs text-red-600 whitespace-pre-wrap">{error}</pre> : null}
       {loading ? <div className="text-sm text-gray-500">加载中…</div> : null}
 
-      <div className="border rounded-lg overflow-auto">
+      <div className="bg-white border border-[#eaeaea] rounded-2xl overflow-auto shadow-sm">
         <table className="min-w-[900px] w-full text-sm">
           <thead className="text-left text-gray-600 border-b">
             <tr>
@@ -407,7 +407,7 @@ export function SubscriptionsClient() {
                 <div>
                   <label className="text-sm">订阅名称</label>
                   <input
-                    className="mt-1 w-full border rounded px-3 py-2"
+                    className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none"
                     value={edit.name}
                     onChange={(e) =>
                       setEditSafe((prev) => {
@@ -420,7 +420,7 @@ export function SubscriptionsClient() {
                 <div>
                   <label className="text-sm">服务器分配策略</label>
                   <select
-                    className="mt-1 w-full border rounded px-3 py-2"
+                    className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none"
                     value={edit.serverAssignStrategy}
                     onChange={(e) =>
                       setEditSafe((prev) => {
@@ -439,7 +439,7 @@ export function SubscriptionsClient() {
               <div>
                 <label className="text-sm">订阅描述</label>
                 <textarea
-                  className="mt-1 w-full border rounded px-3 py-2 min-h-[160px]"
+                  className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none min-h-[160px]"
                   value={edit.description}
                   onChange={(e) =>
                     setEditSafe((prev) => {
@@ -474,7 +474,7 @@ export function SubscriptionsClient() {
                 <div>
                   <label className="text-sm">试用价格（可选）</label>
                   <input
-                    className="mt-1 w-full border rounded px-3 py-2"
+                    className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none"
                     value={edit.trialPrice}
                     onChange={(e) =>
                       setEditSafe((prev) => {
@@ -489,7 +489,7 @@ export function SubscriptionsClient() {
                 <div>
                   <label className="text-sm">试用时间（小时，可选）</label>
                   <input
-                    className="mt-1 w-full border rounded px-3 py-2"
+                    className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none"
                     value={edit.trialHours}
                     onChange={(e) =>
                       setEditSafe((prev) => {
@@ -503,7 +503,7 @@ export function SubscriptionsClient() {
                 <div>
                   <label className="text-sm">月付价格</label>
                   <input
-                    className="mt-1 w-full border rounded px-3 py-2"
+                    className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none"
                     value={edit.monthlyPrice}
                     onChange={(e) =>
                       setEditSafe((prev) => {
@@ -516,7 +516,7 @@ export function SubscriptionsClient() {
                 <div>
                   <label className="text-sm">季付价格</label>
                   <input
-                    className="mt-1 w-full border rounded px-3 py-2"
+                    className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none"
                     value={edit.quarterlyPrice}
                     onChange={(e) =>
                       setEditSafe((prev) => {
@@ -529,7 +529,7 @@ export function SubscriptionsClient() {
                 <div>
                   <label className="text-sm">半年付价格</label>
                   <input
-                    className="mt-1 w-full border rounded px-3 py-2"
+                    className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none"
                     value={edit.halfYearlyPrice}
                     onChange={(e) =>
                       setEditSafe((prev) => {
@@ -542,7 +542,7 @@ export function SubscriptionsClient() {
                 <div>
                   <label className="text-sm">年付价格</label>
                   <input
-                    className="mt-1 w-full border rounded px-3 py-2"
+                    className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none"
                     value={edit.yearlyPrice}
                     onChange={(e) =>
                       setEditSafe((prev) => {
@@ -555,7 +555,7 @@ export function SubscriptionsClient() {
                 <div>
                   <label className="text-sm">两年付价格</label>
                   <input
-                    className="mt-1 w-full border rounded px-3 py-2"
+                    className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none"
                     value={edit.twoYearlyPrice}
                     onChange={(e) =>
                       setEditSafe((prev) => {
@@ -595,7 +595,7 @@ export function SubscriptionsClient() {
                       <div>
                         <label className="text-sm">服务器</label>
                         <select
-                          className="mt-1 w-full border rounded px-3 py-2"
+                          className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none"
                           value={row.embyServerId}
                           onChange={(e) => {
                             const v = e.target.value;
@@ -627,7 +627,7 @@ export function SubscriptionsClient() {
                       <div>
                         <label className="text-sm">模板用户</label>
                         <select
-                          className="mt-1 w-full border rounded px-3 py-2"
+                          className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none"
                           value={row.templateEmbyUserId}
                           onChange={(e) => {
                             const v = e.target.value;
@@ -655,7 +655,7 @@ export function SubscriptionsClient() {
               </div>
 
               <button
-                className="border rounded px-3 py-2"
+                className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none"
                 onClick={() =>
                   setEditSafe((prev) => {
                     if (!prev.open) return prev;
@@ -677,7 +677,7 @@ export function SubscriptionsClient() {
               >
                 取消
               </button>
-              <button className="bg-gray-700 text-white rounded px-3 py-2 disabled:opacity-50" disabled={!canSave || edit.loading} onClick={save}>
+              <button className="bg-[#e3001b] hover:bg-[#c20017] text-white rounded-lg px-3 py-2 disabled:opacity-50" disabled={!canSave || edit.loading} onClick={save}>
                 {edit.loading ? "保存中…" : "保存"}
               </button>
             </div>

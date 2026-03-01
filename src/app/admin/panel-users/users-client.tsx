@@ -57,12 +57,12 @@ export function PanelUsersClient() {
       <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
         <div className="flex gap-2 items-center">
           <input
-            className="w-full md:w-80 border rounded px-3 py-2"
+            className="w-full md:w-80 border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none"
             placeholder="搜索用户/邮箱"
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
-          <button className="border rounded px-3 py-2" onClick={refresh}>
+          <button className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" onClick={refresh}>
             查询
           </button>
         </div>
@@ -76,7 +76,7 @@ export function PanelUsersClient() {
       {error ? <pre className="text-xs text-red-600 whitespace-pre-wrap">{error}</pre> : null}
       {loading ? <div className="text-sm text-gray-500">加载中…</div> : null}
 
-      <div className="border rounded-lg overflow-auto">
+      <div className="bg-white border border-[#eaeaea] rounded-2xl overflow-auto shadow-sm">
         <table className="min-w-[900px] w-full text-sm">
           <thead className="text-left text-gray-600 border-b">
             <tr>
@@ -110,7 +110,7 @@ export function PanelUsersClient() {
 
       {createOpen ? (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg w-full max-w-lg p-4">
+          <div className="bg-white border border-[#eaeaea] rounded-2xl w-full max-w-lg p-4">
             <div className="flex items-center justify-between">
               <div className="font-semibold">创建面板账号</div>
               <button className="text-sm underline" onClick={() => setCreateOpen(false)}>
@@ -121,19 +121,19 @@ export function PanelUsersClient() {
             <div className="mt-3 grid grid-cols-1 gap-3">
               <div>
                 <label className="text-sm">用户名</label>
-                <input className="mt-1 w-full border rounded px-3 py-2" value={newUsername} onChange={(e) => setNewUsername(e.target.value)} />
+                <input className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={newUsername} onChange={(e) => setNewUsername(e.target.value)} />
               </div>
               <div>
                 <label className="text-sm">邮箱（可选）</label>
-                <input className="mt-1 w-full border rounded px-3 py-2" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
+                <input className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
               </div>
               <div>
                 <label className="text-sm">密码</label>
-                <input className="mt-1 w-full border rounded px-3 py-2" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} type="password" />
+                <input className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} type="password" />
               </div>
               <div>
                 <label className="text-sm">角色</label>
-                <select className="mt-1 w-full border rounded px-3 py-2" value={newRole} onChange={(e) => setNewRole(e.target.value as any)}>
+                <select className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={newRole} onChange={(e) => setNewRole(e.target.value as any)}>
                   <option value="USER">用户</option>
                   <option value="ADMIN">管理员</option>
                 </select>
@@ -142,7 +142,7 @@ export function PanelUsersClient() {
 
             <div className="mt-4 flex gap-2">
               <button
-                className="bg-gray-700 text-white rounded px-3 py-2 disabled:opacity-50"
+                className="bg-[#e3001b] hover:bg-[#c20017] text-white rounded-lg px-3 py-2 disabled:opacity-50"
                 disabled={!canCreate}
                 onClick={async () => {
                   const res = await fetch("/api/admin/panel-users", {

@@ -86,7 +86,7 @@ export function MailTemplatesClient() {
 
       <SettingsTabs />
 
-      <div className="border rounded-lg bg-white p-6 space-y-5">
+      <div className="border border-[#eaeaea] rounded-2xl bg-white p-6 space-y-5">
         <div className="flex items-center justify-between">
           <div className="text-lg font-semibold">邮件模板管理</div>
         </div>
@@ -108,12 +108,12 @@ export function MailTemplatesClient() {
 
         <div>
           <label className="text-sm"><span className="text-red-500 mr-1">*</span>邮件主题</label>
-          <input className="mt-2 w-full border rounded px-3 py-2" value={subject} onChange={(e) => setSubject(e.target.value)} />
+          <input className="mt-2 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={subject} onChange={(e) => setSubject(e.target.value)} />
         </div>
 
         <div>
           <label className="text-sm"><span className="text-red-500 mr-1">*</span>邮件内容 (支持HTML)</label>
-          <textarea className="mt-2 w-full border rounded px-3 py-2 min-h-[280px] font-mono text-sm" value={bodyHtml} onChange={(e) => setBodyHtml(e.target.value)} />
+          <textarea className="mt-2 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none min-h-[280px] font-mono text-sm" value={bodyHtml} onChange={(e) => setBodyHtml(e.target.value)} />
         </div>
 
         <div className="pt-3 border-t flex gap-2">
@@ -143,7 +143,7 @@ export function MailTemplatesClient() {
             {saving ? "保存中…" : "保存模板"}
           </button>
           <button
-            className="border rounded px-4 py-2"
+            className="border border-[#eaeaea] bg-white rounded-lg px-4 py-2 hover:bg-[#f4f5f7]"
             onClick={() => {
               const html = bodyHtml
                 .replaceAll("{{siteName}}", "BestEmby")
@@ -186,7 +186,7 @@ export function MailTemplatesClient() {
           <div>
             <label className="text-sm">订阅到期提醒天数</label>
             <input
-              className="mt-1 w-full border rounded px-3 py-2"
+              className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none"
               value={noticeDays}
               onChange={(e) => setNoticeDays(e.target.value.replace(/[^0-9]/g, ""))}
               placeholder="例如 3"

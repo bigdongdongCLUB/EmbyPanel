@@ -91,7 +91,7 @@ export function MonitoringPenaltiesClient() {
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2 items-center">
         <input
-          className="border rounded px-3 py-2 min-w-[220px]"
+          className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 min-w-[220px] focus:border-[#e3001b] outline-none"
           placeholder="搜索用户名"
           value={q}
           onChange={(e) => {
@@ -105,7 +105,7 @@ export function MonitoringPenaltiesClient() {
           <ToggleSwitch checked={penaltyEnabled} onChange={setPenaltyEnabled} textOn="已启用" textOff="已禁用" />
         </label>
 
-        <select className="border rounded px-3 py-2" value={String(penaltyDuration)} onChange={(e) => setPenaltyDuration(Number(e.target.value))}>
+        <select className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={String(penaltyDuration)} onChange={(e) => setPenaltyDuration(Number(e.target.value))}>
           <option value="5">5 分钟</option>
           <option value="10">10 分钟</option>
           <option value="15">15 分钟</option>
@@ -113,11 +113,11 @@ export function MonitoringPenaltiesClient() {
         </select>
 
 
-        <button className="border rounded px-3 py-2" onClick={savePenaltyConfig} disabled={savingPenalty}>
+        <button className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" onClick={savePenaltyConfig} disabled={savingPenalty}>
           {savingPenalty ? "保存中..." : "保存处罚设置"}
         </button>
 
-        <button className="border rounded px-3 py-2" onClick={refresh} disabled={loading}>
+        <button className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" onClick={refresh} disabled={loading}>
           刷新
         </button>
 
@@ -126,7 +126,7 @@ export function MonitoringPenaltiesClient() {
 
       {error ? <pre className="text-xs text-red-600 whitespace-pre-wrap">{error}</pre> : null}
 
-      <div className="bg-white border rounded-lg p-4">
+      <div className="bg-white border border-[#eaeaea] rounded-2xl p-4">
         <div className="flex items-center justify-between gap-2">
           <div className="font-medium text-sm">处罚记录</div>
           <div className="flex items-center gap-2">

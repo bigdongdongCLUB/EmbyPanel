@@ -74,7 +74,7 @@ export function PlaybackStatsClient() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2 items-center">
-        <select className="border rounded px-3 py-2" value={serverId} onChange={(e) => setServerId(e.target.value)}>
+        <select className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={serverId} onChange={(e) => setServerId(e.target.value)}>
           <option value="">选择服务器…</option>
           {servers.map((s) => (
             <option key={s.id} value={s.id}>
@@ -83,14 +83,14 @@ export function PlaybackStatsClient() {
           ))}
         </select>
 
-        <select className="border rounded px-3 py-2" value={rangeDays} onChange={(e) => setRangeDays(Number(e.target.value) as any)}>
+        <select className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={rangeDays} onChange={(e) => setRangeDays(Number(e.target.value) as any)}>
           <option value={7}>7天</option>
           <option value={30}>30天</option>
           <option value={180}>180天</option>
           <option value={365}>365天</option>
         </select>
 
-        <button className="border rounded px-3 py-2" onClick={refresh} disabled={loading || !serverId}>
+        <button className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" onClick={refresh} disabled={loading || !serverId}>
           刷新
         </button>
 
@@ -106,7 +106,7 @@ export function PlaybackStatsClient() {
       ) : null}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div className="bg-white border rounded-lg p-4">
+        <div className="bg-white border border-[#eaeaea] rounded-2xl p-4">
           <div className="text-xs text-gray-500">活跃人数（{titleRange}）</div>
           <div className="mt-2 text-2xl font-semibold">{data && !data.requirePlugin ? String(data.activeUsers ?? "-") : "-"}</div>
           <div className="mt-1 text-xs text-gray-500">按 Emby 用户 LastActivityDate 统计</div>
@@ -114,7 +114,7 @@ export function PlaybackStatsClient() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <div className="bg-white border rounded-lg p-4">
+        <div className="bg-white border border-[#eaeaea] rounded-2xl p-4">
           <div className="font-medium text-sm">电影播放榜（{titleRange}）</div>
           <div className="mt-3 overflow-auto">
             <table className="min-w-[520px] w-full text-sm">
@@ -145,7 +145,7 @@ export function PlaybackStatsClient() {
           </div>
         </div>
 
-        <div className="bg-white border rounded-lg p-4">
+        <div className="bg-white border border-[#eaeaea] rounded-2xl p-4">
           <div className="font-medium text-sm">剧集播放榜（{titleRange}）</div>
           <div className="mt-3 overflow-auto">
             <table className="min-w-[640px] w-full text-sm">

@@ -115,7 +115,7 @@ export function DocsAdminClient() {
     <div className="space-y-4">
       <h1 className="text-xl font-semibold">文档管理</h1>
 
-      <div className="border rounded-lg bg-white overflow-hidden">
+      <div className="border border-[#eaeaea] rounded-2xl bg-white overflow-hidden">
         <div className="p-3 flex items-center justify-end gap-2 border-b">
           <button className="bg-[#e3001b] text-white rounded px-3 py-2 text-sm" onClick={openCreate}>
             + 新建文档
@@ -182,7 +182,7 @@ export function DocsAdminClient() {
           <div className="w-full max-w-5xl max-h-[92vh] overflow-auto bg-white rounded-xl" onClick={(e) => e.stopPropagation()}>
             <div className="px-4 py-3 border-b font-medium">编辑文档</div>
             <div className="p-4 space-y-3">
-              <input className="w-full border rounded px-3 py-2" placeholder="文档标题" value={title} onChange={(e) => setTitle(e.target.value)} />
+              <input className="w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" placeholder="文档标题" value={title} onChange={(e) => setTitle(e.target.value)} />
 
               <label className="inline-flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={published} onChange={(e) => setPublished(e.target.checked)} /> 发布状态
@@ -229,10 +229,10 @@ export function DocsAdminClient() {
               </div>
 
               <div className="flex gap-2 pt-1">
-                <button className="bg-gray-700 text-white rounded px-3 py-2 text-sm" disabled={saving} onClick={save}>
+                <button className="bg-[#e3001b] hover:bg-[#c20017] text-white rounded-lg px-3 py-2 text-sm" disabled={saving} onClick={save}>
                   {saving ? "保存中…" : "保存文档"}
                 </button>
-                <button className="border rounded px-3 py-2 text-sm" onClick={() => setEditOpen(false)}>
+                <button className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none text-sm" onClick={() => setEditOpen(false)}>
                   取消
                 </button>
               </div>

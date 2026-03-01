@@ -118,7 +118,7 @@ export function RealtimeMonitorClient() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2 items-center">
-        <select className="border rounded px-3 py-2" value={serverId} onChange={(e) => setServerId(e.target.value)}>
+        <select className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={serverId} onChange={(e) => setServerId(e.target.value)}>
           <option value="">选择服务器…</option>
           {servers.map((s) => (
             <option key={s.id} value={s.id}>
@@ -127,7 +127,7 @@ export function RealtimeMonitorClient() {
           ))}
         </select>
 
-        <button className="border rounded px-3 py-2" onClick={refresh} disabled={loading || !serverId}>
+        <button className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" onClick={refresh} disabled={loading || !serverId}>
           刷新
         </button>
 
@@ -142,19 +142,19 @@ export function RealtimeMonitorClient() {
       {error ? <pre className="text-xs text-red-600 whitespace-pre-wrap">{error}</pre> : null}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div className="bg-white border rounded-lg p-4">
+        <div className="bg-white border border-[#eaeaea] rounded-2xl p-4">
           <div className="text-xs text-gray-500">服务器状态</div>
           <div className="mt-2 text-2xl font-semibold">{onlineLabel}</div>
           <div className="mt-1 text-xs text-gray-500">{data?.server?.version ? `Emby ${data.server.version}` : ""}</div>
         </div>
-        <div className="bg-white border rounded-lg p-4">
+        <div className="bg-white border border-[#eaeaea] rounded-2xl p-4">
           <div className="text-xs text-gray-500">正在播放</div>
           <div className="mt-2 text-2xl font-semibold">{data ? data.playingCount : "-"}</div>
           <div className="mt-1 text-xs text-gray-500">（仅统计 NowPlayingItem 且未暂停）</div>
         </div>
       </div>
 
-      <div className="bg-white border rounded-lg p-4">
+      <div className="bg-white border border-[#eaeaea] rounded-2xl p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="font-medium text-sm">正在播放列表</div>
           <div className="text-xs text-gray-500">{data ? `共 ${total} 条` : ""}</div>
@@ -162,7 +162,7 @@ export function RealtimeMonitorClient() {
 
         <div className="mt-3 flex flex-wrap items-center gap-2 justify-between">
           <input
-            className="border rounded px-3 py-2 w-[260px]"
+            className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none w-[260px]"
             placeholder="搜索用户名/设备/客户端/IP/正在播放"
             value={q}
             onChange={(e) => {

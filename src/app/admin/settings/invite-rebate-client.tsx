@@ -65,7 +65,7 @@ export function InviteRebateClient() {
 
       <SettingsTabs />
 
-      <div className="border rounded-lg bg-white p-6 space-y-5">
+      <div className="border border-[#eaeaea] rounded-2xl bg-white p-6 space-y-5">
         <div className="text-lg font-semibold">返利系统设置</div>
 
         <div className="rounded border border-[#f3d4d8] bg-[#fff7f8] p-4 text-sm text-gray-700">
@@ -97,7 +97,7 @@ export function InviteRebateClient() {
 
           <div>
             <div className="text-sm mb-2">返利层级</div>
-            <select className="border rounded px-3 py-2" value={form.level} onChange={(e) => setForm((s) => ({ ...s, level: Number(e.target.value) }))}>
+            <select className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={form.level} onChange={(e) => setForm((s) => ({ ...s, level: Number(e.target.value) }))}>
               <option value={1}>一级</option>
               <option value={2}>二级</option>
               <option value={3}>三级</option>
@@ -108,18 +108,18 @@ export function InviteRebateClient() {
             <div className="font-medium">返利比例配置</div>
             <div>
               <label className="text-sm">一级返利比例 (%)</label>
-              <input className="mt-1 w-full border rounded px-3 py-2" value={form.rate1} onChange={(e) => setForm((s) => ({ ...s, rate1: e.target.value }))} />
+              <input className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={form.rate1} onChange={(e) => setForm((s) => ({ ...s, rate1: e.target.value }))} />
             </div>
             {form.level >= 2 ? (
               <div>
                 <label className="text-sm">二级返利比例 (%)</label>
-                <input className="mt-1 w-full border rounded px-3 py-2" value={form.rate2} onChange={(e) => setForm((s) => ({ ...s, rate2: e.target.value }))} />
+                <input className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={form.rate2} onChange={(e) => setForm((s) => ({ ...s, rate2: e.target.value }))} />
               </div>
             ) : null}
             {form.level >= 3 ? (
               <div>
                 <label className="text-sm">三级返利比例 (%)</label>
-                <input className="mt-1 w-full border rounded px-3 py-2" value={form.rate3} onChange={(e) => setForm((s) => ({ ...s, rate3: e.target.value }))} />
+                <input className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={form.rate3} onChange={(e) => setForm((s) => ({ ...s, rate3: e.target.value }))} />
               </div>
             ) : null}
           </div>
@@ -174,7 +174,7 @@ export function InviteRebateClient() {
           >
             {saving ? "保存中…" : "保存返利设置"}
           </button>
-          <button className="border rounded px-4 py-2" onClick={refresh}>重置</button>
+          <button className="border border-[#eaeaea] bg-white rounded-lg px-4 py-2 hover:bg-[#f4f5f7]" onClick={refresh}>重置</button>
         </div>
       </div>
     </div>

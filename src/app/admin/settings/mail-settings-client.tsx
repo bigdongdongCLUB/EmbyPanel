@@ -69,7 +69,7 @@ export function MailSettingsClient() {
 
       <SettingsTabs />
 
-      <div className="border rounded-lg bg-white p-6 space-y-5">
+      <div className="border border-[#eaeaea] rounded-2xl bg-white p-6 space-y-5">
         <div className="text-lg font-semibold">邮件设置</div>
 
         <div className="space-y-1.5">
@@ -79,12 +79,12 @@ export function MailSettingsClient() {
 
         <div>
           <label className="text-sm">SMTP服务器</label>
-          <input className="mt-2 w-full border rounded px-3 py-2" value={form.smtpHost} onChange={(e) => setForm((s) => ({ ...s, smtpHost: e.target.value }))} />
+          <input className="mt-2 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={form.smtpHost} onChange={(e) => setForm((s) => ({ ...s, smtpHost: e.target.value }))} />
         </div>
 
         <div>
           <label className="text-sm">加密方式</label>
-          <select className="mt-2 w-full border rounded px-3 py-2" value={form.secureMode} onChange={(e) => setForm((s) => ({ ...s, secureMode: e.target.value as any }))}>
+          <select className="mt-2 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={form.secureMode} onChange={(e) => setForm((s) => ({ ...s, secureMode: e.target.value as any }))}>
             <option value="ssl">TLS/SSL</option>
             <option value="starttls">STARTTLS</option>
             <option value="none">无加密</option>
@@ -93,18 +93,18 @@ export function MailSettingsClient() {
 
         <div>
           <label className="text-sm">SMTP端口</label>
-          <input className="mt-2 w-full border rounded px-3 py-2" value={form.smtpPort} onChange={(e) => setForm((s) => ({ ...s, smtpPort: e.target.value }))} />
+          <input className="mt-2 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={form.smtpPort} onChange={(e) => setForm((s) => ({ ...s, smtpPort: e.target.value }))} />
         </div>
 
         <div>
           <label className="text-sm">SMTP用户名</label>
-          <input className="mt-2 w-full border rounded px-3 py-2" value={form.smtpUser} onChange={(e) => setForm((s) => ({ ...s, smtpUser: e.target.value }))} />
+          <input className="mt-2 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={form.smtpUser} onChange={(e) => setForm((s) => ({ ...s, smtpUser: e.target.value }))} />
         </div>
 
         <div>
           <label className="text-sm">SMTP密码</label>
           <input
-            className="mt-2 w-full border rounded px-3 py-2"
+            className="mt-2 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none"
             type="password"
             placeholder="留空表示不修改"
             value={form.smtpPassword}
@@ -114,12 +114,12 @@ export function MailSettingsClient() {
 
         <div>
           <label className="text-sm">发件人地址</label>
-          <input className="mt-2 w-full border rounded px-3 py-2" value={form.fromEmail} onChange={(e) => setForm((s) => ({ ...s, fromEmail: e.target.value }))} />
+          <input className="mt-2 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={form.fromEmail} onChange={(e) => setForm((s) => ({ ...s, fromEmail: e.target.value }))} />
         </div>
 
         <div>
           <label className="text-sm">发件人名称</label>
-          <input className="mt-2 w-full border rounded px-3 py-2" value={form.fromName} onChange={(e) => setForm((s) => ({ ...s, fromName: e.target.value }))} />
+          <input className="mt-2 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={form.fromName} onChange={(e) => setForm((s) => ({ ...s, fromName: e.target.value }))} />
         </div>
 
         <div className="pt-3 border-t flex gap-2 items-center flex-wrap">
@@ -150,7 +150,7 @@ export function MailSettingsClient() {
           </button>
 
           <button
-            className="border rounded px-4 py-2 disabled:opacity-60"
+            className="border border-[#eaeaea] bg-white rounded-lg px-4 py-2 hover:bg-[#f4f5f7] disabled:opacity-60"
             disabled={testing || !form.fromEmail.trim()}
             onClick={async () => {
               setTesting(true);

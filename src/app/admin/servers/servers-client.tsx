@@ -267,7 +267,7 @@ function UsersTable({
       <div className="flex flex-wrap items-center gap-2 justify-between">
         <div className="flex flex-wrap items-center gap-2">
           <input
-            className="border rounded px-3 py-2 w-[260px]"
+            className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none w-[260px]"
             placeholder="搜索用户名/面板账号/邮箱"
             value={q}
             onChange={(e) => {
@@ -276,7 +276,7 @@ function UsersTable({
             }}
           />
 
-          <button className="border rounded px-3 py-2" onClick={onRefresh}>
+          <button className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" onClick={onRefresh}>
             刷新
           </button>
         </div>
@@ -284,7 +284,7 @@ function UsersTable({
         <div className="flex items-center gap-2">
           <div className="text-sm text-gray-600">已选 {selectedIds.length} 个</div>
           <div className="relative" ref={moreRef}>
-            <button className="border rounded px-3 py-2 text-sm" onClick={() => setMoreOpen((v) => !v)} disabled={batchLoading || !selectedIds.length}>更多 ▾</button>
+            <button className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none text-sm" onClick={() => setMoreOpen((v) => !v)} disabled={batchLoading || !selectedIds.length}>更多 ▾</button>
             {moreOpen ? (
               <div className="absolute right-0 mt-1 w-36 bg-white border rounded shadow z-20 overflow-hidden">
                 <button className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-50" disabled={batchLoading} onClick={() => runBatch("disable")}>批量禁用</button>
@@ -297,7 +297,7 @@ function UsersTable({
         </div>
       </div>
 
-      <div className="border rounded-lg overflow-hidden">
+      <div className="bg-white border border-[#eaeaea] rounded-2xl overflow-hidden shadow-sm">
         <div className="max-h-[70vh] overflow-auto">
           <table className="min-w-[1250px] w-full text-sm">
             <thead className="text-left text-gray-600 sticky top-0 bg-white border-b">
@@ -428,7 +428,7 @@ function UsersTable({
 
       {deleteLogOpen ? (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-[80]">
-          <div className="bg-white rounded-lg w-full max-w-[760px] p-4 max-h-[85vh] overflow-hidden flex flex-col">
+          <div className="bg-white border border-[#eaeaea] rounded-2xl w-full max-w-[760px] p-4 max-h-[85vh] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between">
               <div className="text-lg font-semibold">批量删除进度</div>
               <button
@@ -497,29 +497,29 @@ export function ServersClient() {
 
   return (
     <div className="space-y-8">
-      <section className="border rounded-lg p-4">
+      <section className="border border-[#eaeaea] rounded-2xl p-4 bg-white shadow-sm">
         <h2 className="font-semibold">新增服务器</h2>
         <div className="mt-3 grid grid-cols-1 md:grid-cols-4 gap-3">
           <div>
             <label className="text-sm">名称</label>
-            <input className="mt-1 w-full border rounded px-3 py-2" value={name} onChange={(e) => setName(e.target.value)} placeholder="比如：4U Emby" />
+            <input className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={name} onChange={(e) => setName(e.target.value)} placeholder="比如：4U Emby" />
           </div>
           <div>
             <label className="text-sm">Base URL</label>
-            <input className="mt-1 w-full border rounded px-3 py-2" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="http://host:8096" />
+            <input className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="http://host:8096" />
           </div>
           <div>
             <label className="text-sm">外部访问地址（选填）</label>
-            <input className="mt-1 w-full border rounded px-3 py-2" value={externalUrl} onChange={(e) => setExternalUrl(e.target.value)} placeholder="https://emby.example.com" />
+            <input className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={externalUrl} onChange={(e) => setExternalUrl(e.target.value)} placeholder="https://emby.example.com" />
           </div>
           <div>
             <label className="text-sm">API Key</label>
-            <input className="mt-1 w-full border rounded px-3 py-2" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="Emby API Key" />
+            <input className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="Emby API Key" />
           </div>
         </div>
         <div className="mt-4 flex gap-3">
           <button
-            className="bg-gray-700 text-white rounded px-3 py-2 disabled:opacity-50"
+            className="bg-[#e3001b] hover:bg-[#c20017] text-white rounded-lg px-3 py-2 disabled:opacity-50"
             disabled={!canSubmit}
             onClick={async () => {
               setError(null);
@@ -542,14 +542,14 @@ export function ServersClient() {
           >
             保存
           </button>
-          <button className="border rounded px-3 py-2" onClick={refresh}>
+          <button className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" onClick={refresh}>
             刷新
           </button>
         </div>
         {error ? <pre className="mt-3 text-xs text-red-600 whitespace-pre-wrap">{error}</pre> : null}
       </section>
 
-      <section className="border rounded-lg p-4">
+      <section className="border border-[#eaeaea] rounded-2xl p-4 bg-white shadow-sm">
         <h2 className="font-semibold">服务器列表</h2>
 
         {loading ? <div className="mt-3 text-sm text-gray-500">加载中…</div> : null}
@@ -574,7 +574,7 @@ export function ServersClient() {
               </div>
               <div className="flex gap-2">
                 <button
-                  className="border rounded px-3 py-2"
+                  className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none"
                   onClick={async () => {
                     const res = await fetch(`/api/admin/emby-servers/${s.id}/test`, { method: "POST" });
                     const txt = await res.text();
@@ -595,7 +595,7 @@ export function ServersClient() {
                 </button>
 
                 <button
-                  className="border rounded px-3 py-2"
+                  className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none"
                   onClick={async () => {
                     setStatsModal({ open: true, id: s.id, name: s.name, loading: true, data: null, error: null });
                     try {
@@ -612,7 +612,7 @@ export function ServersClient() {
                 </button>
 
                 <button
-                  className="border rounded px-3 py-2"
+                  className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none"
                   onClick={async () => {
                     setUsersQ("");
                     setUsersPage(1);
@@ -632,7 +632,7 @@ export function ServersClient() {
                 </button>
 
                 <button
-                  className="border rounded px-3 py-2"
+                  className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none"
                   onClick={async () => {
                     setModal({
                       open: true,
@@ -672,7 +672,7 @@ export function ServersClient() {
                 {/* 服务器默认常驻启用，移除启用/禁用按钮 */}
 
                 <button
-                  className="border rounded px-3 py-2 text-red-600"
+                  className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none text-red-600"
                   onClick={async () => {
                     if (!(await (window as any).showConfirm(`确定删除服务器：${s.name} ?`))) return;
                     const res = await fetch(`/api/admin/emby-servers/${s.id}`, { method: "DELETE" });
@@ -694,7 +694,7 @@ export function ServersClient() {
 
       {statsModal.open ? (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg w-full max-w-lg p-4">
+          <div className="bg-white border border-[#eaeaea] rounded-2xl w-full max-w-lg p-4">
             <div className="flex items-center justify-between">
               <div className="font-semibold">统计 - {statsModal.name}</div>
               <button className="text-sm underline" onClick={() => setStatsModal({ open: false })}>
@@ -728,7 +728,7 @@ export function ServersClient() {
 
       {usersModal.open ? (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg w-full max-w-5xl p-4">
+          <div className="bg-white border border-[#eaeaea] rounded-2xl w-full max-w-5xl p-4">
             <div className="flex items-center justify-between">
               <div className="font-semibold">{usersModal.name} - 用户列表</div>
               <button
@@ -774,7 +774,7 @@ export function ServersClient() {
 
       {modal.open ? (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg w-full max-w-lg p-4">
+          <div className="bg-white border border-[#eaeaea] rounded-2xl w-full max-w-lg p-4">
             <div className="flex items-center justify-between">
               <div className="font-semibold">编辑服务器</div>
               <button className="text-sm underline" onClick={() => setModal({ open: false })}>
@@ -786,7 +786,7 @@ export function ServersClient() {
               <div>
                 <label className="text-sm">名称</label>
                 <input
-                  className="mt-1 w-full border rounded px-3 py-2"
+                  className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none"
                   value={modal.name}
                   onChange={(e) => setModal({ ...modal, name: e.target.value })}
                 />
@@ -794,7 +794,7 @@ export function ServersClient() {
               <div>
                 <label className="text-sm">Base URL</label>
                 <input
-                  className="mt-1 w-full border rounded px-3 py-2"
+                  className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none"
                   value={modal.baseUrl}
                   onChange={(e) => setModal({ ...modal, baseUrl: e.target.value })}
                 />
@@ -802,7 +802,7 @@ export function ServersClient() {
               <div>
                 <label className="text-sm">外部访问地址（选填）</label>
                 <input
-                  className="mt-1 w-full border rounded px-3 py-2"
+                  className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none"
                   value={modal.externalUrl}
                   onChange={(e) => setModal({ ...modal, externalUrl: e.target.value })}
                 />
@@ -812,7 +812,7 @@ export function ServersClient() {
                 <div className="mt-1 relative">
                   <input
                     type={modal.showApiKey ? "text" : "password"}
-                    className="w-full border rounded px-3 py-2 pr-16"
+                    className="w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none pr-16"
                     value={modal.apiKey}
                     onChange={(e) => setModal({ ...modal, apiKey: e.target.value })}
                     disabled={modal.loadingApiKey}
@@ -835,7 +835,7 @@ export function ServersClient() {
 
             <div className="mt-4 flex gap-2">
               <button
-                className="bg-gray-700 text-white rounded px-3 py-2"
+                className="bg-[#e3001b] hover:bg-[#c20017] text-white rounded-lg px-3 py-2"
                 onClick={async () => {
                   if (modal.apiKey.trim().length < 10) {
                     alert("API Key 长度至少 10 位");

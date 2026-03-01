@@ -23,7 +23,7 @@ type Data = {
 
 function Card({ title, value, color }: { title: string; value: string | number; color?: string }) {
   return (
-    <div className="bg-white border rounded-lg p-4">
+    <div className="bg-white border border-[#eaeaea] rounded-2xl p-4">
       <div className="text-xs text-gray-500">{title}</div>
       <div className={`mt-2 text-3xl font-semibold ${color || "text-gray-900"}`}>{value}</div>
     </div>
@@ -76,8 +76,8 @@ export function JobsClient() {
         <Card title="任务类型" value={data?.summary.jobTypes ?? 0} color="text-violet-600" />
       </div>
 
-      <div className="bg-white border rounded-lg p-3 flex flex-wrap gap-2 items-center">
-        <select className="border rounded px-3 py-2" value={jobName} onChange={(e) => { setPage(1); setJobName(e.target.value); }}>
+      <div className="bg-white border border-[#eaeaea] rounded-2xl p-3 flex flex-wrap gap-2 items-center">
+        <select className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={jobName} onChange={(e) => { setPage(1); setJobName(e.target.value); }}>
           <option value="">全部任务类型</option>
           <option value="emby-health-check">Emby服务器健康检查</option>
           <option value="subscription-expiry-disable">订阅到期禁用</option>
@@ -87,13 +87,13 @@ export function JobsClient() {
           <option value="cache-cleanup">缓存清理</option>
         </select>
 
-        <button className="border rounded px-3 py-2" onClick={refresh} disabled={loading}>刷新</button>
+        <button className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" onClick={refresh} disabled={loading}>刷新</button>
         {loading ? <span className="text-sm text-gray-500">加载中…</span> : null}
       </div>
 
       {error ? <pre className="text-xs text-red-600 whitespace-pre-wrap">{error}</pre> : null}
 
-      <div className="bg-white border rounded-lg overflow-auto">
+      <div className="bg-white border border-[#eaeaea] rounded-2xl overflow-auto">
         <table className="min-w-[980px] w-full text-sm">
           <thead className="text-left text-gray-600 border-b">
             <tr>

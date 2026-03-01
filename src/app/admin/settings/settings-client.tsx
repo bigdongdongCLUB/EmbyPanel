@@ -44,13 +44,13 @@ export function SettingsClient() {
 
       <SettingsTabs />
 
-      <div className="border rounded-lg bg-white p-6 space-y-5">
+      <div className="border border-[#eaeaea] rounded-2xl bg-white p-6 space-y-5">
         <div className="text-lg font-semibold">基础设置</div>
 
         <div>
           <label className="text-sm">网站名称</label>
           <input
-            className="mt-2 w-full border rounded px-3 py-2"
+            className="mt-2 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none"
             value={form.siteName}
             onChange={(e) => setForm((s) => ({ ...s, siteName: e.target.value }))}
             maxLength={100}
@@ -60,7 +60,7 @@ export function SettingsClient() {
         <div>
           <label className="text-sm">网站描述</label>
           <textarea
-            className="mt-2 w-full border rounded px-3 py-2 min-h-[90px]"
+            className="mt-2 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none min-h-[90px]"
             value={form.siteDescription}
             onChange={(e) => setForm((s) => ({ ...s, siteDescription: e.target.value }))}
             maxLength={300}
@@ -70,7 +70,7 @@ export function SettingsClient() {
         <div>
           <label className="text-sm">网站Logo</label>
           <div className="mt-2 flex items-center gap-3">
-            <label className="inline-flex items-center border rounded px-3 py-2 cursor-pointer hover:bg-gray-50">
+            <label className="inline-flex items-center border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none cursor-pointer hover:bg-gray-50">
               上传Logo
               <input
                 type="file"

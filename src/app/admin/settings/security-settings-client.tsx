@@ -51,7 +51,7 @@ export function SecuritySettingsClient() {
 
       <SettingsTabs />
 
-      <div className="border rounded-lg bg-white p-6 space-y-5">
+      <div className="border border-[#eaeaea] rounded-2xl bg-white p-6 space-y-5">
         <div className="text-lg font-semibold">安全设置</div>
 
         <div className="space-y-1.5">
@@ -72,7 +72,7 @@ export function SecuritySettingsClient() {
         <div>
           <label className="text-sm">系统保留用户名（逗号分隔）</label>
           <textarea
-            className="mt-1 w-full min-h-[90px] border rounded px-3 py-2"
+            className="mt-1 w-full min-h-[90px] border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none"
             value={form.reservedUsernames}
             onChange={(e) => setForm((s) => ({ ...s, reservedUsernames: e.target.value }))}
           />

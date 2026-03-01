@@ -166,22 +166,22 @@ export function AnnouncementsClient() {
 
       {open ? (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg w-full max-w-3xl p-4 space-y-3">
+          <div className="bg-white border border-[#eaeaea] rounded-2xl w-full max-w-3xl p-4 space-y-3">
             <div className="text-lg font-semibold">{editId ? "编辑公告" : "发布公告"}</div>
 
             <div>
               <label className="text-sm">公告标题</label>
-              <ImeInput key={`title-${editId ?? 'new'}`} className="mt-1 w-full border rounded px-3 py-2" value={title} onChange={setTitle} placeholder="请输入公告标题" />
+              <ImeInput key={`title-${editId ?? 'new'}`} className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={title} onChange={setTitle} placeholder="请输入公告标题" />
             </div>
 
             <div>
               <label className="text-sm">公告内容</label>
-              <ImeTextarea key={`content-${editId ?? 'new'}`} className="mt-1 w-full border rounded px-3 py-2 min-h-[220px]" value={content} onChange={setContent} placeholder="请输入公告内容" />
+              <ImeTextarea key={`content-${editId ?? 'new'}`} className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none min-h-[220px]" value={content} onChange={setContent} placeholder="请输入公告内容" />
             </div>
 
             <div className="flex gap-2">
               <button
-                className="bg-gray-700 text-white rounded px-3 py-2 disabled:opacity-60"
+                className="bg-[#e3001b] hover:bg-[#c20017] text-white rounded-lg px-3 py-2 disabled:opacity-60"
                 disabled={!canSave}
                 onClick={async () => {
                   const payload = {
