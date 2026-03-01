@@ -51,38 +51,38 @@ export function InvitesAdminClient() {
   }, [rows, q]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <h1 className="text-xl font-semibold">邀请管理</h1>
       {loading ? <div className="text-sm text-gray-500">加载中…</div> : null}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-4">
+        <div className="border border-[#eaeaea] bg-white rounded-2xl p-4 shadow-sm">
           <div className="text-sm text-gray-500">30日被邀请用户数</div>
           <div className="text-2xl font-semibold mt-1 text-gray-900">{summary?.invitedUsers30d ?? 0}</div>
         </div>
-        <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-4">
+        <div className="border border-[#eaeaea] bg-white rounded-2xl p-4 shadow-sm">
           <div className="text-sm text-gray-500">30日总返利金额</div>
-          <div className="text-2xl font-semibold mt-1 text-gray-900">¥{summary?.totalRebate30dYuan ?? "0.00"}</div>
+          <div className="text-2xl font-semibold mt-1 text-[#e3001b]">¥{summary?.totalRebate30dYuan ?? "0.00"}</div>
         </div>
-        <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-4">
+        <div className="border border-[#eaeaea] bg-white rounded-2xl p-4 shadow-sm">
           <div className="text-sm text-gray-500">TOP邀请人</div>
           <div className="text-2xl font-semibold mt-1 text-gray-900">{summary?.topInviter?.username ?? "-"}</div>
           <div className="text-sm text-gray-500 mt-1">返利 ¥{summary?.topInviter?.amountYuan ?? "0.00"}</div>
         </div>
       </div>
 
-      <div className="rounded-xl border border-gray-200 bg-white overflow-auto">
-        <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 font-medium">返利记录</div>
-        <div className="p-3 border-b border-gray-200 bg-white">
+      <div className="rounded-2xl border border-[#eaeaea] bg-white overflow-auto shadow-sm">
+        <div className="px-4 py-3 border-b border-[#eaeaea] bg-[#f8f9fa] font-medium">返利记录</div>
+        <div className="p-2 border-b border-[#eaeaea] bg-white">
           <input
-            className="w-full md:w-80 border rounded px-3 py-2"
+            className="w-full md:w-80 border border-transparent bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none"
             placeholder="搜索邀请人或被邀请人"
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
         </div>
         <table className="min-w-[980px] w-full text-sm">
-          <thead className="border-b border-gray-200 bg-gray-50/80 text-left text-gray-600">
+          <thead className="border-b border-[#eaeaea] bg-[#f8f9fa] text-left text-[#666]">
             <tr>
               <th className="px-3 py-2">邀请人</th>
               <th className="px-3 py-2">被邀请人</th>
@@ -95,7 +95,7 @@ export function InvitesAdminClient() {
           </thead>
           <tbody>
             {filteredRows.map((r) => (
-              <tr key={r.id} className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50/60">
+              <tr key={r.id} className="border-b border-[#eaeaea] last:border-b-0 hover:bg-gray-50/60">
                 <td className="px-3 py-2">{r.inviter}</td>
                 <td className="px-3 py-2">{r.invited}</td>
                 <td className="px-3 py-2">{r.level}</td>

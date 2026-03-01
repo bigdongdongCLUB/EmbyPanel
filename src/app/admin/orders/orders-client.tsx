@@ -78,11 +78,11 @@ export function OrdersAdminClient() {
   }, []);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">订单管理</h1>
         <select
-          className="border rounded px-3 py-2"
+          className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none"
           value={String(days)}
           onChange={(e) => {
             const d = Number(e.target.value);
@@ -98,19 +98,19 @@ export function OrdersAdminClient() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-4">
+        <div className="border border-[#eaeaea] bg-white rounded-2xl p-4 shadow-sm">
           <div className="text-sm text-gray-500">订单总览</div>
           <div className="text-2xl font-semibold mt-1 text-gray-900">{summary.totalOrders}</div>
         </div>
-        <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-4">
+        <div className="border border-[#eaeaea] bg-white rounded-2xl p-4 shadow-sm">
           <div className="text-sm text-gray-500">总收入</div>
-          <div className="text-2xl font-semibold mt-1 text-red-600">¥ {summary.totalIncomeYuan}</div>
+          <div className="text-2xl font-semibold mt-1 text-[#e3001b]">¥ {summary.totalIncomeYuan}</div>
         </div>
-        <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-4">
+        <div className="border border-[#eaeaea] bg-white rounded-2xl p-4 shadow-sm">
           <div className="text-sm text-gray-500">完成订单</div>
           <div className="text-2xl font-semibold mt-1 text-green-700">{summary.paidOrders}</div>
         </div>
-        <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-4">
+        <div className="border border-[#eaeaea] bg-white rounded-2xl p-4 shadow-sm">
           <div className="text-sm text-gray-500">待支付订单</div>
           <div className="text-2xl font-semibold mt-1 text-[#e3001b]">{summary.pendingOrders}</div>
         </div>
@@ -119,9 +119,9 @@ export function OrdersAdminClient() {
       {error ? <pre className="text-xs text-red-600 whitespace-pre-wrap">{error}</pre> : null}
       {loading ? <div className="text-sm text-gray-500">加载中…</div> : null}
 
-      <div className="border rounded-lg overflow-auto bg-white">
+      <div className="bg-white border border-[#eaeaea] rounded-2xl overflow-auto shadow-sm">
         <table className="min-w-[920px] w-full text-sm">
-          <thead className="text-left text-gray-600 border-b bg-gray-50">
+          <thead className="text-left text-[#666] border-b border-[#eaeaea] bg-[#f8f9fa]">
             <tr>
               <th className="py-2 px-3">订单ID</th>
               <th className="py-2 px-3">用户</th>
@@ -133,7 +133,7 @@ export function OrdersAdminClient() {
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.id} className="border-b">
+              <tr key={r.id} className="border-b border-[#eaeaea]">
                 <td className="py-2 px-3 font-mono">{r.id.slice(0, 8)}</td>
                 <td className="py-2 px-3">{r.user}</td>
                 <td className="py-2 px-3">{r.planName}</td>
