@@ -56,12 +56,20 @@ function normalizeIp(v?: string | null) {
 
 function toDetailedClient(baseClient: string, sourceJson?: any, snapshot?: any) {
   const device = String(snapshot?.device || sourceJson?.DeviceName || sourceJson?.deviceName || "").trim();
-  const app = String(snapshot?.client || sourceJson?.ClientName || sourceJson?.clientName || sourceJson?.Client || sourceJson?.client || "").trim();
+  const app = String(
+    snapshot?.client || sourceJson?.ClientName || sourceJson?.clientName || sourceJson?.Client || sourceJson?.client || snapshot?.app || sourceJson?.Application || ""
+  ).trim();
 
   if (device && app) return `${device} (${app})`;
   if (device) return device;
   if (app) return app;
   return baseClient || "-";
+}
+
+function isGenericClient(v: string) {
+  const s = String(v || "").trim().toLowerCase();
+  if (!s) return true;
+  return /^(apple[_ ]?tv|iphone|ipad|android|mac|windows|web|safari|chrome|edge|-)$/.test(s);
 }
 
 type OutputRow = {
@@ -218,7 +226,7 @@ export async function GET(req: Request) {
       events = [];
     }
 
-    const starts = new Map<string, Date[]>();
+    const starts = new Map<string, Array<{ at: Date; client: string; ip: string }>>();
     let pushedFromDb = 0;
 
     for (const ev of events) {
@@ -230,7 +238,7 @@ export async function GET(req: Request) {
 
       if (ev.eventType === "start") {
         const arr = starts.get(k) ?? [];
-        arr.push(ev.occurredAt);
+        arr.push({ at: ev.occurredAt, client, ip });
         starts.set(k, arr);
         continue;
       }
@@ -238,12 +246,16 @@ export async function GET(req: Request) {
       if (ev.eventType !== "stop") continue;
 
       let durationSeconds = 0;
+      let resolvedClient = client;
+      let resolvedIp = ip;
       const arr = starts.get(k) ?? [];
       if (arr.length) {
         const st = arr.pop()!;
         starts.set(k, arr);
-        durationSeconds = Math.max(0, Math.round((ev.occurredAt.getTime() - st.getTime()) / 1000));
+        durationSeconds = Math.max(0, Math.round((ev.occurredAt.getTime() - st.at.getTime()) / 1000));
         if (durationSeconds > 24 * 3600) durationSeconds = 0;
+        if (isGenericClient(resolvedClient) && !isGenericClient(st.client)) resolvedClient = st.client;
+        if (resolvedIp === "-" && st.ip && st.ip !== "-") resolvedIp = st.ip;
       }
 
       rows.push({
@@ -252,8 +264,8 @@ export async function GET(req: Request) {
         mediaName,
         mediaKey,
         durationSeconds,
-        client,
-        ip,
+        client: resolvedClient,
+        ip: resolvedIp,
         lastPlayedAt: ev.occurredAt.toISOString(),
       });
       pushedFromDb += 1;
@@ -307,7 +319,7 @@ export async function GET(req: Request) {
   }
 
   // secondary enrichment by session snapshots for missing ip/client
-  const missing = rows.filter((r) => r.ip === "-" || r.client === "-");
+  const missing = rows.filter((r) => r.ip === "-" || isGenericClient(r.client));
   if (missing.length) {
     const snapshots = await prisma.sessionSnapshot.findMany({
       where: { capturedAt: { gte: since }, embyServerId: { in: Array.from(new Set(missing.map((x) => x.serverId))) } },
@@ -323,19 +335,33 @@ export async function GET(req: Request) {
         const st = s.capturedAt.getTime();
         if (Math.abs(st - rt) > 20 * 60 * 1000) continue;
         const list = Array.isArray(s.rawJson) ? (s.rawJson as any[]) : [];
-        const m = list.find((x) => normalizeMediaKey(String(x?.nowPlaying ?? "")) === normalizeMediaKey(r.mediaName) && String(x?.userName ?? "").toLowerCase() === user.username.toLowerCase());
-        if (!m) continue;
-        r.client = toDetailedClient(r.client, undefined, m);
-        if (r.ip === "-") r.ip = normalizeIp(m.ip || "-");
+        const uname = user.username.toLowerCase();
+        const sameUser = list.filter((x) => String(x?.userName ?? "").toLowerCase() === uname);
+        if (!sameUser.length) continue;
+
+        const sameMedia = sameUser.filter((x) => normalizeMediaKey(String(x?.nowPlaying ?? "")) === normalizeMediaKey(r.mediaName));
+        const preferred = sameMedia.find((x) => !x?.paused) || sameMedia[0] || sameUser.find((x) => !x?.paused) || sameUser[0];
+        if (!preferred) continue;
+
+        const detailed = toDetailedClient(r.client, undefined, preferred);
+        if (isGenericClient(r.client) && detailed) r.client = detailed;
+        if (r.ip === "-") r.ip = normalizeIp(preferred.ip || "-");
         break;
       }
     }
   }
 
-  rows.sort((a, b) => new Date(b.lastPlayedAt).getTime() - new Date(a.lastPlayedAt).getTime());
+  const cleanedRows = rows.filter((r) => {
+    // drop low-quality paused/incomplete samples: 0 duration + no ip + generic client
+    if ((r.durationSeconds ?? 0) > 0) return true;
+    if (r.ip !== "-") return true;
+    return !isGenericClient(r.client);
+  });
 
-  const totalDurationSeconds = rows.reduce((sum, r) => sum + (Number.isFinite(r.durationSeconds) ? r.durationSeconds : 0), 0);
-  const watchedItemCount = new Set(rows.map((r) => r.mediaKey || normalizeMediaKey(r.mediaName))).size;
+  cleanedRows.sort((a, b) => new Date(b.lastPlayedAt).getTime() - new Date(a.lastPlayedAt).getTime());
+
+  const totalDurationSeconds = cleanedRows.reduce((sum, r) => sum + (Number.isFinite(r.durationSeconds) ? r.durationSeconds : 0), 0);
+  const watchedItemCount = new Set(cleanedRows.map((r) => r.mediaKey || normalizeMediaKey(r.mediaName))).size;
 
   return NextResponse.json({
     ok: true,
@@ -343,8 +369,8 @@ export async function GET(req: Request) {
     summary: {
       totalDurationSeconds,
       watchedItemCount,
-      totalRecords: rows.length,
+      totalRecords: cleanedRows.length,
     },
-    records: rows,
+    records: cleanedRows,
   });
 }
