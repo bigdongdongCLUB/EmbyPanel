@@ -167,8 +167,9 @@ export function PortalPurchaseClient() {
               </div>
               {p.description ? <div className="text-sm text-gray-600 whitespace-pre-wrap">{p.description}</div> : null}
 
-              <button className="w-full text-center bg-blue-600 text-white rounded px-2.5 py-2 text-sm" onClick={() => openPlanModal(p.id)}>
-                🛒 立即购买
+              <button className="w-full bg-blue-600 text-white rounded px-2.5 py-2 text-sm inline-flex items-center justify-center gap-1.5" onClick={() => openPlanModal(p.id)}>
+                <img src="/icons/shopping.svg" alt="" className="h-4 w-4 invert" />
+                <span>立即购买</span>
               </button>
             </div>
           );
