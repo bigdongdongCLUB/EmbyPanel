@@ -24,7 +24,7 @@ export async function listDocs(): Promise<DocArticle[]> {
       updatedAt: String(x?.updatedAt || new Date().toISOString()),
     }))
     .filter((x) => x.id && x.title)
-    .sort((a, b) => +new Date(b.updatedAt) - +new Date(a.updatedAt));
+    .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
 }
 
 export async function saveDocs(items: DocArticle[]) {
