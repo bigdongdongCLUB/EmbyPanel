@@ -167,49 +167,49 @@ export function PortalClient() {
           }
 
           const renderGrid = (items: typeof tv) => (
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-4">
               {items.map((it) => (
-                <div key={`${it.type}-${it.title}`} className="group">
-                  <div className="relative rounded-xl overflow-hidden aspect-[2/3] bg-gray-100">
+                <div key={`${it.type}-${it.title}`} className="group cursor-pointer">
+                  <div className="relative rounded-lg overflow-hidden aspect-[2/3] bg-gradient-to-br from-[#f5f7fa] to-[#c3cfe2]">
                     {it.imageUrl ? (
                       <img src={it.imageUrl} alt={it.title} className="w-full h-full object-cover" loading="lazy" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-xs text-gray-400 p-2 text-center">{it.title}</div>
+                      <div className="w-full h-full flex items-center justify-center text-xs text-gray-500 p-2 text-center">{it.title}</div>
                     )}
-                    <div className="absolute top-1.5 left-1.5">
-                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded text-white ${it.type === "MOVIE" ? "bg-blue-500" : "bg-purple-500"}`}>
+                    <div className="absolute top-2 left-2">
+                      <span className="text-[11px] font-medium px-1.5 py-0.5 rounded text-white bg-[#e3001b]">
                         {it.type === "MOVIE" ? "电影" : "电视剧"}
                       </span>
                     </div>
                     {!!it.serverNames?.length && (
                       <div className="absolute bottom-1.5 left-1.5 flex flex-col items-start gap-1 max-w-[92%]">
-                        {it.serverNames.slice(0, 5).map((sn) => (
-                          <span key={sn} className="inline-flex w-auto max-w-full text-[10px] font-medium px-1.5 py-0.5 rounded border border-green-200 bg-green-50 text-green-700 leading-none whitespace-nowrap">
+                        {it.serverNames.slice(0, 2).map((sn) => (
+                          <span key={sn} className="inline-flex w-auto max-w-full text-[10px] font-medium px-1.5 py-0.5 rounded border border-white/60 bg-black/40 text-white leading-none whitespace-nowrap">
                             {sn}
                           </span>
                         ))}
-                        {it.serverNames.length > 5 ? (
-                          <span className="inline-flex w-auto text-[10px] font-medium px-1.5 py-0.5 rounded border border-green-200 bg-green-50 text-green-700 leading-none">...</span>
+                        {it.serverNames.length > 2 ? (
+                          <span className="inline-flex w-auto text-[10px] font-medium px-1.5 py-0.5 rounded border border-white/60 bg-black/40 text-white leading-none">...</span>
                         ) : null}
                       </div>
                     )}
                   </div>
-                  <div className="mt-1 px-0.5 text-xs text-gray-700 truncate">{it.title}</div>
-                  <div className="text-[10px] text-gray-400 px-0.5">{it.year || "-"}</div>
+                  <div className="mt-2 text-sm font-medium text-[#222] truncate">{it.title}</div>
+                  <div className="text-xs text-[#888]">{it.year || "-"}</div>
                 </div>
               ))}
             </div>
           );
 
           return (
-            <div className="space-y-4">
+            <div className="space-y-7">
               <div>
-                <div className="text-sm font-medium text-gray-700 mb-2">最近电视剧更新</div>
-                {tv.length ? renderGrid(tv.slice(0, 18)) : <div className="text-xs text-gray-400">暂无电视剧更新</div>}
+                <div className="text-lg font-bold text-[#222] mb-4">最近电视剧更新</div>
+                {tv.length ? renderGrid(tv.slice(0, 18)) : <div className="text-sm text-[#888]">暂无电视剧更新</div>}
               </div>
               <div>
-                <div className="text-sm font-medium text-gray-700 mb-2">最近电影更新</div>
-                {movie.length ? renderGrid(movie.slice(0, 18)) : <div className="text-xs text-gray-400">暂无电影更新</div>}
+                <div className="text-lg font-bold text-[#222] mb-4">最近电影更新</div>
+                {movie.length ? renderGrid(movie.slice(0, 18)) : <div className="text-sm text-[#888]">暂无电影更新</div>}
               </div>
             </div>
           );
