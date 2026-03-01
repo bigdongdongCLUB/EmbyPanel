@@ -54,6 +54,16 @@ function normalizeIp(v?: string | null) {
   return s;
 }
 
+function toDetailedClient(baseClient: string, sourceJson?: any, snapshot?: any) {
+  const device = String(snapshot?.device || sourceJson?.DeviceName || sourceJson?.deviceName || "").trim();
+  const app = String(snapshot?.client || sourceJson?.ClientName || sourceJson?.clientName || sourceJson?.Client || sourceJson?.client || "").trim();
+
+  if (device && app) return `${device} (${app})`;
+  if (device) return device;
+  if (app) return app;
+  return baseClient || "-";
+}
+
 type OutputRow = {
   serverId: string;
   serverName: string;
@@ -185,7 +195,7 @@ export async function GET(req: Request) {
   for (const link of user.embyLinks) {
     if (!link.embyServer?.enabled) continue;
 
-    let events: Array<{ eventType: string; mediaName: string; mediaKey: string; client: string | null; ip: string | null; occurredAt: Date }> = [];
+    let events: Array<{ eventType: string; mediaName: string; mediaKey: string; client: string | null; ip: string | null; sourceJson?: any; occurredAt: Date }> = [];
     try {
       events = await prisma.playbackEvent.findMany({
         where: {
@@ -200,6 +210,7 @@ export async function GET(req: Request) {
           mediaKey: true,
           client: true,
           ip: true,
+          sourceJson: true,
           occurredAt: true,
         },
       });
@@ -213,7 +224,7 @@ export async function GET(req: Request) {
     for (const ev of events) {
       const mediaKey = normalizeMediaKey(ev.mediaKey || ev.mediaName);
       const mediaName = String(ev.mediaName || "未知媒体");
-      const client = String(ev.client || "-");
+      const client = toDetailedClient(String(ev.client || "-"), ev.sourceJson);
       const ip = normalizeIp(ev.ip);
       const k = `${mediaKey}|${client}|${ip}`;
 
@@ -314,7 +325,7 @@ export async function GET(req: Request) {
         const list = Array.isArray(s.rawJson) ? (s.rawJson as any[]) : [];
         const m = list.find((x) => normalizeMediaKey(String(x?.nowPlaying ?? "")) === normalizeMediaKey(r.mediaName) && String(x?.userName ?? "").toLowerCase() === user.username.toLowerCase());
         if (!m) continue;
-        if (r.client === "-") r.client = String(m.client || m.device || "-");
+        r.client = toDetailedClient(r.client, undefined, m);
         if (r.ip === "-") r.ip = normalizeIp(m.ip || "-");
         break;
       }
