@@ -167,6 +167,7 @@ model EmbyServer {
   embyLinks         EmbyUserLink[]
   anomalies         Anomaly[]
   sessionSnapshots  SessionSnapshot[]
+  playbackEvents    PlaybackEvent[]
 
   @@index([enabled])
 }
@@ -208,6 +209,29 @@ model SessionSnapshot {
   embyServer EmbyServer @relation(fields: [embyServerId], references: [id], onDelete: Cascade)
 
   @@index([embyServerId, capturedAt])
+}
+
+model PlaybackEvent {
+  id           String   @id @default(cuid())
+  embyServerId String
+  activityId   String?
+  embyUserId   String?
+  userName     String?
+  eventType    String
+  mediaName    String
+  mediaKey     String
+  client       String?
+  ip           String?
+  occurredAt   DateTime
+  sourceJson   Json?
+  createdAt    DateTime @default(now())
+
+  embyServer EmbyServer @relation(fields: [embyServerId], references: [id], onDelete: Cascade)
+
+  @@unique([embyServerId, activityId])
+  @@index([embyServerId, embyUserId, occurredAt])
+  @@index([embyServerId, userName, occurredAt])
+  @@index([occurredAt])
 }
 
 model Anomaly {
