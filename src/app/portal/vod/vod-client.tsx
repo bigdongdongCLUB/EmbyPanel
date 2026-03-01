@@ -573,6 +573,9 @@ export function VodClient() {
                 onPageChange={changePage}
                 onPageSizeChange={() => {}}
                 pageSizeOptions={[20]}
+                showPageSize={false}
+                compactSinglePage
+                simpleGoto
               />
             </div>
           )}
@@ -666,6 +669,9 @@ export function VodClient() {
                       onPageChange={loadMyRequests}
                       onPageSizeChange={() => {}}
                       pageSizeOptions={[10]}
+                      showPageSize={false}
+                      compactSinglePage
+                      simpleGoto
                     />
                   </div>
                 )}
