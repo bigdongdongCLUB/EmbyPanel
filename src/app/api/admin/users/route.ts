@@ -202,6 +202,7 @@ export async function POST(req: Request) {
       syncPasswordTag: enc.tag,
       role: (parsed.data.role as any) ?? "USER",
       enabled: parsed.data.enabled ?? true,
+      expiryReminderEnabled: true,
       balanceCents: parsed.data.balanceCents ?? 0,
     },
     select: { id: true, username: true, email: true, role: true, enabled: true, balanceCents: true, createdAt: true },

@@ -116,6 +116,7 @@ export async function POST(req: Request) {
       syncPasswordIv: enc.iv,
       syncPasswordTag: enc.tag,
       role,
+      expiryReminderEnabled: true,
     },
     select: { id: true, username: true, email: true, name: true, role: true },
   });

@@ -162,6 +162,7 @@ export async function POST(req: Request) {
         syncPasswordTag: enc.tag,
         role: "USER",
         enabled,
+        expiryReminderEnabled: true,
       },
       select: { id: true },
     });

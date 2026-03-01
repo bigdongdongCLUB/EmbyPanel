@@ -193,6 +193,7 @@ export async function runAdminCsvImport(
           syncPasswordTag: enc.tag,
           role: "USER",
           enabled: true,
+          expiryReminderEnabled: true,
         },
         select: { id: true },
       });

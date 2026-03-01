@@ -104,6 +104,7 @@ export async function POST(req: Request) {
         syncPasswordTag: enc.tag,
         role: "USER",
         enabled: true,
+        expiryReminderEnabled: true,
       },
       select: { id: true, username: true },
     });

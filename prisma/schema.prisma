@@ -74,7 +74,7 @@ model User {
   role         Role     @default(USER)
   enabled      Boolean  @default(true)
   balanceCents Int      @default(0)
-  expiryReminderEnabled Boolean @default(false)
+  expiryReminderEnabled Boolean @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

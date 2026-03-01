@@ -62,6 +62,7 @@ export async function POST(req: Request) {
       passwordHash,
       role: (parsed.data.role as any) ?? "USER",
       enabled: parsed.data.enabled ?? true,
+      expiryReminderEnabled: true,
     },
     select: { id: true, username: true, email: true, role: true, enabled: true, createdAt: true },
   });
