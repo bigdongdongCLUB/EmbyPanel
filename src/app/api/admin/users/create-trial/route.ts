@@ -135,7 +135,7 @@ export async function POST(req: Request) {
 
       const servers = await prisma.embyServer.findMany({
         where: { id: { in: serverIds }, enabled: true },
-        select: { id: true, baseUrl: true, apiKey: true, apiKeyEnc: true, apiKeyIv: true, apiKeyTag: true },
+        select: { id: true, baseUrl: true, externalUrl: true, apiKey: true, apiKeyEnc: true, apiKeyIv: true, apiKeyTag: true },
       });
 
       for (const s of servers) {
@@ -170,8 +170,9 @@ export async function POST(req: Request) {
       }
     }
 
-    const firstServer = await prisma.embyServer.findFirst({ where: { id: { in: serverIds } }, select: { baseUrl: true } });
-    const addr = parseAddressAndPort(firstServer?.baseUrl ?? "https://xx.bestemby.com");
+    const firstServer = await prisma.embyServer.findFirst({ where: { id: { in: serverIds } }, select: { baseUrl: true, externalUrl: true } });
+    const preferredUrl = firstServer?.externalUrl || firstServer?.baseUrl || "https://xx.bestemby.com";
+    const addr = parseAddressAndPort(preferredUrl);
 
     return NextResponse.json({
       ok: true,

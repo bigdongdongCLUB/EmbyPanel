@@ -58,7 +58,7 @@ export async function GET(req: Request) {
           embyUserId: true,
           disabled: true,
           createdAt: true,
-          embyServer: { select: { id: true, name: true, baseUrl: true, apiKey: true, apiKeyEnc: true, apiKeyIv: true, apiKeyTag: true } },
+          embyServer: { select: { id: true, name: true, baseUrl: true, externalUrl: true, apiKey: true, apiKeyEnc: true, apiKeyIv: true, apiKeyTag: true } },
         },
       },
       subscriptions: {
@@ -73,7 +73,7 @@ export async function GET(req: Request) {
           planId: true,
           payCycle: true,
           plan: { select: { id: true, name: true, enabled: true, visible: true } },
-          servers: { select: { embyServer: { select: { id: true, name: true, baseUrl: true } } } },
+          servers: { select: { embyServer: { select: { id: true, name: true, baseUrl: true, externalUrl: true } } } },
         },
       },
     },
@@ -121,7 +121,7 @@ export async function GET(req: Request) {
         return {
           embyServerId: sid,
           name: sv?.name ?? "-",
-          baseUrl: sv?.baseUrl ?? "-",
+          baseUrl: sv?.externalUrl || sv?.baseUrl || "-",
           status,
           assignedAt: (link?.createdAt ?? sub?.startAt ?? u.createdAt)?.toISOString?.() ?? null,
         };
