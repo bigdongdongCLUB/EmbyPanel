@@ -1180,8 +1180,6 @@ export function UsersClient() {
       {importOpen ? (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
           <div className="relative bg-white w-full max-w-[600px] max-h-[90vh] rounded-2xl border-2 border-[#e3001b] shadow-[0_12px_32px_rgba(227,0,27,0.12)] flex flex-col overflow-hidden">
-            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#e3001b] text-white px-5 py-1.5 rounded-full text-[13px] font-bold tracking-[1px] whitespace-nowrap z-10">用户导入向导</div>
-
             <div className="px-8 pt-6 pb-4 border-b border-[#eaeaea] flex items-center justify-between">
               <div className="text-lg font-bold text-[#222]">从 Emby 服务器导入用户</div>
               <button className="text-2xl leading-none text-[#888] hover:text-[#e3001b]" onClick={() => setImportOpen(false)} aria-label="关闭">×</button>
