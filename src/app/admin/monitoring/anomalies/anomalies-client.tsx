@@ -44,13 +44,13 @@ function isCrossRegionByIp(ips: string[]) {
 function TypeBadge({ crossRegion }: { crossRegion: boolean }) {
   if (crossRegion) {
     return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded border text-xs bg-red-50 text-red-700 border-red-200">
+      <span className="inline-flex items-center px-2 py-1 rounded-[4px] border text-[12px] leading-4 bg-red-50 text-red-700 border-red-200">
         异地多设备
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded border text-xs bg-amber-50 text-amber-700 border-amber-200">
+    <span className="inline-flex items-center px-2 py-1 rounded-[4px] border text-[12px] leading-4 bg-amber-50 text-amber-700 border-amber-200">
       同时多设备
     </span>
   );
@@ -177,16 +177,16 @@ export function MonitoringAnomaliesClient() {
         </div>
 
         <div className="mt-3 overflow-auto">
-          <table className="min-w-[1100px] w-full text-sm">
-            <thead className="text-left text-[#666] border-y border-[#eaeaea] bg-[#f8f9fa]">
+          <table className="min-w-[1100px] w-full text-[14px]">
+            <thead className="text-left text-[#666] text-[13px] border-y border-[#eaeaea] bg-[#f8f9fa]">
               <tr>
-                                <th className="py-2 px-3">用户名</th>
-                <th className="py-2 px-3">服务器</th>
-                <th className="py-2 px-3">异常类型</th>
-                <th className="py-2 px-3">设备信息</th>
-                <th className="py-2 px-3">IP 地址</th>
-                <th className="py-2 px-3">说明</th>
-                <th className="py-2 px-3">检测时间</th>
+                                <th className="py-4 px-3 font-medium">用户名</th>
+                <th className="py-4 px-3 font-medium">服务器</th>
+                <th className="py-4 px-3 font-medium">异常类型</th>
+                <th className="py-4 px-3 font-medium">设备信息</th>
+                <th className="py-4 px-3 font-medium">IP 地址</th>
+                <th className="py-4 px-3 font-medium">说明</th>
+                <th className="py-4 px-3 font-medium">检测时间</th>
               </tr>
             </thead>
             <tbody>
@@ -195,13 +195,13 @@ export function MonitoringAnomaliesClient() {
                 return (
                   <React.Fragment key={a.id}>
                     <tr className="border-b border-[#eaeaea]">
-                      <td className="py-2 px-3">{a.user?.name || "-"}</td>
-                      <td className="py-2 px-3">{a.server?.name || "-"}</td>
-                      <td className="py-2 px-3">
+                      <td className="py-4 px-3 leading-6">{a.user?.name || "-"}</td>
+                      <td className="py-4 px-3 leading-6">{a.server?.name || "-"}</td>
+                      <td className="py-4 px-3 leading-6">
                         <TypeBadge crossRegion={crossRegion} />
                       </td>
-                      <td className="py-2 px-3">
-                        <div className="text-xs text-gray-700">
+                      <td className="py-4 px-3 leading-6">
+                        <div className="text-[13px] text-gray-700">
                           {a.sessions
                             .map((s) => s.device || "-")
                             .filter(Boolean)
@@ -210,11 +210,11 @@ export function MonitoringAnomaliesClient() {
                           {a.sessions.length > 2 ? ` 等 ${a.sessions.length} 台` : ""}
                         </div>
                       </td>
-                      <td className="py-2 px-3">
+                      <td className="py-4 px-3 leading-6">
                         <div className="flex flex-wrap gap-1">
                           {a.ips?.length
                             ? a.ips.map((ip) => (
-                                <span key={ip} className="inline-flex items-center px-2 py-0.5 rounded border text-xs font-mono bg-gray-50">
+                                <span key={ip} className="inline-flex items-center px-2 py-1 rounded-[4px] border border-[#eaeaea] text-[13px] leading-4 font-mono text-[#666] bg-[#f4f5f7]">
                                   {ip}
                                 </span>
                               ))
@@ -226,7 +226,7 @@ export function MonitoringAnomaliesClient() {
                         <div className="mt-1 space-y-1">
                           {a.sessions.length ? (
                             a.sessions.slice(0, 2).map((s, idx) => (
-                              <div key={idx} className="text-[11px] leading-4 text-gray-600">
+                              <div key={idx} className="text-[12px] leading-5 text-gray-600">
                                 <div>
                                   📱 {s.device || "未知设备"}
                                   {s.client ? ` (${s.client})` : ""}
@@ -235,9 +235,9 @@ export function MonitoringAnomaliesClient() {
                               </div>
                             ))
                           ) : a.excerpt ? (
-                            <div className="text-[11px] text-gray-500">{a.excerpt}</div>
+                            <div className="text-[12px] text-gray-500">{a.excerpt}</div>
                           ) : null}
-                          {a.sessions.length > 2 ? <div className="text-[11px] text-gray-500">… 另有 {a.sessions.length - 2} 台设备</div> : null}
+                          {a.sessions.length > 2 ? <div className="text-[12px] text-gray-500">… 另有 {a.sessions.length - 2} 台设备</div> : null}
                         </div>
                       </td>
                       <td className="py-2 px-3 text-xs text-gray-700">{formatDateTimeShanghai(a.detectedAt)}</td>

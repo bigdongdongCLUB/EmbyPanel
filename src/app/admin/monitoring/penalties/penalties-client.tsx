@@ -135,14 +135,14 @@ export function MonitoringPenaltiesClient() {
         </div>
 
         <div className="mt-3 overflow-auto">
-          <table className="min-w-[900px] w-full text-sm">
-            <thead className="text-left text-[#666] border-y border-[#eaeaea] bg-[#f8f9fa]">
+          <table className="min-w-[900px] w-full text-[14px]">
+            <thead className="text-left text-[#666] text-[13px] border-y border-[#eaeaea] bg-[#f8f9fa]">
               <tr>
-                <th className="py-2 px-3">用户</th>
-                <th className="py-2 px-3">服务器</th>
-                <th className="py-2 px-3">处罚开始</th>
-                <th className="py-2 px-3">处罚结束</th>
-                <th className="py-2 px-3">解禁状态</th>
+                <th className="py-4 px-3 font-medium">用户</th>
+                <th className="py-4 px-3 font-medium">服务器</th>
+                <th className="py-4 px-3 font-medium">处罚开始</th>
+                <th className="py-4 px-3 font-medium">处罚结束</th>
+                <th className="py-4 px-3 font-medium">解禁状态</th>
               </tr>
             </thead>
             <tbody>
@@ -150,11 +150,11 @@ export function MonitoringPenaltiesClient() {
                 const statusText = r.status === "UNBANNED" ? "已解禁" : r.status === "PENDING" ? "封禁中" : r.status === "SKIPPED_NOT_ELIGIBLE" ? "到期跳过" : r.status === "FAILED_UNBAN" ? "解禁失败" : r.status === "FAILED_DISABLE" ? "封禁失败" : r.status;
                 return (
                   <tr key={r.id} className="border-b last:border-b-0">
-                    <td className="py-2 px-3">{r.username || "-"}</td>
-                    <td className="py-2 px-3">{r.serverName || "-"}</td>
-                    <td className="py-2 px-3 text-xs text-gray-700">{formatDateTimeShanghai(r.disabledAt)}</td>
-                    <td className="py-2 px-3 text-xs text-gray-700">{formatDateTimeShanghai(r.unlockAt)}</td>
-                    <td className="py-2 px-3">{statusText}</td>
+                    <td className="py-4 px-3 leading-6">{r.username || "-"}</td>
+                    <td className="py-4 px-3 leading-6">{r.serverName || "-"}</td>
+                    <td className="py-4 px-3 text-[13px] text-gray-700 leading-6">{formatDateTimeShanghai(r.disabledAt)}</td>
+                    <td className="py-4 px-3 text-[13px] text-gray-700 leading-6">{formatDateTimeShanghai(r.unlockAt)}</td>
+                    <td className="py-4 px-3 leading-6">{statusText}</td>
                   </tr>
                 );
               })}
