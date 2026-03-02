@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { autoCancelExpiredPendingOrders } from "@/lib/order-expiry";
 
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
@@ -16,6 +17,8 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   if (!user) return NextResponse.json({ error: "user_not_found" }, { status: 404 });
 
   const { id } = await ctx.params;
+  await autoCancelExpiredPendingOrders(prisma, { id, userId: user.id });
+
   const order = await prisma.serviceOrder.findFirst({
     where: { id, userId: user.id },
     select: {

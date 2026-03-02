@@ -10,6 +10,7 @@ import { getSyncPassword } from "@/lib/user-secrets";
 import { embyFetchUsers } from "@/lib/emby";
 import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
 import { embyApplyTemplatePolicy, embyCreateUser, embySetUserDisabled, embySetUserPassword } from "@/lib/emby-provision";
+import { autoCancelExpiredPendingOrders, isOrderPendingExpired } from "@/lib/order-expiry";
 
 const INVITE_REBATE_KEY = "invite_rebate";
 const INVITE_REL_KEY = "invite_relations";
@@ -85,12 +86,17 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   if (!user) return NextResponse.json({ error: "user_not_found" }, { status: 404 });
 
   const { id } = await ctx.params;
+  await autoCancelExpiredPendingOrders(prisma, { id, userId: user.id });
 
   let paidOrder: { id: string; planId: string; activeSubId: string };
   try {
     paidOrder = await prisma.$transaction(async (tx) => {
       const order = await tx.serviceOrder.findFirst({ where: { id, userId: user.id } });
       if (!order) throw new Error("order_not_found");
+      if (order.status === "PENDING" && isOrderPendingExpired(order.createdAt)) {
+        await tx.serviceOrder.update({ where: { id: order.id }, data: { status: "CANCELED", canceledAt: new Date() } });
+        throw new Error("order_expired");
+      }
       if (order.status !== "PENDING") throw new Error("order_not_pending");
 
       const me = await tx.user.findUnique({ where: { id: user.id }, select: { balanceCents: true } });

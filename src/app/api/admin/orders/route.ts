@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
+import { autoCancelExpiredPendingOrders } from "@/lib/order-expiry";
 
 function parseIntSafe(v: string | null, d: number) {
   const n = Number(v);
@@ -19,6 +20,8 @@ export async function GET(req: Request) {
   const days = [30, 90, 180, 365].includes(daysRaw) ? daysRaw : 30;
   const page = Math.max(1, parseIntSafe(url.searchParams.get("page"), 1));
   const pageSize = Math.max(1, Math.min(100, parseIntSafe(url.searchParams.get("pageSize"), 10)));
+
+  await autoCancelExpiredPendingOrders(prisma);
 
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
   const where = { createdAt: { gte: since } } as const;
