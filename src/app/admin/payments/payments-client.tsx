@@ -222,9 +222,9 @@ export function PaymentsAdminClient() {
 
       {open ? (
         <div className="fixed inset-0 bg-black/45 flex items-center justify-center p-4 z-40">
-          <div className="bg-white w-full max-w-[520px] rounded-2xl shadow-[0_12px_32px_rgba(0,0,0,0.08)] max-h-[85vh] overflow-auto">
+          <div className="bg-white w-full max-w-[520px] rounded-2xl shadow-[0_12px_32px_rgba(0,0,0,0.08)] max-h-[85vh] overflow-hidden flex flex-col">
             <div className="px-8 pt-8 pb-4">
-              <div className="text-2xl font-bold text-[#222]">添加支付方式</div>
+              <div className="text-[24px] leading-none font-bold text-[#222]">添加支付方式</div>
 
               <div className="mt-6 flex gap-6 border-b border-[#eaeaea]">
                 <button className={`pb-3 text-[15px] relative ${step === 1 ? "text-[#e3001b] font-bold" : "text-[#888] hover:text-[#222]"}`} onClick={() => setStep(1)}>
@@ -238,7 +238,7 @@ export function PaymentsAdminClient() {
               </div>
             </div>
 
-            <div className="px-8 py-6">
+            <div className="px-8 py-6 overflow-y-auto max-h-[60vh]">
             {step === 1 ? (
               <div className="space-y-5">
                 <div>
@@ -277,19 +277,19 @@ export function PaymentsAdminClient() {
                 {form.processor === "epay" ? (
                   <>
                     <div>
-                      <label className="text-sm">* 商户ID（pid）</label>
+                      <label className="text-sm text-[#222]"><span className="text-[#e3001b] mr-1">*</span>商户ID（pid）</label>
                       <input className="mt-2 w-full border border-[#eaeaea] rounded-[10px] px-3.5 py-3 text-sm outline-none focus:border-[#e3001b] focus:ring-4 focus:ring-[rgba(227,0,27,0.05)]" placeholder="请输入商户ID" value={form.config.merchantId} onChange={(e) => setForm({ ...form, config: { ...form.config, merchantId: e.target.value } })} />
                     </div>
                     <div>
-                      <label className="text-sm">* 商户密钥（key）</label>
+                      <label className="text-sm text-[#222]"><span className="text-[#e3001b] mr-1">*</span>商户密钥（key）</label>
                       <input className="mt-2 w-full border border-[#eaeaea] rounded-[10px] px-3.5 py-3 text-sm outline-none focus:border-[#e3001b] focus:ring-4 focus:ring-[rgba(227,0,27,0.05)]" placeholder="请输入商户密钥" value={form.config.merchantKey} onChange={(e) => setForm({ ...form, config: { ...form.config, merchantKey: e.target.value } })} />
                     </div>
                     <div>
-                      <label className="text-sm">* 接口地址（submit.php 所在域名）</label>
+                      <label className="text-sm text-[#222]"><span className="text-[#e3001b] mr-1">*</span>接口地址（submit.php 所在域名）</label>
                       <input className="mt-2 w-full border border-[#eaeaea] rounded-[10px] px-3.5 py-3 text-sm outline-none focus:border-[#e3001b] focus:ring-4 focus:ring-[rgba(227,0,27,0.05)]" placeholder="https://pay.example.com" value={form.config.apiBaseUrl} onChange={(e) => setForm({ ...form, config: { ...form.config, apiBaseUrl: e.target.value } })} />
                     </div>
                     <div>
-                      <label className="text-sm">* 支付类型（type）</label>
+                      <label className="text-sm text-[#222]"><span className="text-[#e3001b] mr-1">*</span>支付类型（type）</label>
                       <select className="mt-2 w-full border border-[#eaeaea] rounded-[10px] px-3.5 py-3 text-sm outline-none focus:border-[#e3001b] focus:ring-4 focus:ring-[rgba(227,0,27,0.05)]" value={form.config.paymentType} onChange={(e) => setForm({ ...form, config: { ...form.config, paymentType: e.target.value } })}>
                         <option value="alipay">alipay</option>
                         <option value="wxpay">wxpay</option>
@@ -298,22 +298,22 @@ export function PaymentsAdminClient() {
                       </select>
                     </div>
                     <div>
-                      <label className="text-sm">* 签名方式（sign_type）</label>
+                      <label className="text-sm text-[#222]"><span className="text-[#e3001b] mr-1">*</span>签名方式（sign_type）</label>
                       <select className="mt-2 w-full border border-[#eaeaea] rounded-[10px] px-3.5 py-3 text-sm outline-none focus:border-[#e3001b] focus:ring-4 focus:ring-[rgba(227,0,27,0.05)]" value={form.config.signType} onChange={(e) => setForm({ ...form, config: { ...form.config, signType: e.target.value } })}>
                         <option value="MD5">MD5</option>
                         <option value="HMAC-SHA256">HMAC-SHA256</option>
                       </select>
                     </div>
-                    <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={!!form.config.sandbox} onChange={(e) => setForm({ ...form, config: { ...form.config, sandbox: e.target.checked } })} /> 调试模式</label>
+                    <label className="flex items-center gap-2 text-sm text-[#222]"><input className="h-4 w-4 accent-[#e3001b]" type="checkbox" checked={!!form.config.sandbox} onChange={(e) => setForm({ ...form, config: { ...form.config, sandbox: e.target.checked } })} /> 调试模式</label>
                   </>
                 ) : form.processor === "stripe" ? (
                   <>
                     <div>
-                      <label className="text-sm">* Secret Key</label>
+                      <label className="text-sm text-[#222]"><span className="text-[#e3001b] mr-1">*</span>Secret Key</label>
                       <input className="mt-2 w-full border border-[#eaeaea] rounded-[10px] px-3.5 py-3 text-sm outline-none focus:border-[#e3001b] focus:ring-4 focus:ring-[rgba(227,0,27,0.05)]" placeholder="sk_live_..." value={form.config.secretKey} onChange={(e) => setForm({ ...form, config: { ...form.config, secretKey: e.target.value } })} />
                     </div>
                     <div>
-                      <label className="text-sm">* Webhook Secret</label>
+                      <label className="text-sm text-[#222]"><span className="text-[#e3001b] mr-1">*</span>Webhook Secret</label>
                       <input className="mt-2 w-full border border-[#eaeaea] rounded-[10px] px-3.5 py-3 text-sm outline-none focus:border-[#e3001b] focus:ring-4 focus:ring-[rgba(227,0,27,0.05)]" placeholder="whsec_..." value={form.config.webhookSecret} onChange={(e) => setForm({ ...form, config: { ...form.config, webhookSecret: e.target.value } })} />
                     </div>
                     <div>
