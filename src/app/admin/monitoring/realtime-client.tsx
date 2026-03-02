@@ -161,10 +161,10 @@ export function RealtimeMonitorClient() {
         </div>
 
         <div className="mt-3 flex flex-wrap items-center gap-2 justify-between">
-          <div className="relative w-[320px]">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-[#888]" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+          <div className="w-[320px]">
             <input
-              className="w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg pl-8 pr-3 py-2 focus:border-[#e3001b] outline-none"
+              type="search"
+              className="w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none"
               placeholder="搜索用户名/设备/客户端/IP/正在播放"
               value={q}
               onChange={(e) => {
