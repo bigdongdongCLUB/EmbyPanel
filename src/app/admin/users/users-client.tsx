@@ -1370,32 +1370,36 @@ export function UsersClient() {
       ) : null}
 
       {csvImportOpen ? (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 overflow-y-auto z-50">
-          <div className="bg-white rounded-lg w-full max-w-[760px] p-4 max-h-[90vh] overflow-y-auto">
-            <div className="text-lg font-semibold">从 CSV 模板导入用户</div>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 overflow-y-auto z-50">
+          <div className="bg-white w-full max-w-[680px] max-h-[90vh] rounded-2xl border-2 border-[#e3001b] shadow-[0_12px_32px_rgba(227,0,27,0.12)] flex flex-col overflow-hidden">
+            <div className="px-8 pt-6 pb-4 flex items-center justify-between">
+              <div className="text-[18px] font-bold text-[#222]">从 CSV 模板导入用户</div>
+              <button className="text-2xl leading-none text-[#666] hover:text-[#e3001b]" onClick={() => setCsvImportOpen(false)} aria-label="关闭">×</button>
+            </div>
+            <div className="px-8 pb-6 overflow-y-auto flex-1">
             {csvImportError ? <pre className="mt-2 text-xs text-red-600 whitespace-pre-wrap">{csvImportError}</pre> : null}
 
-            <div className="mt-4 space-y-4">
-              <div className="rounded-xl border border-sky-200 bg-sky-50 p-4">
-                <div className="flex items-center gap-2 text-sky-900 font-semibold">
-                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-sky-500 text-white text-xs">i</span>
+            <div className="mt-2 space-y-5">
+              <div className="rounded-[8px] border border-[#eaeaea] bg-[#f8f9fa] p-4">
+                <div className="flex items-center gap-2 text-[#222] font-bold">
+                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[#999] text-[#555] text-xs">i</span>
                   <span>操作说明</span>
                 </div>
-                <ol className="mt-2 list-decimal pl-6 text-sm text-sky-900 space-y-1">
+                <ol className="mt-2 list-decimal pl-6 text-sm text-[#666] space-y-1">
                   <li>先下载 CSV 模板，并按模板填写：用户名、面板密码、订阅计划、开始时间、结束时间。</li>
                   <li>上传 CSV 后点击“开始导入”，系统将按行批量创建面板用户。</li>
                   <li>优先使用 CSV 行内订阅计划；仅当行内计划为空或无效时，才使用“分配订阅计划”。</li>
                   <li>导入完成会返回成功/跳过/失败数量，并显示失败行位置（如 A3）。</li>
                 </ol>
-                <div className="mt-3 text-sm font-semibold text-red-600">注意：单次最多导入 1000 行（不含表头）。</div>
+                <div className="mt-3 text-sm font-medium text-[#e3001b]">注意：单次最多导入 1000 行（不含表头）。</div>
               </div>
 
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-                <div className="flex items-center gap-2 text-amber-900 font-semibold">
-                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-white text-xs">!</span>
+              <div className="rounded-[8px] border border-[#ffe58f] bg-[#fff9e6] p-4">
+                <div className="flex items-center gap-2 text-[#665000] font-bold">
+                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-full text-[#faad14] text-sm">⚠</span>
                   <span>重要提示</span>
                 </div>
-                <ul className="mt-2 list-disc pl-6 text-sm text-amber-900 space-y-1">
+                <ul className="mt-2 list-disc pl-6 text-sm text-[#665000] space-y-1">
                   <li>导入用户会按订阅计划同步到对应 Emby 服务器。</li>
                   <li>若 Emby 已存在同名用户，仅做链接（link），不会重置该 Emby 用户密码。</li>
                   <li>只有管理员后续在面板中手动修改该用户密码时，才会同步 Emby 密码。</li>
@@ -1404,8 +1408,8 @@ export function UsersClient() {
               </div>
 
               <div>
-                <label className="text-sm">分配订阅计划（可选）</label>
-                <select className="mt-1 w-full border rounded px-3 py-2" value={csvFallbackPlanId} onChange={(e) => setCsvFallbackPlanId(e.target.value)} disabled={csvImportLoading}>
+                <label className="text-sm font-medium text-[#222]">分配订阅计划（可选）</label>
+                <select className="mt-2 w-full border border-[#eaeaea] rounded-[8px] px-3 py-2.5 bg-white text-sm outline-none focus:border-[#e3001b] focus:ring-4 focus:ring-[rgba(227,0,27,0.05)]" value={csvFallbackPlanId} onChange={(e) => setCsvFallbackPlanId(e.target.value)} disabled={csvImportLoading}>
                   <option value="">不分配（按 CSV 每行计划名称匹配）</option>
                   {csvImportPlans.map((p) => (
                     <option key={p.id} value={p.id}>{p.name}</option>
@@ -1414,7 +1418,7 @@ export function UsersClient() {
               </div>
 
               <div className="flex flex-wrap gap-3">
-                <label className="w-[130px] h-10 border bg-white rounded px-2 cursor-pointer inline-flex items-center justify-center gap-1 text-xs whitespace-nowrap">
+                <label className="h-10 border border-[#eaeaea] bg-white rounded-[8px] px-4 cursor-pointer inline-flex items-center justify-center gap-1.5 text-sm font-medium whitespace-nowrap hover:bg-[#f8f9fa]">
                   <img src="/icons/csv-select.svg" alt="选择CSV文件" className="h-4 w-4" />
                   <span>选择 CSV 文件</span>
                   <input
@@ -1432,7 +1436,7 @@ export function UsersClient() {
                 </label>
 
                 <button
-                  className="w-[130px] h-10 border bg-white rounded px-3 inline-flex items-center justify-center gap-1.5 text-sm"
+                  className="h-10 border border-[#eaeaea] bg-white rounded-[8px] px-4 inline-flex items-center justify-center gap-1.5 text-sm font-medium hover:bg-[#f8f9fa]"
                   onClick={() => {
                     const tpl = "\uFEFF用户名,面板密码,订阅计划,开始时间,结束时间\n" +
                       "testuser1,Xxxx1234,BestEmby,2025/1/15,2026/1/15\n" +
@@ -1453,19 +1457,21 @@ export function UsersClient() {
                 </button>
               </div>
 
-              <div className="text-xs text-gray-600">{csvFileName ? `已选择：${csvFileName}` : "未选择文件"}</div>
+              <div className="text-[13px] text-[#666]">{csvFileName ? `已选择：${csvFileName}` : "未选择文件"}</div>
 
-              <div className="text-xs text-gray-600 bg-gray-50 border rounded p-2">
+              <div className="text-[13px] text-[#666] bg-[#f8f9fa] border border-[#eaeaea] rounded-[8px] p-3">
                 列格式：用户名,面板密码,订阅计划,开始时间,结束时间。最多 1000 行（不含表头）。
               </div>
             </div>
 
-            <div className="mt-5 flex justify-end gap-2">
-              <button className="border bg-white rounded px-3 py-2" onClick={() => setCsvImportOpen(false)}>
+            </div>
+
+            <div className="px-8 py-5 border-t border-[#eaeaea] flex justify-end gap-3">
+              <button className="px-7 py-2.5 rounded-[8px] border border-[#eaeaea] bg-transparent text-[#222] text-sm font-bold hover:bg-[#f8f9fa]" onClick={() => setCsvImportOpen(false)}>
                 取消
               </button>
               <button
-                className="bg-[#e3001b] hover:bg-[#c20017] text-white rounded-lg px-3 py-2 disabled:opacity-50"
+                className="px-7 py-2.5 rounded-[8px] bg-[#e3001b] hover:bg-[#c20017] text-white text-sm font-bold disabled:opacity-50"
                 disabled={!csvText.trim() || csvImportLoading}
                 onClick={async () => {
                   setCsvImportLoading(true);
