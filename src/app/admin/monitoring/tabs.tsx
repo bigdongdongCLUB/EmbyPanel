@@ -10,8 +10,8 @@ function Tab({ href, label }: { href: string; label: string }) {
     <Link
       href={href}
       className={
-        "px-3 py-2 text-sm border-b-2 " +
-        (active ? "border-black text-black" : "border-transparent text-gray-600 hover:text-black")
+        "pb-3 text-[15px] border-b-2 " +
+        (active ? "border-[#e3001b] text-[#e3001b] font-bold" : "border-transparent text-[#888] hover:text-[#222]")
       }
     >
       {label}
@@ -21,7 +21,7 @@ function Tab({ href, label }: { href: string; label: string }) {
 
 export function MonitoringTabs() {
   return (
-    <div className="flex gap-2 border-b">
+    <div className="flex gap-8 border-b border-[#eaeaea]">
       <Tab href="/admin/monitoring" label="实时监控" />
       <Tab href="/admin/monitoring/anomalies" label="异常监控" />
       <Tab href="/admin/monitoring/penalties" label="处罚记录" />

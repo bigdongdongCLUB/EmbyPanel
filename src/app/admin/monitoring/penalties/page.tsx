@@ -12,7 +12,7 @@ export default async function MonitoringPenaltiesPage() {
   if (role !== "ADMIN") redirect("/portal");
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div>
         <h1 className="text-xl font-semibold">统计监控</h1>
       </div>
