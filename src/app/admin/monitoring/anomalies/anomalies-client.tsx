@@ -259,7 +259,7 @@ export function MonitoringAnomaliesClient() {
         </div>
 
         {data ? (
-          <div className="mt-3">
+          <div className="mt-0">
             <PaginationBar
               total={data.total}
               page={data.page}
