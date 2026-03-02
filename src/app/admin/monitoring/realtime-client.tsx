@@ -116,7 +116,7 @@ export function RealtimeMonitorClient() {
   }, [safePage]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex flex-wrap gap-2 items-center bg-white border border-[#eaeaea] rounded-xl p-2 shadow-sm">
         <select className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={serverId} onChange={(e) => setServerId(e.target.value)}>
           <option value="">选择服务器…</option>
@@ -141,16 +141,16 @@ export function RealtimeMonitorClient() {
 
       {error ? <pre className="text-xs text-red-600 whitespace-pre-wrap">{error}</pre> : null}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div className="bg-white border border-[#eaeaea] rounded-2xl p-4">
-          <div className="text-xs text-gray-500">服务器状态</div>
-          <div className="mt-2 text-2xl font-semibold">{onlineLabel}</div>
-          <div className="mt-1 text-xs text-gray-500">{data?.server?.version ? `Emby ${data.server.version}` : ""}</div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white rounded-2xl px-8 py-6 shadow-sm">
+          <div className="text-sm text-gray-500">服务器状态</div>
+          <div className="mt-2 text-[32px] leading-none font-bold">{onlineLabel}</div>
+          <div className="mt-2 text-[13px] text-gray-500">{data?.server?.version ? `Emby ${data.server.version}` : ""}</div>
         </div>
-        <div className="bg-white border border-[#eaeaea] rounded-2xl p-4">
-          <div className="text-xs text-gray-500">正在播放</div>
-          <div className="mt-2 text-2xl font-semibold">{data ? data.playingCount : "-"}</div>
-          <div className="mt-1 text-xs text-gray-500">（仅统计 NowPlayingItem 且未暂停）</div>
+        <div className="bg-white rounded-2xl px-8 py-6 border-2 border-[#e3001b] shadow-[0_8px_24px_rgba(227,0,27,0.08)]">
+          <div className="text-sm text-gray-500">正在播放</div>
+          <div className="mt-2 text-[32px] leading-none font-bold text-[#e3001b]">{data ? data.playingCount : "-"}</div>
+          <div className="mt-2 text-[13px] text-gray-500">（仅统计 NowPlayingItem 且未暂停）</div>
         </div>
       </div>
 
@@ -161,15 +161,18 @@ export function RealtimeMonitorClient() {
         </div>
 
         <div className="mt-3 flex flex-wrap items-center gap-2 justify-between">
-          <input
-            className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none w-[260px]"
-            placeholder="搜索用户名/设备/客户端/IP/正在播放"
-            value={q}
-            onChange={(e) => {
-              setQ(e.target.value);
-              setPage(1);
-            }}
-          />
+          <div className="relative w-[320px]">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-[#888]" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+            <input
+              className="w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg pl-8 pr-3 py-2 focus:border-[#e3001b] outline-none"
+              placeholder="搜索用户名/设备/客户端/IP/正在播放"
+              value={q}
+              onChange={(e) => {
+                setQ(e.target.value);
+                setPage(1);
+              }}
+            />
+          </div>
 
           <div className="flex items-center gap-2">
           </div>

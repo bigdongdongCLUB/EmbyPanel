@@ -88,7 +88,7 @@ export function MonitoringPenaltiesClient() {
   }, [page, safePage]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex flex-wrap gap-2 items-center bg-white border border-[#eaeaea] rounded-xl p-2 shadow-sm">
         <input
           className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 min-w-[220px] focus:border-[#e3001b] outline-none"
