@@ -1180,15 +1180,11 @@ export function UsersClient() {
       {importOpen ? (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
           <div className="relative bg-white w-full max-w-[600px] max-h-[90vh] rounded-2xl border-2 border-[#e3001b] shadow-[0_12px_32px_rgba(227,0,27,0.12)] flex flex-col overflow-hidden">
-            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#e3001b] text-white px-5 py-1.5 rounded-full text-[13px] font-bold tracking-[1px] whitespace-nowrap z-10">
-              用户导入向导
-            </div>
+            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#e3001b] text-white px-5 py-1.5 rounded-full text-[13px] font-bold tracking-[1px] whitespace-nowrap z-10">用户导入向导</div>
 
             <div className="px-8 pt-6 pb-4 border-b border-[#eaeaea] flex items-center justify-between">
               <div className="text-lg font-bold text-[#222]">从 Emby 服务器导入用户</div>
-              <button className="text-2xl leading-none text-[#888] hover:text-[#e3001b]" onClick={() => setImportOpen(false)} aria-label="关闭">
-                ×
-              </button>
+              <button className="text-2xl leading-none text-[#888] hover:text-[#e3001b]" onClick={() => setImportOpen(false)} aria-label="关闭">×</button>
             </div>
 
             <div className="px-8 py-6 overflow-y-auto flex-1 space-y-4">
@@ -1196,141 +1192,83 @@ export function UsersClient() {
               {importError ? <pre className="text-xs text-red-600 whitespace-pre-wrap">{importError}</pre> : null}
 
               <div className="grid grid-cols-1 gap-5">
-              <div>
-                <label className="text-sm text-[#222] font-medium">选择 Emby 服务器 <span className="text-[#e3001b]">*</span></label>
-                <select className="mt-2 w-full rounded-[10px] border border-[#eaeaea] bg-[#f8f9fa] px-3.5 py-2.5 text-sm outline-none focus:bg-white focus:border-[#e3001b] focus:ring-4 focus:ring-[rgba(227,0,27,0.05)]" value={importServerId} onChange={(e) => setImportServerId(e.target.value)}>
-                  <option value="">选择服务器…</option>
-                  {importServers.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-sm text-[#222] font-medium">默认密码 <span className="text-[#e3001b]">*</span> <span className="font-normal text-[#888] text-xs">（导入后面板账户使用该密码；不会重置 Emby 原密码）</span></label>
-                <input
-                  className="mt-2 w-full rounded-[10px] border border-[#eaeaea] bg-[#f8f9fa] px-3.5 py-2.5 text-sm outline-none focus:bg-white focus:border-[#e3001b] focus:ring-4 focus:ring-[rgba(227,0,27,0.05)]"
-                  type="password"
-                  value={importDefaultPassword}
-                  onChange={(e) => setImportDefaultPassword(e.target.value)}
-                  placeholder="至少 6 位"
-                />
-              </div>
-
-              <div>
-                <label className="text-sm text-[#222] font-medium">分配订阅计划（可选）</label>
-                <select
-                  className="mt-2 w-full rounded-[10px] border border-[#eaeaea] bg-[#f8f9fa] px-3.5 py-2.5 text-sm outline-none focus:bg-white focus:border-[#e3001b] focus:ring-4 focus:ring-[rgba(227,0,27,0.05)]"
-                  value={importPlanId}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setImportPlanId(v);
-                  }}
-                >
-                  <option value="">不分配</option>
-                  {importPlans.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {importPlanId ? (
-                <>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm text-[#222] font-medium">订阅开始日期 <span className="text-[#e3001b]">*</span></label>
-                      <input
-                        className="mt-2 w-full rounded-[10px] border border-[#eaeaea] bg-[#f8f9fa] px-3.5 py-2.5 text-sm outline-none focus:bg-white focus:border-[#e3001b] focus:ring-4 focus:ring-[rgba(227,0,27,0.05)]"
-                        type="text"
-                        placeholder="YYYY-MM-DD"
-                        value={importStartAt}
-                        onChange={(e) => setImportStartAt(e.target.value.trim())}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-sm text-[#222] font-medium">订阅结束日期 <span className="text-[#e3001b]">*</span></label>
-                      <input
-                        className="mt-2 w-full rounded-[10px] border border-[#eaeaea] bg-[#f8f9fa] px-3.5 py-2.5 text-sm outline-none focus:bg-white focus:border-[#e3001b] focus:ring-4 focus:ring-[rgba(227,0,27,0.05)]"
-                        type="text"
-                        placeholder="YYYY-MM-DD"
-                        value={importEndAt}
-                        onChange={(e) => setImportEndAt(e.target.value.trim())}
-                      />
-                    </div>
-                  </div>
-
-                  {importStartAt && importEndAt && importStartAt >= importEndAt ? (
-                    <div className="text-sm text-[#e3001b]">订阅开始日期必须早于订阅结束日期</div>
-                  ) : null}
-                </>
-              ) : null}
-
-              <div>
-                <label className="text-sm text-[#222] font-medium">导入模式</label>
-                <div className="mt-2 flex gap-6 text-sm">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input className="h-4 w-4 accent-[#e3001b]" type="radio" name="importMode" checked={importMode === "ALL"} onChange={() => setImportMode("ALL")} />
-                    导入全部用户
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input className="h-4 w-4 accent-[#e3001b]" type="radio" name="importMode" checked={importMode === "SELECTED"} onChange={() => setImportMode("SELECTED")} />
-                    选择特定用户
-                  </label>
+                <div>
+                  <label className="text-sm text-[#222] font-medium">选择 Emby 服务器 <span className="text-[#e3001b]">*</span></label>
+                  <select className="mt-2 w-full rounded-[10px] border border-[#eaeaea] bg-[#f8f9fa] px-3.5 py-2.5 text-sm outline-none focus:bg-white focus:border-[#e3001b] focus:ring-4 focus:ring-[rgba(227,0,27,0.05)]" value={importServerId} onChange={(e) => setImportServerId(e.target.value)}>
+                    <option value="">选择服务器…</option>
+                    {importServers.map((s) => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
                 </div>
-              </div>
 
-              {importMode === "SELECTED" ? (
-                <div className="space-y-3">
-                  <div className="border border-[#eaeaea] rounded-[10px] overflow-hidden bg-white">
-                    <div className="px-3 py-3 bg-[#f8f9fa] border-b border-[#eaeaea] flex items-center gap-3">
-                      <button className="border border-[#eaeaea] bg-white rounded-md px-3 py-1.5 text-[13px] hover:bg-[#f8f9fa]" type="button" onClick={loadEmbyUserListForImport} disabled={importLoading || !importServerId}>
-                        加载 Emby 用户列表
-                      </button>
-                      <div className="text-xs text-[#888] ml-auto">已选择 {importSelectedIds.length}/{importEmbyUsers.length} 个用户</div>
-                    </div>
+                <div>
+                  <label className="text-sm text-[#222] font-medium">默认密码 <span className="text-[#e3001b]">*</span> <span className="font-normal text-[#888] text-xs">（导入后面板账户使用该密码；不会重置 Emby 原密码）</span></label>
+                  <input className="mt-2 w-full rounded-[10px] border border-[#eaeaea] bg-[#f8f9fa] px-3.5 py-2.5 text-sm outline-none focus:bg-white focus:border-[#e3001b] focus:ring-4 focus:ring-[rgba(227,0,27,0.05)]" type="password" value={importDefaultPassword} onChange={(e) => setImportDefaultPassword(e.target.value)} placeholder="至少 6 位" />
+                </div>
 
-                    {importEmbyUsersLoaded ? (
-                      <>
-                        <div className="px-3 py-2.5 border-b border-[#eaeaea]">
-                          <div className="relative">
-                            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-[#888]" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <circle cx="11" cy="11" r="8"></circle>
-                              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                            </svg>
-                            <input
-                              className="w-full rounded-md border border-[#eaeaea] bg-white pl-8 pr-3 py-2 text-[13px] outline-none focus:border-[#e3001b]"
-                              placeholder="搜索用户名或 Emby 用户ID"
-                              value={importEmbyUserSearch}
-                              onChange={(e) => setImportEmbyUserSearch(e.target.value)}
-                            />
-                          </div>
-                        </div>
-                        <div className="px-3 py-2 text-xs text-[#888] border-b border-[#eaeaea]">
-                          共 {importEmbyUsers.length} 个，当前匹配 {importFilteredEmbyUsers.length} 个
-                        </div>
-                      </>
-                    ) : null}
+                <div>
+                  <label className="text-sm text-[#222] font-medium">分配订阅计划（可选）</label>
+                  <select className="mt-2 w-full rounded-[10px] border border-[#eaeaea] bg-[#f8f9fa] px-3.5 py-2.5 text-sm outline-none focus:bg-white focus:border-[#e3001b] focus:ring-4 focus:ring-[rgba(227,0,27,0.05)]" value={importPlanId} onChange={(e) => setImportPlanId(e.target.value)}>
+                    <option value="">不分配</option>
+                    {importPlans.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
 
-                    {!importEmbyUsersLoaded ? (
-                      <div className="m-3 bg-sky-50 border border-sky-200 rounded p-3 text-sm text-sky-900">
-                        请先加载用户列表。点击上方的“加载 Emby 用户列表”按钮来查看和选择要导入的用户。
+                {importPlanId ? (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm text-[#222] font-medium">订阅开始日期 <span className="text-[#e3001b]">*</span></label>
+                        <input className="mt-2 w-full rounded-[10px] border border-[#eaeaea] bg-[#f8f9fa] px-3.5 py-2.5 text-sm outline-none focus:bg-white focus:border-[#e3001b] focus:ring-4 focus:ring-[rgba(227,0,27,0.05)]" type="text" placeholder="YYYY-MM-DD" value={importStartAt} onChange={(e) => setImportStartAt(e.target.value.trim())} />
                       </div>
-                    ) : (
-                      <div className="max-h-[520px] overflow-auto">
-                        <table className="min-w-[520px] w-full text-sm">
-                        <thead className="text-left text-[#888] border-b border-[#eaeaea] sticky top-0 bg-[#fafafa]">
-                          <tr>
-                            <th className="py-2 px-3 text-center w-10">
-                              <input
-                                className="h-4 w-4 accent-[#e3001b]"
-                                type="checkbox"
-                                checked={importFilteredEmbyUsers.length > 0 && importFilteredEmbyUsers.every((u) => !!importSelectedEmbyUsers[u.id])}
-                                onChange={(e) => {
+                      <div>
+                        <label className="text-sm text-[#222] font-medium">订阅结束日期 <span className="text-[#e3001b]">*</span></label>
+                        <input className="mt-2 w-full rounded-[10px] border border-[#eaeaea] bg-[#f8f9fa] px-3.5 py-2.5 text-sm outline-none focus:bg-white focus:border-[#e3001b] focus:ring-4 focus:ring-[rgba(227,0,27,0.05)]" type="text" placeholder="YYYY-MM-DD" value={importEndAt} onChange={(e) => setImportEndAt(e.target.value.trim())} />
+                      </div>
+                    </div>
+                    {importStartAt && importEndAt && importStartAt >= importEndAt ? <div className="text-sm text-[#e3001b]">订阅开始日期必须早于订阅结束日期</div> : null}
+                  </>
+                ) : null}
+
+                <div>
+                  <label className="text-sm text-[#222] font-medium">导入模式</label>
+                  <div className="mt-2 flex gap-6 text-sm">
+                    <label className="flex items-center gap-2 cursor-pointer"><input className="h-4 w-4 accent-[#e3001b]" type="radio" name="importMode" checked={importMode === "ALL"} onChange={() => setImportMode("ALL")} />导入全部用户</label>
+                    <label className="flex items-center gap-2 cursor-pointer"><input className="h-4 w-4 accent-[#e3001b]" type="radio" name="importMode" checked={importMode === "SELECTED"} onChange={() => setImportMode("SELECTED")} />选择特定用户</label>
+                  </div>
+                </div>
+
+                {importMode === "SELECTED" ? (
+                  <div className="space-y-3">
+                    <div className="border border-[#eaeaea] rounded-[10px] overflow-hidden bg-white">
+                      <div className="px-3 py-3 bg-[#f8f9fa] border-b border-[#eaeaea] flex items-center gap-3">
+                        <button className="border border-[#eaeaea] bg-white rounded-md px-3 py-1.5 text-[13px] hover:bg-[#f8f9fa]" type="button" onClick={loadEmbyUserListForImport} disabled={importLoading || !importServerId}>加载 Emby 用户列表</button>
+                        <div className="text-xs text-[#888] ml-auto">已选择 {importSelectedIds.length}/{importEmbyUsers.length} 个用户</div>
+                      </div>
+
+                      {importEmbyUsersLoaded ? (
+                        <>
+                          <div className="px-3 py-2.5 border-b border-[#eaeaea]">
+                            <div className="relative">
+                              <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-[#888]" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+                              <input className="w-full rounded-md border border-[#eaeaea] bg-white pl-8 pr-3 py-2 text-[13px] outline-none focus:border-[#e3001b]" placeholder="搜索用户名或 Emby 用户ID" value={importEmbyUserSearch} onChange={(e) => setImportEmbyUserSearch(e.target.value)} />
+                            </div>
+                          </div>
+                          <div className="px-3 py-2 text-xs text-[#888] border-b border-[#eaeaea]">共 {importEmbyUsers.length} 个，当前匹配 {importFilteredEmbyUsers.length} 个</div>
+                        </>
+                      ) : null}
+
+                      {!importEmbyUsersLoaded ? (
+                        <div className="m-3 bg-sky-50 border border-sky-200 rounded p-3 text-sm text-sky-900">请先加载用户列表。点击上方的“加载 Emby 用户列表”按钮来查看和选择要导入的用户。</div>
+                      ) : (
+                        <div className="max-h-[520px] overflow-auto">
+                          <table className="min-w-[520px] w-full text-sm">
+                            <thead className="text-left text-[#888] border-b border-[#eaeaea] sticky top-0 bg-[#fafafa]">
+                              <tr>
+                                <th className="py-2 px-3 text-center w-10"><input className="h-4 w-4 accent-[#e3001b]" type="checkbox" checked={importFilteredEmbyUsers.length > 0 && importFilteredEmbyUsers.every((u) => !!importSelectedEmbyUsers[u.id])} onChange={(e) => {
                                   const on = e.target.checked;
                                   if (!on) {
                                     setImportSelectedEmbyUsers((m) => {
@@ -1345,95 +1283,60 @@ export function UsersClient() {
                                     for (const u of importFilteredEmbyUsers) next[u.id] = true;
                                     return next;
                                   });
-                                }}
-                              />
-                            </th>
-                            <th className="py-2 px-3">用户名</th>
-                            <th className="py-2 px-3">Emby 用户ID</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {importFilteredEmbyUsers.map((u) => (
-                            <tr key={u.id} className="border-b border-[#eaeaea] last:border-b-0 hover:bg-[#fdfdfd]">
-                              <td className="py-2 px-3 text-center">
-                                <input
-                                  className="h-4 w-4 accent-[#e3001b]"
-                                  type="checkbox"
-                                  checked={!!importSelectedEmbyUsers[u.id]}
-                                  onChange={(e) => setImportSelectedEmbyUsers((m) => ({ ...m, [u.id]: e.target.checked }))}
-                                />
-                              </td>
-                              <td className="py-2 px-3 font-mono">{u.name}</td>
-                              <td className="py-2 px-3 font-mono text-xs">{u.id}</td>
-                            </tr>
-                          ))}
-                          {!importEmbyUsers.length ? (
-                            <tr>
-                              <td className="py-6 px-3 text-gray-500" colSpan={3}>
-                                无可用用户
-                              </td>
-                            </tr>
-                          ) : importFilteredEmbyUsers.length === 0 ? (
-                            <tr>
-                              <td className="py-6 px-3 text-gray-500" colSpan={3}>
-                                无匹配用户
-                              </td>
-                            </tr>
-                          ) : null}
-                        </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </div>
+                                }} /></th>
+                                <th className="py-2 px-3">用户名</th>
+                                <th className="py-2 px-3">Emby 用户ID</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {importFilteredEmbyUsers.map((u) => (
+                                <tr key={u.id} className="border-b border-[#eaeaea] last:border-b-0 hover:bg-[#fdfdfd]">
+                                  <td className="py-2 px-3 text-center"><input className="h-4 w-4 accent-[#e3001b]" type="checkbox" checked={!!importSelectedEmbyUsers[u.id]} onChange={(e) => setImportSelectedEmbyUsers((m) => ({ ...m, [u.id]: e.target.checked }))} /></td>
+                                  <td className="py-2 px-3 font-mono">{u.name}</td>
+                                  <td className="py-2 px-3 font-mono text-xs">{u.id}</td>
+                                </tr>
+                              ))}
+                              {!importEmbyUsers.length ? (
+                                <tr><td className="py-6 px-3 text-gray-500" colSpan={3}>无可用用户</td></tr>
+                              ) : importFilteredEmbyUsers.length === 0 ? (
+                                <tr><td className="py-6 px-3 text-gray-500" colSpan={3}>无匹配用户</td></tr>
+                              ) : null}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
 
-                  <div>
-                    <label className="text-sm text-[#222] font-medium">（可选）手动指定用户名 <span className="font-normal text-[#888] text-xs">（每行一个，和勾选列表取并集）</span></label>
-                    <textarea className="mt-2 w-full rounded-[10px] border border-[#eaeaea] bg-[#f8f9fa] px-3.5 py-2.5 text-sm outline-none focus:bg-white focus:border-[#e3001b] focus:ring-4 focus:ring-[rgba(227,0,27,0.05)] min-h-[100px]" value={importNamesText} onChange={(e) => setImportNamesText(e.target.value)} />
+                    <div>
+                      <label className="text-sm text-[#222] font-medium">（可选）手动指定用户名 <span className="font-normal text-[#888] text-xs">（每行一个，和勾选列表取并集）</span></label>
+                      <textarea className="mt-2 w-full rounded-[10px] border border-[#eaeaea] bg-[#f8f9fa] px-3.5 py-2.5 text-sm outline-none focus:bg-white focus:border-[#e3001b] focus:ring-4 focus:ring-[rgba(227,0,27,0.05)] min-h-[100px]" value={importNamesText} onChange={(e) => setImportNamesText(e.target.value)} />
+                    </div>
                   </div>
+                ) : null}
+
+                <div className="bg-[#fff9e6] border border-[#ffe58f] rounded-[10px] p-4 text-[13px] text-[#665000] space-y-1">
+                  <div className="font-bold">导入提示</div>
+                  <ul className="list-disc pl-5 text-xs text-[#665000] leading-6">
+                    <li>将导入 Emby 服务器上的所有非管理员用户及模板用户（如选择特定用户，则只导入指定用户名）。</li>
+                    <li>如果用户已存在于面板，将跳过创建；但会尝试补齐 EmbyUserLink。</li>
+                    <li>不会重置 Emby 服务器中用户的密码；仅面板侧使用默认密码。</li>
+                  </ul>
                 </div>
-              ) : null}
-
-              <div className="bg-[#fff9e6] border border-[#ffe58f] rounded-[10px] p-4 text-[13px] text-[#665000] space-y-1">
-                <div className="font-bold">导入提示</div>
-                <ul className="list-disc pl-5 text-xs text-[#665000] leading-6">
-                  <li>将导入 Emby 服务器上的所有非管理员用户及模板用户（如选择特定用户，则只导入指定用户名）。</li>
-                  <li>如果用户已存在于面板，将跳过创建；但会尝试补齐 EmbyUserLink。</li>
-                  <li>不会重置 Emby 服务器中用户的密码；仅面板侧使用默认密码。</li>
-                </ul>
               </div>
             </div>
 
             <div className="px-8 pt-4 pb-6 border-t border-[#eaeaea] flex justify-end gap-3">
-              <button className="px-6 py-2.5 rounded-md border border-[#eaeaea] bg-white text-[#222] text-sm font-bold hover:bg-[#f8f9fa]" onClick={() => setImportOpen(false)}>
-                取消
-              </button>
+              <button className="px-6 py-2.5 rounded-md border border-[#eaeaea] bg-white text-[#222] text-sm font-bold hover:bg-[#f8f9fa]" onClick={() => setImportOpen(false)}>取消</button>
               <button
                 className="px-6 py-2.5 rounded-md bg-[#e3001b] hover:bg-[#c20017] text-white text-sm font-bold disabled:opacity-50"
-                disabled={
-                  !importServerId ||
-                  importDefaultPassword.trim().length < 6 ||
-                  importLoading ||
-                  (importMode === "SELECTED" && importSelectedIds.length === 0 && importNamesText.trim().length === 0) ||
-                  (importPlanId ? !importStartAt || !importEndAt || importStartAt >= importEndAt : false)
-                }
+                disabled={!importServerId || importDefaultPassword.trim().length < 6 || importLoading || (importMode === "SELECTED" && importSelectedIds.length === 0 && importNamesText.trim().length === 0) || (importPlanId ? !importStartAt || !importEndAt || importStartAt >= importEndAt : false)}
                 onClick={async () => {
                   setImportLoading(true);
                   setImportError(null);
                   try {
-                    const usernamesFromText =
-                      importMode === "SELECTED"
-                        ? importNamesText
-                            .split(/\r?\n/)
-                            .map((s) => s.trim())
-                            .filter(Boolean)
-                        : [];
-
+                    const usernamesFromText = importMode === "SELECTED" ? importNamesText.split(/\r?\n/).map((s) => s.trim()).filter(Boolean) : [];
                     const usernamesFromChecked = importMode === "SELECTED" ? importSelectedIds.map((id) => importEmbyUsers.find((u) => u.id === id)?.name).filter(Boolean) : [];
-
-                    const usernames =
-                      importMode === "SELECTED"
-                        ? Array.from(new Set([...usernamesFromChecked, ...usernamesFromText].map((s) => String(s).trim()).filter(Boolean)))
-                        : null;
+                    const usernames = importMode === "SELECTED" ? Array.from(new Set([...usernamesFromChecked, ...usernamesFromText].map((s) => String(s).trim()).filter(Boolean))) : null;
 
                     const res = await fetch("/api/admin/users/import-from-emby", {
                       method: "POST",
@@ -1463,9 +1366,7 @@ export function UsersClient() {
                     setImportLoading(false);
                   }
                 }}
-              >
-                开始导入
-              </button>
+              >开始导入</button>
             </div>
           </div>
         </div>
