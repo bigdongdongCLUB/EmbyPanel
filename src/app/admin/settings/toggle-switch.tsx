@@ -17,7 +17,7 @@ export function ToggleSwitch({
       aria-pressed={checked}
       onClick={() => onChange(!checked)}
       className={`relative inline-flex h-[25px] w-[60px] items-center rounded-full border transition-all ${
-        checked ? "bg-[#3b82f6] border-[#3b82f6]" : "bg-[#bfbfbf] border-[#bfbfbf]"
+        checked ? "bg-[#e3001b] border-[#e3001b]" : "bg-[#bfbfbf] border-[#bfbfbf]"
       }`}
       title={checked ? textOn : textOff}
     >
