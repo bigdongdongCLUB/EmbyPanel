@@ -221,46 +221,55 @@ export function PaymentsAdminClient() {
       </div>
 
       {open ? (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center p-4 z-40">
-          <div className="bg-white w-full max-w-[430px] rounded-lg shadow p-4 space-y-4 max-h-[85vh] overflow-auto">
-            <div className="text-2xl font-semibold">添加支付方式</div>
+        <div className="fixed inset-0 bg-black/45 flex items-center justify-center p-4 z-40">
+          <div className="bg-white w-full max-w-[520px] rounded-2xl shadow-[0_12px_32px_rgba(0,0,0,0.08)] max-h-[85vh] overflow-auto">
+            <div className="px-8 pt-8 pb-4">
+              <div className="text-2xl font-bold text-[#222]">添加支付方式</div>
 
-            <div className="flex gap-6 border-b">
-              <button className={`pb-2 border-b-2 ${step === 1 ? "border-[#e3001b] text-[#e3001b]" : "border-transparent"}`} onClick={() => setStep(1)}>基本信息</button>
-              <button className={`pb-2 border-b-2 ${step === 2 ? "border-[#e3001b] text-[#e3001b]" : "border-transparent text-gray-400"}`} disabled={!form.processor} onClick={() => setStep(2)}>配置信息</button>
+              <div className="mt-6 flex gap-6 border-b border-[#eaeaea]">
+                <button className={`pb-3 text-[15px] relative ${step === 1 ? "text-[#e3001b] font-bold" : "text-[#888] hover:text-[#222]"}`} onClick={() => setStep(1)}>
+                  基本信息
+                  {step === 1 ? <span className="absolute left-0 right-0 -bottom-px h-0.5 bg-[#e3001b]" /> : null}
+                </button>
+                <button className={`pb-3 text-[15px] relative ${step === 2 ? "text-[#e3001b] font-bold" : "text-[#888] hover:text-[#222] disabled:text-gray-300"}`} disabled={!form.processor} onClick={() => setStep(2)}>
+                  配置信息
+                  {step === 2 ? <span className="absolute left-0 right-0 -bottom-px h-0.5 bg-[#e3001b]" /> : null}
+                </button>
+              </div>
             </div>
 
+            <div className="px-8 py-6">
             {step === 1 ? (
-              <div className="space-y-3">
+              <div className="space-y-5">
                 <div>
-                  <label className="text-sm">支付方式名称</label>
-                  <input className="mt-1 w-full border rounded px-3 py-2" placeholder="请输入支付方式名称" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                  <label className="text-sm text-[#222]">支付方式名称</label>
+                  <input className="mt-2 w-full border border-[#eaeaea] rounded-[10px] px-3.5 py-3 text-sm outline-none focus:border-[#e3001b] focus:ring-4 focus:ring-[rgba(227,0,27,0.05)]" placeholder="请输入支付方式名称" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
                 </div>
                 <div>
-                  <label className="text-sm">* 支付处理器</label>
-                  <select className="mt-1 w-full border rounded px-3 py-2" value={form.processor} onChange={(e) => setForm({ ...form, processor: e.target.value })}>
+                  <label className="text-sm text-[#222]"><span className="text-[#e3001b] mr-1">*</span>支付处理器</label>
+                  <select className="mt-2 w-full border border-[#eaeaea] rounded-[10px] px-3.5 py-3 text-sm outline-none focus:border-[#e3001b] focus:ring-4 focus:ring-[rgba(227,0,27,0.05)]" value={form.processor} onChange={(e) => setForm({ ...form, processor: e.target.value })}>
                     <option value="">请选择支付处理器</option>
                     <option value="epay">易支付</option>
                     <option value="stripe">Stripe</option>
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm">描述</label>
-                  <textarea className="mt-1 w-full border rounded px-3 py-2 min-h-[90px]" placeholder="请输入支付方式描述" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+                  <label className="text-sm text-[#222]">描述</label>
+                  <textarea className="mt-2 w-full border border-[#eaeaea] rounded-[10px] px-3.5 py-3 min-h-[90px] text-sm outline-none focus:border-[#e3001b] focus:ring-4 focus:ring-[rgba(227,0,27,0.05)]" placeholder="请输入支付方式描述" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm">优先级</label>
-                    <input className="mt-1 w-full border rounded px-3 py-2" value={String(form.priority)} onChange={(e) => setForm({ ...form, priority: Number(e.target.value || 0) })} />
+                    <input className="mt-2 w-full border border-[#eaeaea] rounded-[10px] px-3.5 py-3 text-sm outline-none focus:border-[#e3001b] focus:ring-4 focus:ring-[rgba(227,0,27,0.05)]" value={String(form.priority)} onChange={(e) => setForm({ ...form, priority: Number(e.target.value || 0) })} />
                   </div>
                   <div>
                     <label className="text-sm">手续费(%)</label>
-                    <input className="mt-1 w-full border rounded px-3 py-2" value={String(form.feePercent)} onChange={(e) => setForm({ ...form, feePercent: Number(e.target.value || 0) })} />
+                    <input className="mt-2 w-full border border-[#eaeaea] rounded-[10px] px-3.5 py-3 text-sm outline-none focus:border-[#e3001b] focus:ring-4 focus:ring-[rgba(227,0,27,0.05)]" value={String(form.feePercent)} onChange={(e) => setForm({ ...form, feePercent: Number(e.target.value || 0) })} />
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.feeEnabled} onChange={(e) => setForm({ ...form, feeEnabled: e.target.checked })} /> 收取手续费</label>
-                  <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.enabled} onChange={(e) => setForm({ ...form, enabled: e.target.checked })} /> 启用</label>
+                <div className="flex items-center gap-5">
+                  <label className="flex items-center gap-2 text-sm text-[#222]"><input className="h-4 w-4 accent-[#e3001b]" type="checkbox" checked={form.feeEnabled} onChange={(e) => setForm({ ...form, feeEnabled: e.target.checked })} /> 收取手续费</label>
+                  <label className="flex items-center gap-2 text-sm text-[#222]"><input className="h-4 w-4 accent-[#e3001b]" type="checkbox" checked={form.enabled} onChange={(e) => setForm({ ...form, enabled: e.target.checked })} /> 启用</label>
                 </div>
               </div>
             ) : (
@@ -269,19 +278,19 @@ export function PaymentsAdminClient() {
                   <>
                     <div>
                       <label className="text-sm">* 商户ID（pid）</label>
-                      <input className="mt-1 w-full border rounded px-3 py-2" placeholder="请输入商户ID" value={form.config.merchantId} onChange={(e) => setForm({ ...form, config: { ...form.config, merchantId: e.target.value } })} />
+                      <input className="mt-2 w-full border border-[#eaeaea] rounded-[10px] px-3.5 py-3 text-sm outline-none focus:border-[#e3001b] focus:ring-4 focus:ring-[rgba(227,0,27,0.05)]" placeholder="请输入商户ID" value={form.config.merchantId} onChange={(e) => setForm({ ...form, config: { ...form.config, merchantId: e.target.value } })} />
                     </div>
                     <div>
                       <label className="text-sm">* 商户密钥（key）</label>
-                      <input className="mt-1 w-full border rounded px-3 py-2" placeholder="请输入商户密钥" value={form.config.merchantKey} onChange={(e) => setForm({ ...form, config: { ...form.config, merchantKey: e.target.value } })} />
+                      <input className="mt-2 w-full border border-[#eaeaea] rounded-[10px] px-3.5 py-3 text-sm outline-none focus:border-[#e3001b] focus:ring-4 focus:ring-[rgba(227,0,27,0.05)]" placeholder="请输入商户密钥" value={form.config.merchantKey} onChange={(e) => setForm({ ...form, config: { ...form.config, merchantKey: e.target.value } })} />
                     </div>
                     <div>
                       <label className="text-sm">* 接口地址（submit.php 所在域名）</label>
-                      <input className="mt-1 w-full border rounded px-3 py-2" placeholder="https://pay.example.com" value={form.config.apiBaseUrl} onChange={(e) => setForm({ ...form, config: { ...form.config, apiBaseUrl: e.target.value } })} />
+                      <input className="mt-2 w-full border border-[#eaeaea] rounded-[10px] px-3.5 py-3 text-sm outline-none focus:border-[#e3001b] focus:ring-4 focus:ring-[rgba(227,0,27,0.05)]" placeholder="https://pay.example.com" value={form.config.apiBaseUrl} onChange={(e) => setForm({ ...form, config: { ...form.config, apiBaseUrl: e.target.value } })} />
                     </div>
                     <div>
                       <label className="text-sm">* 支付类型（type）</label>
-                      <select className="mt-1 w-full border rounded px-3 py-2" value={form.config.paymentType} onChange={(e) => setForm({ ...form, config: { ...form.config, paymentType: e.target.value } })}>
+                      <select className="mt-2 w-full border border-[#eaeaea] rounded-[10px] px-3.5 py-3 text-sm outline-none focus:border-[#e3001b] focus:ring-4 focus:ring-[rgba(227,0,27,0.05)]" value={form.config.paymentType} onChange={(e) => setForm({ ...form, config: { ...form.config, paymentType: e.target.value } })}>
                         <option value="alipay">alipay</option>
                         <option value="wxpay">wxpay</option>
                         <option value="qqpay">qqpay</option>
@@ -290,7 +299,7 @@ export function PaymentsAdminClient() {
                     </div>
                     <div>
                       <label className="text-sm">* 签名方式（sign_type）</label>
-                      <select className="mt-1 w-full border rounded px-3 py-2" value={form.config.signType} onChange={(e) => setForm({ ...form, config: { ...form.config, signType: e.target.value } })}>
+                      <select className="mt-2 w-full border border-[#eaeaea] rounded-[10px] px-3.5 py-3 text-sm outline-none focus:border-[#e3001b] focus:ring-4 focus:ring-[rgba(227,0,27,0.05)]" value={form.config.signType} onChange={(e) => setForm({ ...form, config: { ...form.config, signType: e.target.value } })}>
                         <option value="MD5">MD5</option>
                         <option value="HMAC-SHA256">HMAC-SHA256</option>
                       </select>
@@ -301,15 +310,15 @@ export function PaymentsAdminClient() {
                   <>
                     <div>
                       <label className="text-sm">* Secret Key</label>
-                      <input className="mt-1 w-full border rounded px-3 py-2" placeholder="sk_live_..." value={form.config.secretKey} onChange={(e) => setForm({ ...form, config: { ...form.config, secretKey: e.target.value } })} />
+                      <input className="mt-2 w-full border border-[#eaeaea] rounded-[10px] px-3.5 py-3 text-sm outline-none focus:border-[#e3001b] focus:ring-4 focus:ring-[rgba(227,0,27,0.05)]" placeholder="sk_live_..." value={form.config.secretKey} onChange={(e) => setForm({ ...form, config: { ...form.config, secretKey: e.target.value } })} />
                     </div>
                     <div>
                       <label className="text-sm">* Webhook Secret</label>
-                      <input className="mt-1 w-full border rounded px-3 py-2" placeholder="whsec_..." value={form.config.webhookSecret} onChange={(e) => setForm({ ...form, config: { ...form.config, webhookSecret: e.target.value } })} />
+                      <input className="mt-2 w-full border border-[#eaeaea] rounded-[10px] px-3.5 py-3 text-sm outline-none focus:border-[#e3001b] focus:ring-4 focus:ring-[rgba(227,0,27,0.05)]" placeholder="whsec_..." value={form.config.webhookSecret} onChange={(e) => setForm({ ...form, config: { ...form.config, webhookSecret: e.target.value } })} />
                     </div>
                     <div>
                       <label className="text-sm">Publishable Key（可选）</label>
-                      <input className="mt-1 w-full border rounded px-3 py-2" placeholder="pk_live_..." value={form.config.publishableKey} onChange={(e) => setForm({ ...form, config: { ...form.config, publishableKey: e.target.value } })} />
+                      <input className="mt-2 w-full border border-[#eaeaea] rounded-[10px] px-3.5 py-3 text-sm outline-none focus:border-[#e3001b] focus:ring-4 focus:ring-[rgba(227,0,27,0.05)]" placeholder="pk_live_..." value={form.config.publishableKey} onChange={(e) => setForm({ ...form, config: { ...form.config, publishableKey: e.target.value } })} />
                     </div>
                   </>
                 ) : (
@@ -318,12 +327,14 @@ export function PaymentsAdminClient() {
               </div>
             )}
 
-            <div className="flex justify-end gap-2 pt-2">
-              <button className="border bg-white rounded px-4 py-2" onClick={() => setOpen(false)}>取消</button>
+            </div>
+
+            <div className="px-8 pb-8 pt-4 flex justify-end gap-3">
+              <button className="px-6 py-2.5 rounded-md border border-[#eaeaea] bg-white text-[#222] text-sm font-bold hover:bg-[#f8f9fa]" onClick={() => setOpen(false)}>取消</button>
               {step === 1 ? (
-                <button className="bg-gray-700 text-white rounded px-4 py-2 disabled:opacity-50" disabled={!form.processor} onClick={() => setStep(2)}>下一步</button>
+                <button className="px-6 py-2.5 rounded-md bg-[#e3001b] hover:bg-[#c20017] text-white text-sm font-bold disabled:opacity-50" disabled={!form.processor} onClick={() => setStep(2)}>下一步</button>
               ) : (
-                <button className="bg-gray-700 text-white rounded px-4 py-2 disabled:opacity-50" disabled={saving || !validateStep2()} onClick={submit}>{saving ? "保存中..." : "创建"}</button>
+                <button className="px-6 py-2.5 rounded-md bg-[#e3001b] hover:bg-[#c20017] text-white text-sm font-bold disabled:opacity-50" disabled={saving || !validateStep2()} onClick={submit}>{saving ? "保存中..." : "创建"}</button>
               )}
             </div>
           </div>
