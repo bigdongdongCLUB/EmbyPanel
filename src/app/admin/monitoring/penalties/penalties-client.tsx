@@ -126,7 +126,7 @@ export function MonitoringPenaltiesClient() {
 
       {error ? <pre className="text-xs text-red-600 whitespace-pre-wrap">{error}</pre> : null}
 
-      <div className="bg-white border border-[#eaeaea] rounded-2xl p-4">
+      <div className="bg-white border border-[#eaeaea] rounded-2xl p-4 shadow-sm">
         <div className="flex items-center justify-between gap-2">
           <div className="font-medium text-sm">处罚记录</div>
           <div className="flex items-center gap-2">
@@ -136,7 +136,7 @@ export function MonitoringPenaltiesClient() {
 
         <div className="mt-3 overflow-auto">
           <table className="min-w-[900px] w-full text-sm">
-            <thead className="text-left text-gray-600 border-b">
+            <thead className="text-left text-[#666] border-y border-[#eaeaea] bg-[#f8f9fa]">
               <tr>
                 <th className="py-2 px-3">用户</th>
                 <th className="py-2 px-3">服务器</th>
@@ -167,7 +167,7 @@ export function MonitoringPenaltiesClient() {
           </table>
         </div>
 
-        <div className="mt-3">
+        <div className="mt-0">
           <PaginationBar
             total={total}
             page={safePage}

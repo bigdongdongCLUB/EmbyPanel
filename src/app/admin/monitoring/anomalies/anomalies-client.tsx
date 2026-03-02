@@ -178,7 +178,7 @@ export function MonitoringAnomaliesClient() {
 
         <div className="mt-3 overflow-auto">
           <table className="min-w-[1100px] w-full text-sm">
-            <thead className="text-left text-[#666] border-b border-[#eaeaea] bg-[#f8f9fa]">
+            <thead className="text-left text-[#666] border-y border-[#eaeaea] bg-[#f8f9fa]">
               <tr>
                                 <th className="py-2 px-3">用户名</th>
                 <th className="py-2 px-3">服务器</th>
