@@ -1383,8 +1383,8 @@ export function UsersClient() {
                         </tbody>
                         </table>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
 
                   <div>
                     <label className="text-sm text-[#222] font-medium">（可选）手动指定用户名 <span className="font-normal text-[#888] text-xs">（每行一个，和勾选列表取并集）</span></label>
