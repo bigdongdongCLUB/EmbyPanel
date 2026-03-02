@@ -183,7 +183,6 @@ export function CardCodesClient() {
           <option value="">全部状态</option>
           <option value="UNUSED">未使用</option>
           <option value="USED">已使用</option>
-          <option value="DISABLED">已禁用</option>
         </select>
         <button className="h-8 border border-[#eaeaea] bg-white rounded-lg px-3 text-xs hover:bg-[#f4f5f7]" onClick={refresh} disabled={loading}>刷新</button>
         <button className="h-8 bg-[#e3001b] hover:bg-[#c20017] text-white rounded-lg px-3 text-xs ml-auto" onClick={() => setOpen(true)}>创建卡密</button>
