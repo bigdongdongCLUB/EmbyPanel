@@ -2,10 +2,15 @@ import { execSync } from "node:child_process";
 import type { NextConfig } from "next";
 
 const allowedDevOrigins = [
+  "http://localhost",
   "http://localhost:3000",
+  "http://127.0.0.1",
   "http://127.0.0.1:3000",
   // LAN access (adjust if your host IP changes)
+  "http://192.168.55.5",
   "http://192.168.55.5:3000",
+  "https://192.168.55.5",
+  "https://192.168.55.5:3000",
 ];
 
 function toVersionString(count: number) {
