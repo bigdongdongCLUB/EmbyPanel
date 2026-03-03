@@ -157,6 +157,7 @@ function parseActivityEntryToPlayback(entry: any, username: string) {
   if (!occurredAt || !mediaName) return null;
 
   return {
+    activityId: pickString(entry, ["Id", "id"]) || null,
     eventType: isStart ? "start" : "stop",
     userName: userName || null,
     mediaName,
@@ -164,6 +165,7 @@ function parseActivityEntryToPlayback(entry: any, username: string) {
     client,
     ip: normalizeIp(pickString(entry, ["RemoteEndPoint", "remoteEndPoint", "RemoteAddress", "remoteAddress", "IpAddress", "ipAddress", "IPAddress"])),
     occurredAt,
+    sourceJson: entry,
   };
 }
 
@@ -202,16 +204,29 @@ export async function GET(req: Request) {
   for (const link of user.embyLinks) {
     if (!link.embyServer?.enabled) continue;
 
-    let events: Array<{ eventType: string; mediaName: string; mediaKey: string; client: string | null; ip: string | null; sourceJson?: any; occurredAt: Date }> = [];
+    const rawEvents: Array<{
+      activityId?: string | null;
+      eventType: string;
+      mediaName: string;
+      mediaKey: string;
+      client: string;
+      ip: string;
+      occurredAt: Date;
+      sourceJson?: any;
+    }> = [];
+
+    // 1) 历史采集库（快速）
     try {
-      events = await prisma.playbackEvent.findMany({
+      const events = await prisma.playbackEvent.findMany({
         where: {
           embyServerId: link.embyServerId,
           occurredAt: { gte: since },
           OR: [{ embyUserId: link.embyUserId }, { userName: { equals: user.username, mode: "insensitive" } }],
         },
-        orderBy: { occurredAt: "asc" },
+        orderBy: { occurredAt: "desc" },
+        take: 2000,
         select: {
+          activityId: true,
           eventType: true,
           mediaName: true,
           mediaKey: true,
@@ -221,120 +236,144 @@ export async function GET(req: Request) {
           occurredAt: true,
         },
       });
+
+      for (const ev of events) {
+        const mediaName = String(ev.mediaName || "").trim();
+        if (!mediaName) continue;
+        rawEvents.push({
+          activityId: ev.activityId || null,
+          eventType: String(ev.eventType || "play"),
+          mediaName,
+          mediaKey: normalizeMediaKey(ev.mediaKey || mediaName),
+          client: toDetailedClient(String(ev.client || "-"), ev.sourceJson),
+          ip: normalizeIp(ev.ip),
+          occurredAt: ev.occurredAt,
+          sourceJson: ev.sourceJson,
+        });
+      }
     } catch {
-      events = [];
+      // ignore and fallback to live sources
     }
 
-    const startsByMedia = new Map<string, Array<{ at: Date; client: string; ip: string }>>();
-    let pushedFromDb = 0;
+    // 2) 实时 Activity（补齐刚播放但采集任务未落库的窗口）
+    const apiKey = getEmbyApiKeyForServer(link.embyServer as any);
+    if (apiKey) {
+      const live = await fetchActivityEntries(link.embyServer.baseUrl, apiKey, 400);
+      if (live.length) {
+        const parsed = live
+          .map((x) => parseActivityEntryToPlayback(x, user.username))
+          .filter(Boolean) as Array<{
+          activityId?: string | null;
+          eventType: "start" | "stop";
+          mediaName: string;
+          mediaKey: string;
+          client: string;
+          ip: string;
+          occurredAt: Date;
+          sourceJson?: any;
+        }>;
 
-    for (const ev of events) {
-      const mediaKey = normalizeMediaKey(ev.mediaKey || ev.mediaName);
-      const mediaName = String(ev.mediaName || "未知媒体");
-      const client = toDetailedClient(String(ev.client || "-"), ev.sourceJson);
-      const ip = normalizeIp(ev.ip);
-      if (ev.eventType === "start") {
-        const arr = startsByMedia.get(mediaKey) ?? [];
-        arr.push({ at: ev.occurredAt, client, ip });
-        startsByMedia.set(mediaKey, arr);
-        continue;
-      }
-
-      if (ev.eventType !== "stop") continue;
-
-      let durationSeconds = 0;
-      let resolvedClient = client;
-      let resolvedIp = ip;
-
-      const arr = startsByMedia.get(mediaKey) ?? [];
-      if (arr.length) {
-        // pick best candidate from newest -> oldest (prefer same client+ip)
-        let pickIndex = -1;
-        let bestScore = -1;
-        for (let i = arr.length - 1; i >= 0; i--) {
-          const st = arr[i];
-          if (st.at.getTime() > ev.occurredAt.getTime()) continue;
-          const ageSec = (ev.occurredAt.getTime() - st.at.getTime()) / 1000;
-          if (ageSec > 24 * 3600) continue;
-          let score = 0;
-          if (st.client === client) score += 2;
-          if (st.ip === ip && ip !== "-") score += 2;
-          if (st.client && !isGenericClient(st.client) && isGenericClient(client)) score += 1;
-          if (score > bestScore) {
-            bestScore = score;
-            pickIndex = i;
-            if (score >= 4) break;
-          }
-        }
-
-        if (pickIndex >= 0) {
-          const [st] = arr.splice(pickIndex, 1);
-          startsByMedia.set(mediaKey, arr);
-          durationSeconds = Math.max(0, Math.round((ev.occurredAt.getTime() - st.at.getTime()) / 1000));
-          if (durationSeconds > 24 * 3600) durationSeconds = 0;
-          if (isGenericClient(resolvedClient) && !isGenericClient(st.client)) resolvedClient = st.client;
-          if (resolvedIp === "-" && st.ip && st.ip !== "-") resolvedIp = st.ip;
+        for (const ev of parsed) {
+          if (ev.occurredAt < since) continue;
+          rawEvents.push({
+            activityId: ev.activityId || null,
+            eventType: ev.eventType,
+            mediaName: ev.mediaName,
+            mediaKey: normalizeMediaKey(ev.mediaKey || ev.mediaName),
+            client: toDetailedClient(ev.client || "-", ev.sourceJson),
+            ip: normalizeIp(ev.ip),
+            occurredAt: ev.occurredAt,
+            sourceJson: ev.sourceJson,
+          });
         }
       }
+    }
 
-      rows.push({
+    // 3) 最近会话快照（进一步补齐实时正在播放）
+    try {
+      const latestSnapshot = await prisma.sessionSnapshot.findFirst({
+        where: { embyServerId: link.embyServerId, capturedAt: { gte: new Date(Date.now() - 30 * 60 * 1000) } },
+        select: { capturedAt: true, rawJson: true },
+        orderBy: { capturedAt: "desc" },
+      });
+
+      const sessions = Array.isArray(latestSnapshot?.rawJson) ? (latestSnapshot!.rawJson as any[]) : [];
+      const uname = user.username.toLowerCase();
+      for (const s of sessions) {
+        if (String(s?.userName ?? "").toLowerCase() !== uname) continue;
+        const mediaName = String(s?.nowPlaying ?? "").trim();
+        if (!mediaName) continue;
+        rawEvents.push({
+          eventType: s?.paused ? "snapshot_paused" : "snapshot_playing",
+          mediaName,
+          mediaKey: normalizeMediaKey(mediaName),
+          client: toDetailedClient("-", undefined, s),
+          ip: normalizeIp(s?.ip),
+          occurredAt: latestSnapshot!.capturedAt,
+          sourceJson: s,
+        });
+      }
+    } catch {
+      // ignore snapshot enrichment source failures
+    }
+
+    if (!rawEvents.length) continue;
+
+    // 4) 原始事件去重：优先 activityId，其次指纹
+    const uniqueEvents = new Map<string, (typeof rawEvents)[number]>();
+    for (const ev of rawEvents) {
+      const fingerprint = ev.activityId
+        ? `A:${link.embyServerId}:${ev.activityId}`
+        : `F:${link.embyServerId}:${ev.eventType}:${ev.mediaKey}:${Math.floor(ev.occurredAt.getTime() / 1000)}`;
+      const prev = uniqueEvents.get(fingerprint);
+      if (!prev || ev.occurredAt.getTime() > prev.occurredAt.getTime()) uniqueEvents.set(fingerprint, ev);
+    }
+
+    // 5) 展示去重：同媒体10分钟窗口只保留一条；若有 stop 则优先 stop
+    const displayMap = new Map<string, OutputRow & { __eventType: string; __ts: number }>();
+    const ordered = Array.from(uniqueEvents.values()).sort((a, b) => b.occurredAt.getTime() - a.occurredAt.getTime());
+    for (const ev of ordered) {
+      const mediaName = String(ev.mediaName || "").trim();
+      if (!mediaName) continue;
+      const mediaKey = normalizeMediaKey(ev.mediaKey || mediaName);
+      const ts = ev.occurredAt.getTime();
+      const bucket = Math.floor(ts / (10 * 60 * 1000));
+      const key = `${link.embyServerId}:${mediaKey}:${bucket}`;
+
+      const nextRow: OutputRow & { __eventType: string; __ts: number } = {
         serverId: link.embyServerId,
         serverName: link.embyServer.name,
         mediaName,
         mediaKey,
-        client: resolvedClient,
-        ip: resolvedIp,
+        client: toDetailedClient(ev.client || "-", ev.sourceJson),
+        ip: normalizeIp(ev.ip),
         lastPlayedAt: ev.occurredAt.toISOString(),
-      });
-      pushedFromDb += 1;
+        __eventType: ev.eventType,
+        __ts: ts,
+      };
+
+      const prev = displayMap.get(key);
+      if (!prev) {
+        displayMap.set(key, nextRow);
+        continue;
+      }
+
+      const preferNext =
+        (nextRow.__eventType === "stop" && prev.__eventType !== "stop") ||
+        (nextRow.__eventType === prev.__eventType && nextRow.__ts > prev.__ts);
+      if (preferNext) displayMap.set(key, nextRow);
     }
 
-    // live fallback: when collector has no data yet, read Activity directly
-    if (pushedFromDb === 0) {
-      const apiKey = getEmbyApiKeyForServer(link.embyServer as any);
-      if (apiKey) {
-        const live = await fetchActivityEntries(link.embyServer.baseUrl, apiKey, 1000);
-        if (live.length) {
-          const parsed = live
-            .map((x) => parseActivityEntryToPlayback(x, user.username))
-            .filter(Boolean) as Array<{ eventType: "start" | "stop"; mediaName: string; mediaKey: string; client: string; ip: string; occurredAt: Date }>;
-
-          parsed.sort((a, b) => a.occurredAt.getTime() - b.occurredAt.getTime());
-          const liveStartsByMedia = new Map<string, Array<{ at: Date; client: string; ip: string }>>();
-          for (const ev of parsed) {
-            if (ev.occurredAt < since) continue;
-            if (ev.eventType === "start") {
-              const arr = liveStartsByMedia.get(ev.mediaKey) ?? [];
-              arr.push({ at: ev.occurredAt, client: ev.client || "-", ip: ev.ip || "-" });
-              liveStartsByMedia.set(ev.mediaKey, arr);
-              continue;
-            }
-
-            const arr = liveStartsByMedia.get(ev.mediaKey) ?? [];
-            let durationSeconds = 0;
-            let resolvedClient = ev.client || "-";
-            let resolvedIp = ev.ip || "-";
-            if (arr.length) {
-              const st = arr.pop()!;
-              liveStartsByMedia.set(ev.mediaKey, arr);
-              durationSeconds = Math.max(0, Math.round((ev.occurredAt.getTime() - st.at.getTime()) / 1000));
-              if (durationSeconds > 24 * 3600) durationSeconds = 0;
-              if (isGenericClient(resolvedClient) && !isGenericClient(st.client)) resolvedClient = st.client;
-              if (resolvedIp === "-" && st.ip && st.ip !== "-") resolvedIp = st.ip;
-            }
-
-            rows.push({
-              serverId: link.embyServerId,
-              serverName: link.embyServer.name,
-              mediaName: ev.mediaName,
-              mediaKey: ev.mediaKey,
-                    client: resolvedClient,
-              ip: resolvedIp,
-              lastPlayedAt: ev.occurredAt.toISOString(),
-            });
-          }
-        }
-      }
+    for (const r of displayMap.values()) {
+      rows.push({
+        serverId: r.serverId,
+        serverName: r.serverName,
+        mediaName: r.mediaName,
+        mediaKey: r.mediaKey,
+        client: r.client,
+        ip: r.ip,
+        lastPlayedAt: r.lastPlayedAt,
+      });
     }
   }
 
