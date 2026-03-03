@@ -6,7 +6,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
-import { normalizeBaseUrl } from "@/lib/emby";
+import { embyFetchUsers, normalizeBaseUrl } from "@/lib/emby";
+import { embyDeleteUser } from "@/lib/emby-provision";
 
 async function fetchItemCounts(baseUrl: string, apiKey: string) {
   try {
@@ -64,13 +65,14 @@ export async function GET() {
       id: true,
       username: true,
       subscriptions: {
-        where: { status: "ACTIVE" },
+        where: { status: { in: ["ACTIVE", "EXPIRED"] }, planId: { not: null } },
         orderBy: { endAt: "desc" },
         take: 1,
         select: {
           id: true,
           startAt: true,
           endAt: true,
+          status: true,
           plan: { select: { id: true, name: true } },
           servers: { select: { embyServerId: true } },
         },
@@ -81,9 +83,11 @@ export async function GET() {
 
   if (!user) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
-  const activeSub = user.subscriptions?.[0] ?? null;
+  const currentSub = user.subscriptions?.[0] ?? null;
+  const now = Date.now();
+  const canDeleteExpired = !!(currentSub?.plan?.id && currentSub?.endAt && currentSub.endAt.getTime() <= now);
   const serverIds = new Set<string>([
-    ...(activeSub?.servers?.map((s) => s.embyServerId) ?? []),
+    ...(currentSub?.servers?.map((s) => s.embyServerId) ?? []),
     ...user.embyLinks.map((l) => l.embyServerId),
   ]);
 
@@ -143,8 +147,9 @@ export async function GET() {
   return NextResponse.json({
     ok: true,
     subscription: {
-      planName: activeSub?.plan?.name ?? "无订阅",
-      endAt: activeSub?.endAt ?? null,
+      planName: currentSub?.plan?.name ?? "无订阅",
+      endAt: currentSub?.endAt ?? null,
+      canDeleteExpired,
       serverCount: list.length,
       onlineCount,
     },
@@ -152,4 +157,116 @@ export async function GET() {
     servers: list,
     user: { username: user.username },
   });
+}
+
+export async function DELETE() {
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const username = (session as any)?.username;
+  if (!username) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  const user = await prisma.user.findUnique({
+    where: { username },
+    select: {
+      id: true,
+      username: true,
+      subscriptions: {
+        where: { status: { in: ["ACTIVE", "EXPIRED"] }, planId: { not: null } },
+        orderBy: { endAt: "desc" },
+        take: 1,
+        select: { id: true, endAt: true, servers: { select: { embyServerId: true } } },
+      },
+      embyLinks: {
+        select: {
+          embyServerId: true,
+          embyUserId: true,
+          embyServer: { select: { id: true, baseUrl: true, apiKey: true, apiKeyEnc: true, apiKeyIv: true, apiKeyTag: true } },
+        },
+      },
+    },
+  });
+
+  if (!user) return NextResponse.json({ error: "not_found" }, { status: 404 });
+
+  const currentSub = user.subscriptions?.[0] ?? null;
+  if (!currentSub) return NextResponse.json({ error: "no_subscription" }, { status: 400 });
+  if (currentSub.endAt.getTime() > Date.now()) {
+    return NextResponse.json({ error: "subscription_not_expired", message: "仅支持删除已到期的订阅计划" }, { status: 400 });
+  }
+
+  const linkByServerId = new Map(user.embyLinks.map((l) => [l.embyServerId, l] as const));
+  const serverIds = new Set<string>([
+    ...(currentSub.servers ?? []).map((x) => x.embyServerId),
+    ...user.embyLinks.map((x) => x.embyServerId),
+  ]);
+
+  const missingServerIds = Array.from(serverIds).filter((id) => !linkByServerId.has(id));
+  const extraServers = missingServerIds.length
+    ? await prisma.embyServer.findMany({
+        where: { id: { in: missingServerIds } },
+        select: { id: true, baseUrl: true, apiKey: true, apiKeyEnc: true, apiKeyIv: true, apiKeyTag: true },
+      })
+    : [];
+
+  const servers = [
+    ...user.embyLinks.map((x) => ({ id: x.embyServerId, baseUrl: x.embyServer.baseUrl, apiKey: x.embyServer.apiKey, apiKeyEnc: x.embyServer.apiKeyEnc, apiKeyIv: x.embyServer.apiKeyIv, apiKeyTag: x.embyServer.apiKeyTag })),
+    ...extraServers,
+  ];
+
+  const remoteIssues: string[] = [];
+
+  for (const s of servers) {
+    const apiKey = getEmbyApiKeyForServer(s as any);
+    if (!apiKey) {
+      remoteIssues.push(`${s.id}:missing_api_key`);
+      continue;
+    }
+
+    let embyUserId = linkByServerId.get(s.id)?.embyUserId ?? null;
+
+    if (!embyUserId) {
+      try {
+        const usersRes = await embyFetchUsers(s.baseUrl, apiKey);
+        if (usersRes.ok) {
+          const found = usersRes.users.find((x: any) => String(x?.Name ?? "").toLowerCase() === user.username.toLowerCase());
+          if (found?.Id) embyUserId = String(found.Id);
+        }
+      } catch {
+        remoteIssues.push(`${s.id}:fetch_user_failed`);
+      }
+    }
+
+    if (!embyUserId) {
+      remoteIssues.push(`${s.id}:user_not_found`);
+      continue;
+    }
+
+    try {
+      const r = await embyDeleteUser(s.baseUrl, apiKey, embyUserId);
+      if (!r.ok) remoteIssues.push(`${s.id}:delete_failed`);
+    } catch {
+      remoteIssues.push(`${s.id}:delete_failed`);
+    }
+  }
+
+  await prisma.$transaction(async (tx) => {
+    const subIds = await tx.subscription.findMany({ where: { userId: user.id }, select: { id: true } });
+    const idList = subIds.map((x) => x.id);
+
+    if (idList.length) {
+      await tx.subscriptionServer.deleteMany({ where: { subscriptionId: { in: idList } } });
+      await tx.subscription.updateMany({
+        where: { id: { in: idList }, status: { in: ["ACTIVE", "EXPIRED"] } },
+        data: { status: "CANCELED" },
+      });
+    }
+
+    await tx.embyUserLink.deleteMany({ where: { userId: user.id } });
+  });
+
+  if (remoteIssues.length) {
+    return NextResponse.json({ ok: true, warn: "subscription_deleted_remote_partial", issues: remoteIssues });
+  }
+
+  return NextResponse.json({ ok: true });
 }

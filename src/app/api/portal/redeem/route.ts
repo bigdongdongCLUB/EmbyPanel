@@ -208,6 +208,36 @@ export async function POST(req: Request) {
           const plan = await tx.plan.findUnique({ where: { id: card.planId }, select: { pricingJson: true } });
           planPriceCents = getPlanPriceCents((plan as any)?.pricingJson, card.payCycle);
         }
+        // 已有订阅计划（无论是否到期）：仅延长时长，不更换 planId
+        const existingPlanSub = await tx.subscription.findFirst({
+          where: { userId: user.id, planId: { not: null }, status: { in: ["ACTIVE", "EXPIRED"] } },
+          orderBy: { endAt: "desc" },
+          select: { id: true, planId: true, payCycle: true, startAt: true, endAt: true, servers: { select: { embyServerId: true } } },
+        });
+
+        if (existingPlanSub?.planId) {
+          const base = existingPlanSub.endAt.getTime() > now.getTime() ? existingPlanSub.endAt : now;
+          const newEnd = new Date(base.getTime() + days * 24 * 3600 * 1000);
+          await tx.subscription.update({
+            where: { id: existingPlanSub.id },
+            data: {
+              payCycle: existingPlanSub.payCycle ?? card.payCycle ?? "MONTHLY",
+              startAt: existingPlanSub.endAt.getTime() > now.getTime() ? existingPlanSub.startAt : now,
+              endAt: newEnd,
+              status: "ACTIVE",
+            },
+          });
+          await applyInviteCommission(tx, user.id, planPriceCents);
+          return {
+            kind: "SUBSCRIPTION",
+            daysAdded: days,
+            endAt: newEnd,
+            planId: existingPlanSub.planId,
+            subscriptionId: existingPlanSub.id,
+            preferredServerIds: (existingPlanSub.servers ?? []).map((x) => x.embyServerId),
+          };
+        }
+
         const active = await tx.subscription.findFirst({
           where: { userId: user.id, status: "ACTIVE" },
           orderBy: { endAt: "desc" },
@@ -228,7 +258,7 @@ export async function POST(req: Request) {
             select: { id: true },
           });
           await applyInviteCommission(tx, user.id, planPriceCents);
-          return { kind: "SUBSCRIPTION", daysAdded: days, endAt, planId: card.planId ?? null, subscriptionId: created.id };
+          return { kind: "SUBSCRIPTION", daysAdded: days, endAt, planId: card.planId ?? null, subscriptionId: created.id, preferredServerIds: [] };
         }
 
         const base = active.endAt.getTime() > now.getTime() ? active.endAt : now;
@@ -244,7 +274,7 @@ export async function POST(req: Request) {
           },
         });
         await applyInviteCommission(tx, user.id, planPriceCents);
-        return { kind: "SUBSCRIPTION", daysAdded: days, endAt: newEnd, planId: card.planId ?? null, subscriptionId: active.id };
+        return { kind: "SUBSCRIPTION", daysAdded: days, endAt: newEnd, planId: card.planId ?? null, subscriptionId: active.id, preferredServerIds: [] };
       }
 
       throw new Error("unsupported_card_type");
@@ -254,10 +284,13 @@ export async function POST(req: Request) {
 
     if (result?.kind === "SUBSCRIPTION" && result?.planId && result?.subscriptionId) {
       try {
-        const [u, picked] = await Promise.all([
-          prisma.user.findUnique({ where: { id: user.id }, select: { id: true, username: true, syncPasswordEnc: true, syncPasswordIv: true, syncPasswordTag: true } }),
-          pickServerForPlan(result.planId),
-        ]);
+        const u = await prisma.user.findUnique({ where: { id: user.id }, select: { id: true, username: true, syncPasswordEnc: true, syncPasswordIv: true, syncPasswordTag: true } });
+        const preferredServerIds = Array.isArray((result as any).preferredServerIds)
+          ? ((result as any).preferredServerIds as string[]).filter(Boolean)
+          : [];
+        const picked = preferredServerIds.length
+          ? { strategy: "KEEP_EXISTING" as const, servers: preferredServerIds.map((embyServerId) => ({ embyServerId, templateEmbyUserId: "" })) }
+          : await pickServerForPlan(result.planId);
 
         if (!u) {
           syncWarn = "user_not_found_after_redeem";

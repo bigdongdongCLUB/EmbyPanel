@@ -88,7 +88,7 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   const { id } = await ctx.params;
   await autoCancelExpiredPendingOrders(prisma, { id, userId: user.id });
 
-  let paidOrder: { id: string; planId: string; activeSubId: string };
+  let paidOrder: { id: string; planId: string; activeSubId: string; preferredServerIds?: string[] };
   try {
     paidOrder = await prisma.$transaction(async (tx) => {
       const order = await tx.serviceOrder.findFirst({ where: { id, userId: user.id } });
@@ -106,62 +106,88 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
       await tx.user.update({ where: { id: user.id }, data: { balanceCents: { decrement: order.amountCents } } });
 
       const now = new Date();
-      const active = await tx.subscription.findFirst({
-        where: { userId: user.id, status: "ACTIVE" },
+      const durationMs = order.payCycle === "TRIAL"
+        ? ((order.trialHours ?? order.days * 24) * 3600 * 1000)
+        : (order.days * 24 * 3600 * 1000);
+
+      // 已有订阅计划（无论是否到期）：仅延长时长，不更换 planId
+      const existingPlanSub = await tx.subscription.findFirst({
+        where: { userId: user.id, planId: { not: null }, status: { in: ["ACTIVE", "EXPIRED"] } },
         orderBy: { endAt: "desc" },
-        select: { id: true, startAt: true, endAt: true },
+        select: { id: true, planId: true, payCycle: true, startAt: true, endAt: true, servers: { select: { embyServerId: true } } },
       });
 
       let activeSubId = "";
-      if (!active) {
-        const durationMs = order.payCycle === "TRIAL"
-          ? ((order.trialHours ?? order.days * 24) * 3600 * 1000)
-          : (order.days * 24 * 3600 * 1000);
-        const endAt = new Date(now.getTime() + durationMs);
-        const created = await tx.subscription.create({
-          data: {
-            userId: user.id,
-            planId: order.planId,
-            status: "ACTIVE",
-            payCycle: order.payCycle,
-            startAt: now,
-            endAt,
-          },
-          select: { id: true },
-        });
-        activeSubId = created.id;
-      } else {
-        const base = active.endAt.getTime() > now.getTime() ? active.endAt : now;
-        const durationMs = order.payCycle === "TRIAL"
-          ? ((order.trialHours ?? order.days * 24) * 3600 * 1000)
-          : (order.days * 24 * 3600 * 1000);
+      let effectivePlanId = order.planId;
+      let preferredServerIds: string[] = [];
+
+      if (existingPlanSub?.planId) {
+        const base = existingPlanSub.endAt.getTime() > now.getTime() ? existingPlanSub.endAt : now;
         const newEnd = new Date(base.getTime() + durationMs);
         await tx.subscription.update({
-          where: { id: active.id },
+          where: { id: existingPlanSub.id },
           data: {
-            planId: order.planId,
-            payCycle: order.payCycle,
-            startAt: active.endAt.getTime() > now.getTime() ? active.startAt : now,
+            payCycle: existingPlanSub.payCycle ?? order.payCycle,
+            startAt: existingPlanSub.endAt.getTime() > now.getTime() ? existingPlanSub.startAt : now,
             endAt: newEnd,
             status: "ACTIVE",
           },
         });
-        activeSubId = active.id;
+        activeSubId = existingPlanSub.id;
+        effectivePlanId = existingPlanSub.planId;
+        preferredServerIds = (existingPlanSub.servers ?? []).map((s) => s.embyServerId);
+      } else {
+        const active = await tx.subscription.findFirst({
+          where: { userId: user.id, status: "ACTIVE" },
+          orderBy: { endAt: "desc" },
+          select: { id: true, startAt: true, endAt: true },
+        });
+
+        if (!active) {
+          const endAt = new Date(now.getTime() + durationMs);
+          const created = await tx.subscription.create({
+            data: {
+              userId: user.id,
+              planId: order.planId,
+              status: "ACTIVE",
+              payCycle: order.payCycle,
+              startAt: now,
+              endAt,
+            },
+            select: { id: true },
+          });
+          activeSubId = created.id;
+        } else {
+          const base = active.endAt.getTime() > now.getTime() ? active.endAt : now;
+          const newEnd = new Date(base.getTime() + durationMs);
+          await tx.subscription.update({
+            where: { id: active.id },
+            data: {
+              planId: order.planId,
+              payCycle: order.payCycle,
+              startAt: active.endAt.getTime() > now.getTime() ? active.startAt : now,
+              endAt: newEnd,
+              status: "ACTIVE",
+            },
+          });
+          activeSubId = active.id;
+        }
       }
 
       await tx.serviceOrder.update({ where: { id: order.id }, data: { status: "PAID", paidAt: now } });
 
       await applyInviteCommission(tx, user.id, order.amountCents ?? 0);
 
-      return { id: order.id, planId: order.planId, activeSubId };
+      return { id: order.id, planId: effectivePlanId, activeSubId, preferredServerIds };
     });
 
     // 支付后同步分配 Emby 服务器与账号（best-effort）
     try {
-      const [u, picked] = await Promise.all([
-        prisma.user.findUnique({ where: { id: user.id }, select: { id: true, username: true, syncPasswordEnc: true, syncPasswordIv: true, syncPasswordTag: true } }),
-        pickServerForPlan(paidOrder.planId),
-      ]);
+      const u = await prisma.user.findUnique({ where: { id: user.id }, select: { id: true, username: true, syncPasswordEnc: true, syncPasswordIv: true, syncPasswordTag: true } });
+      const preferredServerIds = Array.isArray(paidOrder.preferredServerIds) ? paidOrder.preferredServerIds.filter(Boolean) : [];
+      const picked = preferredServerIds.length
+        ? { strategy: "KEEP_EXISTING" as const, servers: preferredServerIds.map((embyServerId) => ({ embyServerId, templateEmbyUserId: "" })) }
+        : await pickServerForPlan(paidOrder.planId);
 
       if (!u) return NextResponse.json({ ok: true, warn: "user_not_found_after_paid" });
 

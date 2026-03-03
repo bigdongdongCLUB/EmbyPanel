@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 type Data = {
-  subscription: { planName: string; endAt: string | null; serverCount: number; onlineCount: number };
+  subscription: { planName: string; endAt: string | null; canDeleteExpired?: boolean; serverCount: number; onlineCount: number };
   aggregate: { movieCount: number; seriesCount: number; episodeCount: number; songCount: number };
   servers: Array<{
     id: string;
@@ -40,6 +40,7 @@ export function PortalEmbyServicesClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [syncingServerId, setSyncingServerId] = useState<string | null>(null);
+  const [deletingSubscription, setDeletingSubscription] = useState(false);
 
   async function refresh() {
     setLoading(true);
@@ -67,7 +68,38 @@ export function PortalEmbyServicesClient() {
       {loading ? <div className="text-sm text-gray-500">加载中…</div> : null}
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <div className="bg-white rounded-2xl border border-[#eaeaea] p-8">
+        <div className="relative bg-white rounded-2xl border border-[#eaeaea] p-8">
+          {data?.subscription.canDeleteExpired ? (
+            <button
+              className="absolute top-4 right-4 inline-flex items-center justify-center w-8 h-8 rounded-full border border-[#f2d4d9] bg-[#fff7f8] hover:border-[#e3001b] hover:bg-[#fff0f1] disabled:opacity-60"
+              disabled={deletingSubscription}
+              onClick={async () => {
+                const ok = await (window as any).showConfirm("该操作会删除用户对应emby服务器上所有资料，且操作不可以逆");
+                if (!ok) return;
+                setDeletingSubscription(true);
+                try {
+                  const res = await fetch("/api/portal/emby-services", { method: "DELETE" });
+                  const json = await res.json().catch(() => null);
+                  if (!res.ok) {
+                    alert(json?.message || json?.error || `HTTP ${res.status}`);
+                    return;
+                  }
+                  if (json?.warn) {
+                    alert("订阅计划已删除，但部分服务器删除失败，请联系管理员检查。");
+                  } else {
+                    alert("订阅计划已删除");
+                  }
+                  await refresh();
+                } finally {
+                  setDeletingSubscription(false);
+                }
+              }}
+              title="删除已到期订阅计划"
+            >
+              <img src="/icons/delete.svg" alt="删除" className="w-3.5 h-3.5" />
+            </button>
+          ) : null}
+
           <div className="text-sm text-[#888] mb-4">订阅计划</div>
           <div className="text-[32px] font-bold text-[#222] leading-tight">{data?.subscription.planName ?? "无订阅"}</div>
           <div className="text-sm text-[#888] mt-2 mb-6">有效期至 {fmtDate(data?.subscription.endAt)}</div>
