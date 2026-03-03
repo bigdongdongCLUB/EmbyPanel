@@ -12,12 +12,14 @@ const Schema = z.object({
   enabled: z.boolean().default(false),
   tmdbApiKey: z.string().max(200).default(""),
   tmdbCacheHours: z.number().int().min(1).max(168).default(12),
+  dailyTotalQuota: z.number().int().min(1).max(100).default(5),
 });
 
 const DEFAULTS = {
   enabled: false,
   tmdbApiKey: "",
   tmdbCacheHours: 12,
+  dailyTotalQuota: 5,
 };
 
 export async function GET() {

@@ -64,6 +64,7 @@ export async function POST(req: Request) {
   const settings = (settingRow?.valueJson as any) ?? {};
   const enabled = Boolean(settings.enabled ?? false);
   if (!enabled) return NextResponse.json({ error: "vod_disabled", message: "目前点播功能暂未开启" }, { status: 403 });
+  const dailyTotalQuota = Number(settings.dailyTotalQuota ?? 5);
   const dailyMovieQuota = Number(settings.dailyMovieQuota ?? 5);
   const dailyTvQuota = Number(settings.dailyTvQuota ?? 5);
 
@@ -73,9 +74,12 @@ export async function POST(req: Request) {
     select: { mediaType: true },
   });
 
+  const totalUsed = todayRequests.length;
   const movieUsed = todayRequests.filter((r) => r.mediaType === "MOVIE").length;
   const tvUsed = todayRequests.filter((r) => r.mediaType === "TV").length;
 
+  if (totalUsed >= dailyTotalQuota)
+    return NextResponse.json({ error: "quota_exceeded", message: "今日点播总配额已用完" }, { status: 429 });
   if (mediaType === "MOVIE" && movieUsed >= dailyMovieQuota)
     return NextResponse.json({ error: "quota_exceeded", message: "今日电影点播配额已用完" }, { status: 429 });
   if (mediaType === "TV" && tvUsed >= dailyTvQuota)

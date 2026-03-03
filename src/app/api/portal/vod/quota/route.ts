@@ -21,6 +21,7 @@ export async function GET() {
 
   const settingRow = await prisma.appSetting.findUnique({ where: { key: "vod_settings" } });
   const settings = (settingRow?.valueJson as any) ?? {};
+  const dailyTotalQuota = Number(settings.dailyTotalQuota ?? 5);
   const dailyMovieQuota = Number(settings.dailyMovieQuota ?? 5);
   const dailyTvQuota = Number(settings.dailyTvQuota ?? 5);
 
@@ -30,6 +31,7 @@ export async function GET() {
     select: { mediaType: true },
   });
 
+  const totalUsed = todayRequests.length;
   const movieUsed = todayRequests.filter((r) => r.mediaType === "MOVIE").length;
   const tvUsed = todayRequests.filter((r) => r.mediaType === "TV").length;
 
@@ -38,6 +40,8 @@ export async function GET() {
 
   return NextResponse.json({
     ok: true,
+    totalRemaining: Math.max(0, dailyTotalQuota - totalUsed),
+    totalTotal: dailyTotalQuota,
     movieRemaining: Math.max(0, dailyMovieQuota - movieUsed),
     movieTotal: dailyMovieQuota,
     tvRemaining: Math.max(0, dailyTvQuota - tvUsed),

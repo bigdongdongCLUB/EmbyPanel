@@ -38,6 +38,8 @@ type DetailData = {
 };
 
 type Quota = {
+  totalRemaining: number;
+  totalTotal: number;
   movieRemaining: number;
   movieTotal: number;
   tvRemaining: number;
@@ -338,6 +340,7 @@ export function VodClient() {
   const [myReqTotalPages, setMyReqTotalPages] = useState(1);
   const [myReqTotal, setMyReqTotal] = useState(0);
   const [myReqLoading, setMyReqLoading] = useState(false);
+  const [quota, setQuota] = useState<Quota | null>(null);
   const [vodEnabled, setVodEnabled] = useState(true);
   const [vodCanRequest, setVodCanRequest] = useState(true);
   const [vodDisabledReason, setVodDisabledReason] = useState("目前点播功能暂未开启");
@@ -450,13 +453,24 @@ export function VodClient() {
     }
   }
 
+  async function loadVodQuota() {
+    try {
+      const r = await fetch("/api/portal/vod/quota", { cache: "no-store" });
+      const j = await r.json().catch(() => null);
+      if (!r.ok) return;
+      setQuota(j as Quota);
+    } catch {
+      // non-critical
+    }
+  }
+
   async function clearCompletedRequests() {
     const ok = await (window as any).showConfirm("确认清空所有已完成点播记录？");
     if (!ok) return;
     const r = await fetch("/api/portal/vod/request", { method: "DELETE" });
     const j = await r.json().catch(() => null);
     if (!r.ok) throw new Error(j?.error || `HTTP ${r.status}`);
-    await loadMyRequests(1);
+    await Promise.all([loadMyRequests(1), loadVodQuota()]);
   }
 
   async function submitRequest({ season, note }: { season?: number; note: string }) {
@@ -478,6 +492,7 @@ export function VodClient() {
     });
     const j = await r.json();
     if (!r.ok) throw new Error(j?.message ?? j?.error ?? `HTTP ${r.status}`);
+    await loadVodQuota();
     alert("点播请求已提交！");
   }
 
@@ -491,7 +506,7 @@ export function VodClient() {
         <button
           className="flex items-center gap-1.5 border border-[#eaeaea] bg-white rounded-lg px-3 py-2 text-sm text-[#666] hover:border-[#e3001b] hover:text-[#e3001b] shrink-0"
           onClick={async () => {
-            await loadMyRequests(1);
+            await Promise.all([loadMyRequests(1), loadVodQuota()]);
             setShowMyRequests(true);
           }}
         >
@@ -606,13 +621,15 @@ export function VodClient() {
       {/* My requests */}
       {showMyRequests && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setShowMyRequests(false)} />
-          <div className="relative bg-white rounded-2xl border border-[#eaeaea] shadow-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto p-5">
-            <div className="flex items-center justify-between mb-4">
-              <div className="font-semibold text-gray-800">我的点播记录</div>
-              <div className="flex items-center gap-2">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowMyRequests(false)} />
+          <div className="relative bg-white w-full max-w-[560px] max-h-[85vh] rounded-[20px] border-2 border-[#e3001b] shadow-[0_12px_32px_rgba(227,0,27,0.10)] flex flex-col overflow-hidden">
+            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#e3001b] text-white px-4 py-1 rounded-[14px] text-[13px] font-bold tracking-[1px] z-10">点播记录</div>
+
+            <div className="px-7 py-5 border-b border-[#eaeaea] flex items-center justify-between">
+              <div className="text-[20px] font-bold text-[#222]">我的点播记录</div>
+              <div className="flex items-center gap-4">
                 <button
-                  className="text-xs border border-[#eaeaea] rounded px-2 py-1 text-[#666] hover:bg-gray-50 disabled:opacity-40"
+                  className="border border-[#eaeaea] rounded-[8px] px-4 py-1.5 text-[13px] text-[#222] hover:border-[#e3001b] hover:text-[#e3001b] hover:bg-[#fff0f1] disabled:opacity-40"
                   disabled={myReqLoading}
                   onClick={async () => {
                     try { await clearCompletedRequests(); } catch {}
@@ -620,63 +637,70 @@ export function VodClient() {
                 >
                   清空已完成
                 </button>
-                <button onClick={() => setShowMyRequests(false)} className="text-gray-400 hover:text-gray-600 text-xl">×</button>
+                <button onClick={() => setShowMyRequests(false)} className="text-[#888] hover:text-[#e3001b] text-2xl leading-none">×</button>
               </div>
             </div>
-            {myReqLoading ? (
-              <div className="text-gray-400 text-sm text-center py-10">加载中…</div>
-            ) : myRequests.length === 0 ? (
-              <div className="text-gray-400 text-sm text-center py-10">暂无点播记录</div>
-            ) : (
-              <div className="space-y-2">
-                {myRequests.map((r) => (
-                  <div key={r.id} className="flex items-center gap-3 p-3 border border-[#eaeaea] rounded-xl bg-white">
-                    {r.posterPath ? (
-                      <img src={r.posterPath} className="w-10 h-14 rounded object-cover shrink-0" alt={r.title} />
-                    ) : (
-                      <div className="w-10 h-14 bg-gray-100 rounded shrink-0" />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-gray-800 truncate">{r.title}</div>
-                      <div className="text-xs text-gray-400">
-                        {r.mediaType === "TV" && r.season ? `第${r.season}季 · ` : ""}{r.year}
-                      </div>
-                      <div className="text-xs mt-0.5">
-                        <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                          r.bizStatus === "COMPLETED" ? "bg-green-50 text-green-700" :
-                          r.bizStatus === "PENDING" ? "bg-[#fff0f1] text-[#e3001b]" :
-                          r.bizStatus === "NO_RESOURCE" ? "bg-red-50 text-red-600" :
-                          r.bizStatus === "CANNOT_UPDATE" ? "bg-purple-50 text-purple-700" :
-                          "bg-amber-50 text-amber-700"
-                        }`}>
-                          {r.bizStatus === "COMPLETED" ? "已完成" : r.bizStatus === "PENDING" ? "待处理" : r.bizStatus === "NO_RESOURCE" ? "无资源" : r.bizStatus === "CANNOT_UPDATE" ? "无法更新" : "进行中"}
-                        </span>
-                      </div>
-                      {r.adminNote ? (
-                        <div className="text-[11px] text-gray-500 mt-1 truncate">管理员回复：{String(r.adminNote).slice(0, 20)}</div>
-                      ) : null}
-                    </div>
-                  </div>
-                ))}
 
-                {myReqTotalPages > 1 && (
-                  <div className="pt-2">
-                    <PaginationBar
-                      total={myReqTotal}
-                      page={myReqPage}
-                      totalPages={myReqTotalPages}
-                      pageSize={10}
-                      onPageChange={loadMyRequests}
-                      onPageSizeChange={() => {}}
-                      pageSizeOptions={[10]}
-                      showPageSize={false}
-                      compactSinglePage
-                      simpleGoto
-                    />
-                  </div>
-                )}
+            <div className="px-7 py-5 overflow-y-auto flex-1">
+              <div className="bg-[#fafafa] border border-[#eaeaea] rounded-[12px] px-4 py-3 flex items-center justify-between mb-5">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-sm font-bold text-[#222]">今日点播配额</span>
+                  <span className="text-[18px] font-black text-[#e3001b] font-mono">{quota ? `${quota.totalRemaining}/${quota.totalTotal}` : "--/--"}</span>
+                </div>
+                <span className="text-xs text-[#888]">（默认每人每天 {quota?.totalTotal ?? 5} 个额度）</span>
               </div>
-            )}
+
+              {myReqLoading ? (
+                <div className="text-[#888] text-sm text-center py-10">加载中…</div>
+              ) : myRequests.length === 0 ? (
+                <div className="text-[#888] text-sm text-center py-10">暂无点播记录</div>
+              ) : (
+                <div className="space-y-4">
+                  {myRequests.map((r) => (
+                    <div key={r.id} className="flex gap-4 p-4 border border-[#eaeaea] rounded-[12px] bg-white transition-all hover:border-[#dcdcdc] hover:shadow-[0_4px_12px_rgba(0,0,0,0.04)] hover:-translate-y-0.5">
+                      {r.posterPath ? (
+                        <img src={r.posterPath} className="w-[70px] h-[105px] rounded-[8px] object-cover shrink-0" alt={r.title} />
+                      ) : (
+                        <div className="w-[70px] h-[105px] rounded-[8px] bg-gradient-to-br from-[#e4eaf5] to-[#cbd6e9] shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0 flex flex-col justify-center">
+                        <div className="text-[18px] font-bold text-[#222] truncate">{r.title}</div>
+                        <div className="text-sm text-[#888] mt-1">{r.mediaType === "TV" && r.season ? `第${r.season}季 · ` : ""}{r.year || "-"}</div>
+                        <div className="mt-2">
+                          <span className={`inline-flex items-center px-3 py-1 rounded-[6px] text-[13px] font-bold ${
+                            r.bizStatus === "COMPLETED"
+                              ? "bg-[#f0f0f0] text-[#888]"
+                              : "bg-[#fff0f1] text-[#e3001b]"
+                          }`}>
+                            {r.bizStatus === "COMPLETED" ? "已完成" : r.bizStatus === "PENDING" ? "待处理" : r.bizStatus === "NO_RESOURCE" ? "无资源" : r.bizStatus === "CANNOT_UPDATE" ? "无法更新" : "进行中"}
+                          </span>
+                        </div>
+                        {r.adminNote ? (
+                          <div className="text-[12px] text-[#888] mt-2 truncate">管理员回复：{String(r.adminNote).slice(0, 30)}</div>
+                        ) : null}
+                      </div>
+                    </div>
+                  ))}
+
+                  {myReqTotalPages > 1 && (
+                    <div className="pt-2">
+                      <PaginationBar
+                        total={myReqTotal}
+                        page={myReqPage}
+                        totalPages={myReqTotalPages}
+                        pageSize={10}
+                        onPageChange={loadMyRequests}
+                        onPageSizeChange={() => {}}
+                        pageSizeOptions={[10]}
+                        showPageSize={false}
+                        compactSinglePage
+                        simpleGoto
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

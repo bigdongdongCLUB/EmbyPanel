@@ -8,9 +8,10 @@ type Settings = {
   enabled: boolean;
   tmdbApiKey: string;
   tmdbCacheHours: number;
+  dailyTotalQuota: number;
 };
 
-const DEFAULTS: Settings = { enabled: false, tmdbApiKey: "", tmdbCacheHours: 12 };
+const DEFAULTS: Settings = { enabled: false, tmdbApiKey: "", tmdbCacheHours: 12, dailyTotalQuota: 5 };
 
 export function VodSettingsClient() {
   const [settings, setSettings] = useState<Settings>(DEFAULTS);
@@ -131,6 +132,28 @@ export function VodSettingsClient() {
           <span className="text-sm text-gray-400 shrink-0">小时</span>
         </div>
         <p className="text-xs text-gray-400">设置 TMDB 数据的缓存时间，减少 API 调用频率。范围: 1-168 小时（最多7天）</p>
+      </div>
+
+      {/* 每人每天点播上限 */}
+      <div className="space-y-1.5">
+        <label className="text-sm font-medium text-gray-700">
+          <span className="text-red-500 mr-0.5">*</span>每人每天点播上限
+        </label>
+        <div className="flex items-center border rounded-lg px-3 py-2 gap-2 bg-white max-w-xs">
+          <input
+            type="number"
+            min={1}
+            max={100}
+            className="flex-1 text-sm outline-none"
+            value={settings.dailyTotalQuota}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              setSettings((s) => ({ ...s, dailyTotalQuota: Math.min(100, Math.max(1, v || 1)) }));
+            }}
+          />
+          <span className="text-sm text-gray-400 shrink-0">个/天</span>
+        </div>
+        <p className="text-xs text-gray-400">控制单个用户每天可提交的点播总数量，默认 5 个（电影和电视剧合计）。</p>
       </div>
 
       {/* 测试结果 */}
