@@ -219,6 +219,11 @@ function isGenericClient(v: string) {
   return /^(apple[_ ]?tv|iphone|ipad|android|mac|windows|web|safari|chrome|edge|-)$/.test(s);
 }
 
+
+function isRealtimeEventType(v: string) {
+  return String(v || "").startsWith("live_session_") || String(v || "").startsWith("snapshot_");
+}
+
 type OutputRow = {
   serverId: string;
   serverName: string;
@@ -391,6 +396,7 @@ export async function GET(req: Request) {
             };
 
             const prev = existingBySession.get(sessionId);
+            let displayOccurredAt = now;
             if (!prev) {
               await upsertPlaybackSessionState(stateRow);
               await createPlaybackStartEventFromSessionState(stateRow, now);
@@ -399,19 +405,21 @@ export async function GET(req: Request) {
               if (changedMedia) {
                 await upsertPlaybackSessionState(stateRow, now);
                 await createPlaybackStartEventFromSessionState(stateRow, now);
+                displayOccurredAt = now;
               } else {
                 await upsertPlaybackSessionState(stateRow, prev.startedAt);
+                displayOccurredAt = prev.startedAt;
               }
             }
 
-            // 实时展示
+            // 实时展示（开始播放时间保持稳定，不随刷新漂移）
             rawEvents.push({
               eventType: s?.PlayState?.IsPaused ? "live_session_paused" : "live_session_playing",
               mediaName,
               mediaKey: stateRow.mediaKey,
               client: stateRow.client,
               ip: stateRow.ip,
-              occurredAt: now,
+              occurredAt: displayOccurredAt,
               sourceJson: s,
             });
           }
@@ -492,6 +500,18 @@ export async function GET(req: Request) {
 
       const prev = displayMap.get(key);
       if (!prev) {
+        displayMap.set(key, nextRow);
+        continue;
+      }
+
+      if (prev.__eventType === "start" && isRealtimeEventType(nextRow.__eventType)) {
+        const merged = { ...prev };
+        if (merged.ip === "-" && nextRow.ip !== "-") merged.ip = nextRow.ip;
+        if (isGenericClient(merged.client) && !isGenericClient(nextRow.client)) merged.client = nextRow.client;
+        displayMap.set(key, merged);
+        continue;
+      }
+      if (isRealtimeEventType(prev.__eventType) && nextRow.__eventType === "start") {
         displayMap.set(key, nextRow);
         continue;
       }
