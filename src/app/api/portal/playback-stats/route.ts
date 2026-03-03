@@ -6,7 +6,6 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
-import { normalizeBaseUrl } from "@/lib/emby";
 import { embyFetchSessions } from "@/lib/emby-sessions";
 
 async function ensurePlaybackEventTable() {
@@ -83,92 +82,6 @@ type OutputRow = {
   lastPlayedAt: string;
 };
 
-function pickString(obj: any, keys: string[]) {
-  for (const k of keys) {
-    const v = obj?.[k];
-    if (v !== undefined && v !== null && String(v).trim()) return String(v).trim();
-  }
-  return "";
-}
-
-function pickDate(obj: any) {
-  const raw = pickString(obj, ["DateCreated", "dateCreated", "Date", "date", "Time", "time"]);
-  if (!raw) return null;
-  const d = new Date(raw);
-  return Number.isFinite(d.getTime()) ? d : null;
-}
-
-async function fetchActivityEntries(baseUrl: string, apiKey: string, limit = 1200) {
-  const base = normalizeBaseUrl(baseUrl);
-  const urls = [
-    `${base}/System/ActivityLog/Entries?api_key=${encodeURIComponent(apiKey)}&Limit=${limit}`,
-    `${base}/System/ActivityLog/Entries?api_key=${encodeURIComponent(apiKey)}&StartIndex=0&Limit=${limit}`,
-  ];
-  for (const u of urls) {
-    try {
-      const res = await fetch(u, { method: "GET", headers: { Accept: "application/json" }, cache: "no-store" });
-      if (!res.ok) continue;
-      const json = await res.json().catch(() => null);
-      const rows = Array.isArray(json) ? json : json?.Items || json?.items || json?.Rows || json?.results || [];
-      if (Array.isArray(rows) && rows.length) return rows;
-    } catch {}
-  }
-  return [] as any[];
-}
-
-function parseActivityEntryToPlayback(entry: any, username: string) {
-  const text = [pickString(entry, ["Overview", "overview"]), pickString(entry, ["Name", "name"]), pickString(entry, ["ShortOverview", "shortOverview"])]
-    .filter(Boolean)
-    .join(" ");
-  if (!text) return null;
-  if (!text.toLowerCase().includes(String(username).toLowerCase())) return null;
-
-  const isStart = /(开始播放|start\s*playing|playing)/i.test(text) && !/(已停止播放|stopped|stop\s*playing)/i.test(text);
-  const isStop = /(已停止播放|stopped|stop\s*playing)/i.test(text);
-  if (!isStart && !isStop) return null;
-
-  let userName = "";
-  let mediaName = "";
-  let client = "-";
-
-  let m = text.match(/^\s*(.+?)\s*在\s*(.+?)\s*上开始播放\s*(.+)$/);
-  if (m) {
-    userName = (m[1] || "").trim();
-    client = (m[2] || "").trim() || "-";
-    mediaName = (m[3] || "").trim();
-  }
-  if (!mediaName) {
-    m = text.match(/^\s*(.+?)\s*上\s*(.+?)\s*已停止播放\s*(.+)$/);
-    if (m) {
-      client = (m[1] || "").trim() || client;
-      userName = (m[2] || "").trim() || userName;
-      mediaName = (m[3] || "").trim();
-    }
-  }
-  if (!mediaName) {
-    m = text.match(/(?:开始播放|已停止播放|start\s*playing|stopped)\s*(.+)$/i);
-    if (m) mediaName = (m[1] || "").trim();
-  }
-  if (!userName) {
-    m = text.match(/^\s*(.+?)\s*(?:在|已)/);
-    if (m) userName = (m[1] || "").trim();
-  }
-
-  const occurredAt = pickDate(entry);
-  if (!occurredAt || !mediaName) return null;
-
-  return {
-    activityId: pickString(entry, ["Id", "id"]) || null,
-    eventType: isStart ? "start" : "stop",
-    userName: userName || null,
-    mediaName,
-    mediaKey: normalizeMediaKey(mediaName),
-    client,
-    ip: normalizeIp(pickString(entry, ["RemoteEndPoint", "remoteEndPoint", "RemoteAddress", "remoteAddress", "IpAddress", "ipAddress", "IPAddress"])),
-    occurredAt,
-    sourceJson: entry,
-  };
-}
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
@@ -284,41 +197,9 @@ export async function GET(req: Request) {
       // ignore and fallback to live sources
     }
 
-    // 2) 实时 Activity（补齐刚播放但采集任务未落库的窗口）
     const apiKey = getEmbyApiKeyForServer(srv.embyServer as any);
-    if (apiKey) {
-      const live = await fetchActivityEntries(srv.embyServer.baseUrl, apiKey, 400);
-      if (live.length) {
-        const parsed = live
-          .map((x) => parseActivityEntryToPlayback(x, user.username))
-          .filter(Boolean) as Array<{
-          activityId?: string | null;
-          eventType: "start" | "stop";
-          mediaName: string;
-          mediaKey: string;
-          client: string;
-          ip: string;
-          occurredAt: Date;
-          sourceJson?: any;
-        }>;
 
-        for (const ev of parsed) {
-          if (ev.occurredAt < since) continue;
-          rawEvents.push({
-            activityId: ev.activityId || null,
-            eventType: ev.eventType,
-            mediaName: ev.mediaName,
-            mediaKey: normalizeMediaKey(ev.mediaKey || ev.mediaName),
-            client: toDetailedClient(ev.client || "-", ev.sourceJson),
-            ip: normalizeIp(ev.ip),
-            occurredAt: ev.occurredAt,
-            sourceJson: ev.sourceJson,
-          });
-        }
-      }
-    }
-
-    // 3) 实时 Sessions（直接复用 Emby “正在播放”数据，优先拿到 IP/设备/客户端）
+    // 2) 实时 Sessions（直接复用 Emby “正在播放”数据，优先拿到 IP/设备/客户端）
     if (apiKey) {
       try {
         const ses = await embyFetchSessions(srv.embyServer.baseUrl, apiKey);

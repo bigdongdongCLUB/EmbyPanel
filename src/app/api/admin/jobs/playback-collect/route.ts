@@ -5,7 +5,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin";
 import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
-import { normalizeBaseUrl } from "@/lib/emby";
 import { embyFetchSessions } from "@/lib/emby-sessions";
 
 function normalizeMediaKey(v: string) {
@@ -18,94 +17,149 @@ function normalizeMediaKey(v: string) {
     .trim();
 }
 
-function pickString(obj: any, keys: string[]) {
-  for (const k of keys) {
-    const v = obj?.[k];
-    if (v !== undefined && v !== null && String(v).trim()) return String(v).trim();
-  }
-  return "";
+function normalizeIp(v?: string | null) {
+  const s = String(v || "").trim();
+  if (!s) return "-";
+  const m = s.match(/^(\d+\.\d+\.\d+\.\d+)(?::\d+)?$/);
+  if (m) return m[1];
+  return s;
 }
 
-function pickDate(obj: any) {
-  const raw = pickString(obj, ["DateCreated", "dateCreated", "Date", "date", "Time", "time"]);
-  if (!raw) return null;
-  const d = new Date(raw);
-  return Number.isFinite(d.getTime()) ? d : null;
+function toDetailedClientFromSession(x: any) {
+  const device = String(x?.DeviceName || "").trim();
+  const client = String(x?.Client || "").trim();
+  const app = String(x?.ApplicationVersion || "").trim();
+  if (device && client && app) return `${device} (${client} ${app})`;
+  if (device && client) return `${device} (${client})`;
+  if (device) return device;
+  if (client && app) return `${client} ${app}`;
+  if (client) return client;
+  return "-";
 }
 
-function parseActivity(entry: any) {
-  const text = [pickString(entry, ["Overview", "overview"]), pickString(entry, ["Name", "name"]), pickString(entry, ["ShortOverview", "shortOverview"])]
-    .filter(Boolean)
-    .join(" ");
-  if (!text) return null;
+type SessionStateRow = {
+  embyServerId: string;
+  sessionId: string;
+  embyUserId: string | null;
+  userName: string | null;
+  mediaName: string;
+  mediaKey: string;
+  client: string;
+  ip: string;
+  startedAt: Date;
+  lastSeenAt: Date;
+  sourceJson?: any;
+};
 
-  const isStart = /(开始播放|start\s*playing|playing)/i.test(text) && !/(已停止播放|stop\s*playing|stopped)/i.test(text);
-  const isStop = /(已停止播放|stop\s*playing|stopped)/i.test(text);
-  const isLogin = /(被验证|登录验证|authenticated|logged in)/i.test(text);
-  if (!isStart && !isStop && !isLogin) return null;
-
-  const occurredAt = pickDate(entry);
-  if (!occurredAt) return null;
-
-  let userName = "";
-  let mediaName = "";
-  let client = "";
-
-  // zh-CN patterns
-  let m = text.match(/^\s*(.+?)\s*在\s*(.+?)\s*上开始播放\s*(.+)$/);
-  if (m) {
-    userName = (m[1] || "").trim();
-    client = (m[2] || "").trim();
-    mediaName = (m[3] || "").trim();
-  }
-
-  if (!userName || !mediaName) {
-    m = text.match(/^\s*(.+?)\s*上\s*(.+?)\s*已停止播放\s*(.+)$/);
-    if (m) {
-      client = (m[1] || "").trim() || client;
-      userName = (m[2] || "").trim() || userName;
-      mediaName = (m[3] || "").trim() || mediaName;
-    }
-  }
-
-  if (!userName) {
-    m = text.match(/^\s*(.+?)\s*(?:在|已)/);
-    if (m) userName = (m[1] || "").trim();
-  }
-
-  const eventType = isStart ? "start" : isStop ? "stop" : "login";
-  mediaName = mediaName.replace(/^[:：\-\s]+/, "").trim();
-
-  return {
-    activityId: pickString(entry, ["Id", "id"]) || null,
-    eventType,
-    userName: userName || null,
-    mediaName: mediaName || (eventType === "login" ? "登录" : null),
-    mediaKey: mediaName ? normalizeMediaKey(mediaName) : "",
-    client: client || null,
-    ip: pickString(entry, ["RemoteEndPoint", "remoteEndPoint", "RemoteAddress", "remoteAddress", "IpAddress", "ipAddress", "IPAddress"]) || null,
-    occurredAt,
-    sourceJson: entry,
-  };
+async function ensurePlaybackSessionStateTable() {
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "PlaybackSessionState" (
+      "id" TEXT PRIMARY KEY,
+      "embyServerId" TEXT NOT NULL,
+      "sessionId" TEXT NOT NULL,
+      "embyUserId" TEXT,
+      "userName" TEXT,
+      "mediaName" TEXT NOT NULL,
+      "mediaKey" TEXT NOT NULL,
+      "client" TEXT,
+      "ip" TEXT,
+      "startedAt" TIMESTAMP(3) NOT NULL,
+      "lastSeenAt" TIMESTAMP(3) NOT NULL,
+      "sourceJson" JSONB,
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "PlaybackSessionState_embyServerId_sessionId_key" ON "PlaybackSessionState"("embyServerId", "sessionId")`);
+  await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PlaybackSessionState_embyServerId_lastSeenAt_idx" ON "PlaybackSessionState"("embyServerId", "lastSeenAt")`);
+  await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PlaybackSessionState_embyServerId_embyUserId_lastSeenAt_idx" ON "PlaybackSessionState"("embyServerId", "embyUserId", "lastSeenAt")`);
 }
 
-async function fetchActivityEntries(baseUrl: string, apiKey: string, limit = 1200) {
-  const base = normalizeBaseUrl(baseUrl);
-  const urls = [
-    `${base}/System/ActivityLog/Entries?api_key=${encodeURIComponent(apiKey)}&Limit=${limit}`,
-    `${base}/System/ActivityLog/Entries?api_key=${encodeURIComponent(apiKey)}&StartIndex=0&Limit=${limit}`,
-  ];
+async function getServerSessionStates(embyServerId: string) {
+  const rows = await prisma.$queryRawUnsafe<any[]>(
+    `SELECT "embyServerId", "sessionId", "embyUserId", "userName", "mediaName", "mediaKey", "client", "ip", "startedAt", "lastSeenAt", "sourceJson" FROM "PlaybackSessionState" WHERE "embyServerId"=$1`,
+    embyServerId
+  );
 
-  for (const u of urls) {
-    try {
-      const res = await fetch(u, { method: "GET", headers: { Accept: "application/json" }, cache: "no-store" });
-      if (!res.ok) continue;
-      const json = await res.json().catch(() => null);
-      const rows = Array.isArray(json) ? json : json?.Items || json?.items || json?.Rows || json?.results || [];
-      if (Array.isArray(rows) && rows.length) return rows;
-    } catch {}
+  return (rows || []).map((r) => ({
+    embyServerId: String(r.embyServerId),
+    sessionId: String(r.sessionId),
+    embyUserId: r.embyUserId ? String(r.embyUserId) : null,
+    userName: r.userName ? String(r.userName) : null,
+    mediaName: String(r.mediaName || ""),
+    mediaKey: String(r.mediaKey || ""),
+    client: String(r.client || "-"),
+    ip: normalizeIp(r.ip),
+    startedAt: new Date(r.startedAt),
+    lastSeenAt: new Date(r.lastSeenAt),
+    sourceJson: r.sourceJson,
+  })) as SessionStateRow[];
+}
+
+async function insertSessionState(row: SessionStateRow) {
+  await prisma.$executeRawUnsafe(
+    `INSERT INTO "PlaybackSessionState" ("id", "embyServerId", "sessionId", "embyUserId", "userName", "mediaName", "mediaKey", "client", "ip", "startedAt", "lastSeenAt", "sourceJson", "createdAt", "updatedAt") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb,$13,$13) ON CONFLICT ("embyServerId", "sessionId") DO NOTHING`,
+    `${row.embyServerId}:${row.sessionId}`,
+    row.embyServerId,
+    row.sessionId,
+    row.embyUserId,
+    row.userName,
+    row.mediaName,
+    row.mediaKey,
+    row.client,
+    row.ip,
+    row.startedAt,
+    row.lastSeenAt,
+    JSON.stringify(row.sourceJson ?? null),
+    new Date()
+  );
+}
+
+async function updateSessionState(row: SessionStateRow, keepStartedAt?: Date) {
+  await prisma.$executeRawUnsafe(
+    `UPDATE "PlaybackSessionState" SET "embyUserId"=$3, "userName"=$4, "mediaName"=$5, "mediaKey"=$6, "client"=$7, "ip"=$8, "startedAt"=$9, "lastSeenAt"=$10, "sourceJson"=$11::jsonb, "updatedAt"=$12 WHERE "embyServerId"=$1 AND "sessionId"=$2`,
+    row.embyServerId,
+    row.sessionId,
+    row.embyUserId,
+    row.userName,
+    row.mediaName,
+    row.mediaKey,
+    row.client,
+    row.ip,
+    keepStartedAt ?? row.startedAt,
+    row.lastSeenAt,
+    JSON.stringify(row.sourceJson ?? null),
+    new Date()
+  );
+}
+
+async function deleteSessionState(embyServerId: string, sessionId: string) {
+  await prisma.$executeRawUnsafe(`DELETE FROM "PlaybackSessionState" WHERE "embyServerId"=$1 AND "sessionId"=$2`, embyServerId, sessionId);
+}
+
+async function createPlaybackEvent(row: SessionStateRow, eventType: "start" | "stop", occurredAt: Date) {
+  const ts = Math.floor(occurredAt.getTime() / 1000);
+  const activityId = `session:${row.sessionId}:${eventType}:${row.mediaKey}:${ts}`;
+  try {
+    await prisma.playbackEvent.create({
+      data: {
+        embyServerId: row.embyServerId,
+        activityId,
+        embyUserId: row.embyUserId,
+        userName: row.userName,
+        eventType,
+        mediaName: row.mediaName,
+        mediaKey: row.mediaKey,
+        client: row.client,
+        ip: row.ip,
+        occurredAt,
+        sourceJson: row.sourceJson,
+      },
+    });
+    return 1;
+  } catch {
+    return 0;
   }
-  return [] as any[];
 }
 
 export async function POST(req: Request) {
@@ -123,6 +177,8 @@ export async function POST(req: Request) {
   const job = await prisma.jobRun.create({ data: { jobName: "playback-collect", startedAt } });
 
   try {
+    await ensurePlaybackSessionStateTable();
+
     const servers = await prisma.embyServer.findMany({
       where: { enabled: true },
       select: { id: true, name: true, baseUrl: true, apiKey: true, apiKeyEnc: true, apiKeyIv: true, apiKeyTag: true },
@@ -130,11 +186,9 @@ export async function POST(req: Request) {
     });
 
     const linkByServerAndName = new Map<string, string>();
-    const linkByServerAndEmbyUserId = new Map<string, string>();
     const links = await prisma.embyUserLink.findMany({ select: { embyServerId: true, embyUserId: true, user: { select: { username: true } } } });
     for (const l of links as any[]) {
       linkByServerAndName.set(`${l.embyServerId}:${String(l.user?.username || "").toLowerCase()}`, l.embyUserId);
-      linkByServerAndEmbyUserId.set(`${l.embyServerId}:${l.embyUserId}`, l.embyUserId);
     }
 
     let collected = 0;
@@ -144,69 +198,107 @@ export async function POST(req: Request) {
       const apiKey = getEmbyApiKeyForServer(s as any);
       if (!apiKey) continue;
 
-      // snapshot sessions for ip/client补全
+      const ses = await embyFetchSessions(s.baseUrl, apiKey).catch(() => null);
+      if (!ses?.ok) continue;
+
+      const now = new Date();
+      const sessions = ses.sessions ?? [];
+
+      // 1) 原样快照落库，供辅助排查
       try {
-        const ses = await embyFetchSessions(s.baseUrl, apiKey);
-        if (ses.ok) {
-          await prisma.sessionSnapshot.create({
-            data: {
-              embyServerId: s.id,
-              capturedAt: new Date(),
-              sessionCount: (ses.sessions ?? []).length,
-              rawJson: (ses.sessions ?? []).map((x: any) => ({
-                userId: x?.UserId ?? null,
-                userName: x?.UserName ?? null,
-                client: x?.Client ?? null,
-                app: x?.ApplicationVersion ?? null,
-                device: x?.DeviceName ?? null,
-                paused: !!x?.PlayState?.IsPaused,
-                ip: x?.RemoteEndPoint ?? null,
-                nowPlaying: x?.NowPlayingItem?.Name ?? x?.NowPlayingItem?.SeriesName ?? null,
-              })),
-            },
-          });
-          snapshots += 1;
-        }
+        await prisma.sessionSnapshot.create({
+          data: {
+            embyServerId: s.id,
+            capturedAt: now,
+            sessionCount: sessions.length,
+            rawJson: sessions.map((x: any) => ({
+              id: x?.Id ?? null,
+              userId: x?.UserId ?? null,
+              userName: x?.UserName ?? null,
+              client: x?.Client ?? null,
+              app: x?.ApplicationVersion ?? null,
+              device: x?.DeviceName ?? null,
+              paused: !!x?.PlayState?.IsPaused,
+              ip: x?.RemoteEndPoint ?? null,
+              nowPlaying: x?.NowPlayingItem?.Name ?? x?.NowPlayingItem?.SeriesName ?? null,
+              source: "sessions",
+            })),
+          },
+        });
+        snapshots += 1;
       } catch {}
 
-      const rows = await fetchActivityEntries(s.baseUrl, apiKey, 1200);
-      for (const r of rows) {
-        const p = parseActivity(r);
-        if (!p || !p.userName || !p.mediaName) continue;
+      // 2) 读取当前缓存状态
+      const existing = await getServerSessionStates(s.id);
+      const existingBySession = new Map(existing.map((x) => [x.sessionId, x]));
 
-        const embyUserId =
-          linkByServerAndName.get(`${s.id}:${String(p.userName).toLowerCase()}`) ||
-          pickString(r, ["UserId", "userId"]) ||
-          null;
+      // 3) 把当前正在播放写入状态缓存；新会话写 start；媒体切换先 stop 再 start
+      const activeSessionIds = new Set<string>();
+      for (const x of sessions) {
+        const sessionId = String(x?.Id || "").trim();
+        if (!sessionId) continue;
 
-        if (!embyUserId) continue;
+        const mediaName = String(x?.NowPlayingItem?.Name || x?.NowPlayingItem?.SeriesName || "").trim();
+        if (!mediaName) continue;
 
-        try {
-          await prisma.playbackEvent.create({
-            data: {
-              embyServerId: s.id,
-              activityId: p.activityId,
-              embyUserId,
-              userName: p.userName,
-              eventType: p.eventType,
-              mediaName: p.mediaName,
-              mediaKey: p.mediaKey || normalizeMediaKey(p.mediaName),
-              client: p.client,
-              ip: p.ip,
-              occurredAt: p.occurredAt,
-              sourceJson: p.sourceJson,
-            },
-          });
-          collected += 1;
-        } catch {
-          // duplicate or parse issue ignore
+        const userName = String(x?.UserName || "").trim() || null;
+        const embyUserId = String(x?.UserId || "").trim() || (userName ? linkByServerAndName.get(`${s.id}:${userName.toLowerCase()}`) || null : null);
+        if (!embyUserId && !userName) continue;
+
+        activeSessionIds.add(sessionId);
+
+        const row: SessionStateRow = {
+          embyServerId: s.id,
+          sessionId,
+          embyUserId,
+          userName,
+          mediaName,
+          mediaKey: normalizeMediaKey(mediaName),
+          client: toDetailedClientFromSession(x),
+          ip: normalizeIp(x?.RemoteEndPoint),
+          startedAt: now,
+          lastSeenAt: now,
+          sourceJson: x,
+        };
+
+        const prev = existingBySession.get(sessionId);
+        if (!prev) {
+          await insertSessionState(row);
+          collected += await createPlaybackEvent(row, "start", now);
+          continue;
         }
+
+        const changedMedia = normalizeMediaKey(prev.mediaKey || prev.mediaName) !== row.mediaKey;
+        if (changedMedia) {
+          collected += await createPlaybackEvent(prev, "stop", now);
+          await updateSessionState(row, now);
+          collected += await createPlaybackEvent(row, "start", now);
+          continue;
+        }
+
+        // 同一媒体持续播放：只更新详细信息和 lastSeenAt，startedAt 保持首次时间
+        await updateSessionState(row, prev.startedAt);
+      }
+
+      // 4) 不再出现在 /Sessions 的会话视为已结束：落 stop 并清理缓存
+      for (const prev of existing) {
+        if (activeSessionIds.has(prev.sessionId)) continue;
+
+        // 仅将最近 24 小时内的会话结算，避免历史残留噪声
+        const endedAt = prev.lastSeenAt && Number.isFinite(prev.lastSeenAt.getTime()) ? prev.lastSeenAt : now;
+        if (now.getTime() - endedAt.getTime() > 24 * 60 * 60 * 1000) {
+          await deleteSessionState(prev.embyServerId, prev.sessionId);
+          continue;
+        }
+
+        collected += await createPlaybackEvent(prev, "stop", endedAt);
+        await deleteSessionState(prev.embyServerId, prev.sessionId);
       }
     }
 
     const finishedAt = new Date();
-    await prisma.jobRun.update({ where: { id: job.id }, data: { finishedAt, ok: true, message: JSON.stringify({ collected, snapshots }) } });
-    return NextResponse.json({ ok: true, collected, snapshots, jobRunId: job.id });
+    await prisma.jobRun.update({ where: { id: job.id }, data: { finishedAt, ok: true, message: JSON.stringify({ collected, snapshots, source: "sessions" }) } });
+    return NextResponse.json({ ok: true, collected, snapshots, source: "sessions", jobRunId: job.id });
   } catch (e: any) {
     const finishedAt = new Date();
     await prisma.jobRun.update({ where: { id: job.id }, data: { finishedAt, ok: false, message: String(e?.message ?? e) } });
