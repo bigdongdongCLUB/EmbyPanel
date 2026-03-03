@@ -112,6 +112,48 @@ function cycleDays(payCycle?: string | null) {
   }
 }
 
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function findEmbyUserIdByUsername(baseUrl: string, apiKey: string, username: string) {
+  try {
+    const usersRes = await embyFetchUsers(baseUrl, apiKey);
+    if (!usersRes.ok) return null;
+    const found = usersRes.users.find((x: any) => String(x?.Name ?? "").toLowerCase() === username.toLowerCase());
+    return found?.Id ? String(found.Id) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function ensureEmbyUserId(baseUrl: string, apiKey: string, username: string) {
+  const backoffMs = [0, 300, 800];
+
+  for (let i = 0; i < backoffMs.length; i += 1) {
+    const existing = await findEmbyUserIdByUsername(baseUrl, apiKey, username);
+    if (existing) return existing;
+
+    try {
+      const created = await embyCreateUser(baseUrl, apiKey, username);
+      if (created.ok && created.userId) return created.userId;
+    } catch {
+      // ignore and retry by re-querying user list
+    }
+
+    // 某些高负载情况下，创建可能已成功但响应失败，二次查询兜底
+    const createdBySideEffect = await findEmbyUserIdByUsername(baseUrl, apiKey, username);
+    if (createdBySideEffect) return createdBySideEffect;
+
+    if (i < backoffMs.length - 1) {
+      await sleep(backoffMs[i + 1]);
+    }
+  }
+
+  return null;
+}
+
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -208,6 +250,8 @@ export async function POST(req: Request) {
       throw new Error("unsupported_card_type");
     });
 
+    let syncWarn: string | null = null;
+
     if (result?.kind === "SUBSCRIPTION" && result?.planId && result?.subscriptionId) {
       try {
         const [u, picked] = await Promise.all([
@@ -215,54 +259,84 @@ export async function POST(req: Request) {
           pickServerForPlan(result.planId),
         ]);
 
-        if (u) {
+        if (!u) {
+          syncWarn = "user_not_found_after_redeem";
+        } else {
+          const [servers, serverConfigs] = await Promise.all([
+            prisma.embyServer.findMany({
+              where: { id: { in: picked.servers.map((x) => x.embyServerId) } },
+              select: { id: true, baseUrl: true, apiKey: true, apiKeyEnc: true, apiKeyIv: true, apiKeyTag: true },
+            }),
+            prisma.planServerConfig.findMany({ where: { planId: result.planId }, select: { embyServerId: true, templateEmbyUserId: true } }),
+          ]);
+
+          // 先写订阅-服务器关联，避免后续某个远端接口波动导致本地 link 丢失
+          await prisma.subscriptionServer.deleteMany({ where: { subscriptionId: result.subscriptionId } });
+          if (picked.servers.length) {
+            await prisma.subscriptionServer.createMany({
+              data: picked.servers.map((x) => ({ subscriptionId: result.subscriptionId, embyServerId: x.embyServerId })),
+              skipDuplicates: true,
+            });
+          }
+
+          const templateByServerId = new Map(serverConfigs.map((c) => [c.embyServerId, c.templateEmbyUserId] as const));
           const pw = getSyncPassword(u);
-          if (pw) {
-            const [servers, serverConfigs] = await Promise.all([
-              prisma.embyServer.findMany({
-                where: { id: { in: picked.servers.map((x) => x.embyServerId) } },
-                select: { id: true, baseUrl: true, apiKey: true, apiKeyEnc: true, apiKeyIv: true, apiKeyTag: true },
-              }),
-              prisma.planServerConfig.findMany({ where: { planId: result.planId }, select: { embyServerId: true, templateEmbyUserId: true } }),
-            ]);
+          const syncIssues: string[] = [];
 
-            const templateByServerId = new Map(serverConfigs.map((c) => [c.embyServerId, c.templateEmbyUserId] as const));
+          for (const s of servers) {
+            const apiKey = getEmbyApiKeyForServer(s);
+            const embyUserId = await ensureEmbyUserId(s.baseUrl, apiKey, u.username);
 
-            for (const s of servers) {
-              const apiKey = getEmbyApiKeyForServer(s);
-              let embyUserId: string | null = null;
-
-              const usersRes = await embyFetchUsers(s.baseUrl, apiKey);
-              if (usersRes.ok) {
-                const found = usersRes.users.find((x: any) => String(x?.Name ?? "").toLowerCase() === u.username.toLowerCase());
-                if (found?.Id) embyUserId = String(found.Id);
-              }
-
-              if (!embyUserId) {
-                const created = await embyCreateUser(s.baseUrl, apiKey, u.username);
-                if (created.ok) embyUserId = created.userId;
-              }
-              if (!embyUserId) continue;
-
-              await embySetUserPassword(s.baseUrl, apiKey, embyUserId, pw);
-              const templateId = templateByServerId.get(s.id);
-              if (templateId) await embyApplyTemplatePolicy(s.baseUrl, apiKey, embyUserId, templateId);
-              await embySetUserDisabled(s.baseUrl, apiKey, embyUserId, false);
-
-              await prisma.embyUserLink.upsert({
-                where: { userId_embyServerId: { userId: u.id, embyServerId: s.id } },
-                update: { embyUserId },
-                create: { userId: u.id, embyServerId: s.id, embyUserId },
-              });
+            if (!embyUserId) {
+              syncIssues.push(`${s.id}:resolve_user_failed`);
+              continue;
             }
 
-            await prisma.subscriptionServer.deleteMany({ where: { subscriptionId: result.subscriptionId } });
-            if (picked.servers.length) {
-              await prisma.subscriptionServer.createMany({
-                data: picked.servers.map((x) => ({ subscriptionId: result.subscriptionId, embyServerId: x.embyServerId })),
-                skipDuplicates: true,
-              });
+            // 只要拿到 Emby userId，立即 upsert link，降低“远端已创建但本地未关联”的概率
+            await prisma.embyUserLink.upsert({
+              where: { userId_embyServerId: { userId: u.id, embyServerId: s.id } },
+              update: { embyUserId },
+              create: { userId: u.id, embyServerId: s.id, embyUserId },
+            });
+
+            if (!pw) {
+              syncIssues.push(`${s.id}:missing_sync_password`);
+              continue;
             }
+
+            try {
+              const r = await embySetUserPassword(s.baseUrl, apiKey, embyUserId, pw);
+              if (!r.ok) syncIssues.push(`${s.id}:set_password_failed`);
+            } catch {
+              syncIssues.push(`${s.id}:set_password_failed`);
+            }
+
+            const templateId = templateByServerId.get(s.id);
+            if (templateId) {
+              try {
+                const r = await embyApplyTemplatePolicy(s.baseUrl, apiKey, embyUserId, templateId);
+                if (!r.ok) syncIssues.push(`${s.id}:apply_template_failed`);
+              } catch {
+                syncIssues.push(`${s.id}:apply_template_failed`);
+              }
+            }
+
+            try {
+              const r = await embySetUserDisabled(s.baseUrl, apiKey, embyUserId, false);
+              if (!r.ok) syncIssues.push(`${s.id}:enable_user_failed`);
+            } catch {
+              syncIssues.push(`${s.id}:enable_user_failed`);
+            }
+          }
+
+          if (syncIssues.length) {
+            syncWarn = "redeem_subscription_sync_partial";
+            console.warn("redeem_subscription_sync_partial", {
+              userId: user.id,
+              planId: result.planId,
+              subscriptionId: result.subscriptionId,
+              issues: syncIssues,
+            });
           }
         }
       } catch (syncErr) {
@@ -271,7 +345,7 @@ export async function POST(req: Request) {
       }
     }
 
-    return NextResponse.json({ ok: true, result });
+    return NextResponse.json(syncWarn ? { ok: true, result, warn: syncWarn } : { ok: true, result });
   } catch (e: any) {
     return NextResponse.json({ error: String(e?.message ?? e) }, { status: 400 });
   }
