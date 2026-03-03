@@ -35,6 +35,128 @@ async function ensurePlaybackEventTable() {
   }
 }
 
+
+
+type SessionStateRow = {
+  embyServerId: string;
+  sessionId: string;
+  embyUserId: string | null;
+  userName: string | null;
+  mediaName: string;
+  mediaKey: string;
+  client: string;
+  ip: string;
+  startedAt: Date;
+  lastSeenAt: Date;
+  sourceJson?: any;
+};
+
+async function ensurePlaybackSessionStateTable() {
+  try {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "PlaybackSessionState" (
+        "id" TEXT PRIMARY KEY,
+        "embyServerId" TEXT NOT NULL,
+        "sessionId" TEXT NOT NULL,
+        "embyUserId" TEXT,
+        "userName" TEXT,
+        "mediaName" TEXT NOT NULL,
+        "mediaKey" TEXT NOT NULL,
+        "client" TEXT,
+        "ip" TEXT,
+        "startedAt" TIMESTAMP(3) NOT NULL,
+        "lastSeenAt" TIMESTAMP(3) NOT NULL,
+        "sourceJson" JSONB,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "PlaybackSessionState_embyServerId_sessionId_key" ON "PlaybackSessionState"("embyServerId", "sessionId")`);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PlaybackSessionState_embyServerId_lastSeenAt_idx" ON "PlaybackSessionState"("embyServerId", "lastSeenAt")`);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PlaybackSessionState_embyServerId_embyUserId_lastSeenAt_idx" ON "PlaybackSessionState"("embyServerId", "embyUserId", "lastSeenAt")`);
+  } catch {
+    // ignore when table creation unavailable
+  }
+}
+
+async function loadPlaybackSessionStatesForUser(embyServerId: string, embyUserId: string | null, username: string) {
+  try {
+    const rows = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT "embyServerId", "sessionId", "embyUserId", "userName", "mediaName", "mediaKey", "client", "ip", "startedAt", "lastSeenAt", "sourceJson" FROM "PlaybackSessionState" WHERE "embyServerId"=$1 AND (("embyUserId" IS NOT NULL AND "embyUserId"=$2) OR LOWER(COALESCE("userName", ''))=LOWER($3))`,
+      embyServerId,
+      embyUserId,
+      username
+    );
+    return (rows || []).map((r) => ({
+      embyServerId: String(r.embyServerId),
+      sessionId: String(r.sessionId),
+      embyUserId: r.embyUserId ? String(r.embyUserId) : null,
+      userName: r.userName ? String(r.userName) : null,
+      mediaName: String(r.mediaName || ""),
+      mediaKey: String(r.mediaKey || ""),
+      client: String(r.client || "-"),
+      ip: normalizeIp(r.ip),
+      startedAt: new Date(r.startedAt),
+      lastSeenAt: new Date(r.lastSeenAt),
+      sourceJson: r.sourceJson,
+    })) as SessionStateRow[];
+  } catch {
+    return [] as SessionStateRow[];
+  }
+}
+
+async function upsertPlaybackSessionState(row: SessionStateRow, keepStartedAt?: Date) {
+  await prisma.$executeRawUnsafe(
+    `INSERT INTO "PlaybackSessionState" ("id", "embyServerId", "sessionId", "embyUserId", "userName", "mediaName", "mediaKey", "client", "ip", "startedAt", "lastSeenAt", "sourceJson", "createdAt", "updatedAt") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb,$13,$13) ON CONFLICT ("embyServerId", "sessionId") DO UPDATE SET "embyUserId"=EXCLUDED."embyUserId", "userName"=EXCLUDED."userName", "mediaName"=EXCLUDED."mediaName", "mediaKey"=EXCLUDED."mediaKey", "client"=EXCLUDED."client", "ip"=EXCLUDED."ip", "startedAt"=$14, "lastSeenAt"=EXCLUDED."lastSeenAt", "sourceJson"=EXCLUDED."sourceJson", "updatedAt"=EXCLUDED."updatedAt"`,
+    `${row.embyServerId}:${row.sessionId}`,
+    row.embyServerId,
+    row.sessionId,
+    row.embyUserId,
+    row.userName,
+    row.mediaName,
+    row.mediaKey,
+    row.client,
+    row.ip,
+    row.startedAt,
+    row.lastSeenAt,
+    JSON.stringify(row.sourceJson ?? null),
+    new Date(),
+    keepStartedAt ?? row.startedAt
+  );
+}
+
+async function deletePlaybackSessionState(embyServerId: string, sessionId: string) {
+  try {
+    await prisma.$executeRawUnsafe(`DELETE FROM "PlaybackSessionState" WHERE "embyServerId"=$1 AND "sessionId"=$2`, embyServerId, sessionId);
+  } catch {
+    // ignore
+  }
+}
+
+async function createPlaybackEventFromSessionState(row: SessionStateRow, eventType: "start" | "stop", occurredAt: Date) {
+  const ts = Math.floor(occurredAt.getTime() / 1000);
+  const activityId = `session:${row.sessionId}:${eventType}:${row.mediaKey}:${ts}`;
+  try {
+    await prisma.playbackEvent.create({
+      data: {
+        embyServerId: row.embyServerId,
+        activityId,
+        embyUserId: row.embyUserId,
+        userName: row.userName,
+        eventType,
+        mediaName: row.mediaName,
+        mediaKey: row.mediaKey,
+        client: row.client,
+        ip: row.ip,
+        occurredAt,
+        sourceJson: row.sourceJson,
+      },
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
 function normalizeMediaKey(v: string) {
   return String(v || "")
     .toLowerCase()
@@ -125,6 +247,7 @@ export async function GET(req: Request) {
 
   const since = new Date(Date.now() - rangeDays * 24 * 60 * 60 * 1000);
   await ensurePlaybackEventTable();
+  await ensurePlaybackSessionStateTable();
 
   const serverCandidates = new Map<string, { embyServerId: string; embyUserId: string | null; embyServer: any }>();
   for (const link of user.embyLinks) {
@@ -199,24 +322,36 @@ export async function GET(req: Request) {
 
     const apiKey = getEmbyApiKeyForServer(srv.embyServer as any);
 
-    // 2) 实时 Sessions（直接复用 Emby “正在播放”数据，优先拿到 IP/设备/客户端）
+    // 2) 基于实时 Sessions 的状态机：先缓存详细信息，结束后结算 stop 事件
     if (apiKey) {
       try {
         const ses = await embyFetchSessions(srv.embyServer.baseUrl, apiKey);
         if (ses.ok) {
           const now = new Date();
           const uname = user.username.toLowerCase();
+          const existingStates = await loadPlaybackSessionStatesForUser(srv.embyServerId, srv.embyUserId, user.username);
+          const existingBySession = new Map(existingStates.map((x) => [x.sessionId, x]));
+          const activeSessionIds = new Set<string>();
+
           for (const s of ses.sessions ?? []) {
             const sameUser = srv.embyUserId
               ? String(s?.UserId || "") === String(srv.embyUserId)
               : String(s?.UserName || "").toLowerCase() === uname;
             if (!sameUser) continue;
 
+            const sessionId = String(s?.Id || "").trim();
+            if (!sessionId) continue;
+
             const mediaName = String(s?.NowPlayingItem?.Name || s?.NowPlayingItem?.SeriesName || "").trim();
             if (!mediaName) continue;
 
-            rawEvents.push({
-              eventType: s?.PlayState?.IsPaused ? "live_session_paused" : "live_session_playing",
+            activeSessionIds.add(sessionId);
+
+            const stateRow: SessionStateRow = {
+              embyServerId: srv.embyServerId,
+              sessionId,
+              embyUserId: String(s?.UserId || "").trim() || srv.embyUserId || null,
+              userName: String(s?.UserName || "").trim() || user.username,
               mediaName,
               mediaKey: normalizeMediaKey(mediaName),
               client: toDetailedClient("-", undefined, {
@@ -225,8 +360,54 @@ export async function GET(req: Request) {
                 app: s?.ApplicationVersion,
               }),
               ip: normalizeIp(s?.RemoteEndPoint || "-"),
+              startedAt: now,
+              lastSeenAt: now,
+              sourceJson: s,
+            };
+
+            const prev = existingBySession.get(sessionId);
+            if (!prev) {
+              await upsertPlaybackSessionState(stateRow);
+              await createPlaybackEventFromSessionState(stateRow, "start", now);
+            } else {
+              const changedMedia = normalizeMediaKey(prev.mediaKey || prev.mediaName) !== stateRow.mediaKey;
+              if (changedMedia) {
+                await createPlaybackEventFromSessionState(prev, "stop", now);
+                await upsertPlaybackSessionState(stateRow, now);
+                await createPlaybackEventFromSessionState(stateRow, "start", now);
+              } else {
+                await upsertPlaybackSessionState(stateRow, prev.startedAt);
+              }
+            }
+
+            // 实时展示
+            rawEvents.push({
+              eventType: s?.PlayState?.IsPaused ? "live_session_paused" : "live_session_playing",
+              mediaName,
+              mediaKey: stateRow.mediaKey,
+              client: stateRow.client,
+              ip: stateRow.ip,
               occurredAt: now,
               sourceJson: s,
+            });
+          }
+
+          // 对于已不在 Sessions 的缓存会话，结算 stop 并清理
+          for (const prev of existingStates) {
+            if (activeSessionIds.has(prev.sessionId)) continue;
+            const endedAt = now;
+            await createPlaybackEventFromSessionState(prev, "stop", endedAt);
+            await deletePlaybackSessionState(prev.embyServerId, prev.sessionId);
+
+            // 本次响应立即可见，避免“刚结束就消失”
+            rawEvents.push({
+              eventType: "stop",
+              mediaName: prev.mediaName,
+              mediaKey: normalizeMediaKey(prev.mediaKey || prev.mediaName),
+              client: prev.client,
+              ip: normalizeIp(prev.ip),
+              occurredAt: endedAt,
+              sourceJson: prev.sourceJson,
             });
           }
         }
