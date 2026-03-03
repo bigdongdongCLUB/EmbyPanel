@@ -45,7 +45,7 @@ export function PaginationBar({
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-t p-3 text-sm">
-      <div className="text-gray-600">共 {total} 条记录</div>
+      <div className="text-gray-600">共 {total} 条</div>
 
       <div className="ml-auto flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-1 whitespace-nowrap">
