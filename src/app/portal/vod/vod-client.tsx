@@ -473,6 +473,16 @@ export function VodClient() {
     await Promise.all([loadMyRequests(1), loadVodQuota()]);
   }
 
+  async function deleteMyRequest(requestId: string) {
+    const ok = await (window as any).showConfirm("确认删除这条点播记录？删除后管理员侧也会同步移除。");
+    if (!ok) return;
+    const r = await fetch(`/api/portal/vod/request?id=${encodeURIComponent(requestId)}`, { method: "DELETE" });
+    const j = await r.json().catch(() => null);
+    if (!r.ok) throw new Error(j?.message ?? j?.error ?? `HTTP ${r.status}`);
+    const nextPage = myRequests.length === 1 && myReqPage > 1 ? myReqPage - 1 : myReqPage;
+    await Promise.all([loadMyRequests(nextPage), loadVodQuota()]);
+  }
+
   async function submitRequest({ season, note }: { season?: number; note: string }) {
     if (!vodEnabled || !vodCanRequest) throw new Error(vodDisabledReason);
     if (!selectedItem) throw new Error("no item");
@@ -623,8 +633,6 @@ export function VodClient() {
         <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40" onClick={() => setShowMyRequests(false)} />
           <div className="relative bg-white w-full max-w-[560px] max-h-[85vh] rounded-[20px] border-2 border-[#e3001b] shadow-[0_12px_32px_rgba(227,0,27,0.10)] flex flex-col overflow-hidden">
-            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#e3001b] text-white px-4 py-1 rounded-[14px] text-[13px] font-bold tracking-[1px] z-10">点播记录</div>
-
             <div className="px-7 py-5 border-b border-[#eaeaea] flex items-center justify-between">
               <div className="text-[20px] font-bold text-[#222]">我的点播记录</div>
               <div className="flex items-center gap-4">
@@ -678,6 +686,20 @@ export function VodClient() {
                         {r.adminNote ? (
                           <div className="text-[12px] text-[#888] mt-2 truncate">管理员回复：{String(r.adminNote).slice(0, 30)}</div>
                         ) : null}
+                      </div>
+                      <div className="shrink-0 self-start">
+                        <button
+                          className="border border-[#eaeaea] rounded-[8px] px-2.5 py-1 text-[12px] text-[#888] hover:border-[#e3001b] hover:text-[#e3001b] hover:bg-[#fff7f8]"
+                          onClick={async () => {
+                            try {
+                              await deleteMyRequest(r.id);
+                            } catch (e: any) {
+                              alert(e?.message || "删除失败");
+                            }
+                          }}
+                        >
+                          删除
+                        </button>
                       </div>
                     </div>
                   ))}

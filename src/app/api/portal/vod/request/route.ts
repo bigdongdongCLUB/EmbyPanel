@@ -127,7 +127,7 @@ export async function GET(req: Request) {
   });
 }
 
-export async function DELETE() {
+export async function DELETE(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const username = (session as any)?.username as string | undefined;
@@ -135,6 +135,18 @@ export async function DELETE() {
   const dbUser = await prisma.user.findUnique({ where: { username }, select: { id: true } });
   if (!dbUser) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
+  const url = new URL(req.url);
+  const id = (url.searchParams.get("id") || "").trim();
+
+  // 删除单条点播记录（用户主动删除，管理员侧也会同步看不到）
+  if (id) {
+    const row = await prisma.vodRequest.findFirst({ where: { id, userId: dbUser.id }, select: { id: true } });
+    if (!row) return NextResponse.json({ error: "not_found" }, { status: 404 });
+    await prisma.vodRequest.delete({ where: { id } });
+    return NextResponse.json({ ok: true, deleted: 1 });
+  }
+
+  // 清空已完成记录
   const result = await prisma.vodRequest.deleteMany({
     where: { userId: dbUser.id, OR: [{ bizStatus: "COMPLETED" }, { status: "APPROVED" }] },
   });
