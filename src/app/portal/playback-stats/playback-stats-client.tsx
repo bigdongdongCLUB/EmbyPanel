@@ -142,7 +142,7 @@ export function PortalPlaybackStatsClient() {
                 <th className="text-left px-4 py-3 whitespace-nowrap">媒体名称</th>
                 <th className="text-left px-4 py-3 whitespace-nowrap">客户端</th>
                 <th className="text-left px-4 py-3 whitespace-nowrap">IP地址</th>
-                <th className="text-left px-4 py-3 whitespace-nowrap">最后播放时间</th>
+                <th className="text-left px-4 py-3 whitespace-nowrap">开始播放时间</th>
               </tr>
             </thead>
             <tbody>

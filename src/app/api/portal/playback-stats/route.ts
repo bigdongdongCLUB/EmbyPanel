@@ -133,9 +133,9 @@ async function deletePlaybackSessionState(embyServerId: string, sessionId: strin
   }
 }
 
-async function createPlaybackEventFromSessionState(row: SessionStateRow, eventType: "start" | "stop", occurredAt: Date) {
-  const ts = Math.floor(occurredAt.getTime() / 1000);
-  const activityId = `session:${row.sessionId}:${eventType}:${row.mediaKey}:${ts}`;
+async function createPlaybackStartEventFromSessionState(row: SessionStateRow, occurredAt: Date) {
+  const minuteBucket = Math.floor(occurredAt.getTime() / 60000);
+  const activityId = `session:${row.sessionId}:start:${row.mediaKey}:${minuteBucket}`;
   try {
     await prisma.playbackEvent.create({
       data: {
@@ -143,7 +143,7 @@ async function createPlaybackEventFromSessionState(row: SessionStateRow, eventTy
         activityId,
         embyUserId: row.embyUserId,
         userName: row.userName,
-        eventType,
+        eventType: "start",
         mediaName: row.mediaName,
         mediaKey: row.mediaKey,
         client: row.client,
@@ -186,6 +186,31 @@ function toDetailedClient(baseClient: string, sourceJson?: any, snapshot?: any) 
   if (device) return device;
   if (app) return app;
   return baseClient || "-";
+}
+
+
+function formatMediaNameFromSession(s: any) {
+  const item = s?.NowPlayingItem ?? s?.nowPlayingItem ?? {};
+  const seriesName = String(item?.SeriesName || item?.seriesName || "").trim();
+  const itemName = String(item?.Name || item?.name || s?.nowPlaying || "").trim();
+  const seasonNum = Number(item?.ParentIndexNumber ?? item?.parentIndexNumber);
+  const episodeNum = Number(item?.IndexNumber ?? item?.indexNumber);
+
+  if (seriesName && itemName && seriesName !== itemName) {
+    const se: string[] = [];
+    if (Number.isFinite(seasonNum) && seasonNum > 0) se.push(`S${seasonNum}`);
+    if (Number.isFinite(episodeNum) && episodeNum > 0) se.push(`Ep${episodeNum}`);
+    const sePart = se.length ? ` - ${se.join(", ")}` : "";
+    return `${seriesName}${sePart} - ${itemName}`;
+  }
+
+  return itemName || seriesName || "";
+}
+
+function formatMediaNameFromSource(mediaName: string, sourceJson?: any) {
+  const fromSession = formatMediaNameFromSession(sourceJson);
+  if (fromSession) return fromSession;
+  return String(mediaName || "").trim();
 }
 
 function isGenericClient(v: string) {
@@ -303,7 +328,7 @@ export async function GET(req: Request) {
       });
 
       for (const ev of events) {
-        const mediaName = String(ev.mediaName || "").trim();
+        const mediaName = formatMediaNameFromSource(String(ev.mediaName || ""), ev.sourceJson).trim();
         if (!mediaName) continue;
         rawEvents.push({
           activityId: ev.activityId || null,
@@ -342,7 +367,7 @@ export async function GET(req: Request) {
             const sessionId = String(s?.Id || "").trim();
             if (!sessionId) continue;
 
-            const mediaName = String(s?.NowPlayingItem?.Name || s?.NowPlayingItem?.SeriesName || "").trim();
+            const mediaName = formatMediaNameFromSession(s).trim();
             if (!mediaName) continue;
 
             activeSessionIds.add(sessionId);
@@ -368,13 +393,12 @@ export async function GET(req: Request) {
             const prev = existingBySession.get(sessionId);
             if (!prev) {
               await upsertPlaybackSessionState(stateRow);
-              await createPlaybackEventFromSessionState(stateRow, "start", now);
+              await createPlaybackStartEventFromSessionState(stateRow, now);
             } else {
               const changedMedia = normalizeMediaKey(prev.mediaKey || prev.mediaName) !== stateRow.mediaKey;
               if (changedMedia) {
-                await createPlaybackEventFromSessionState(prev, "stop", now);
                 await upsertPlaybackSessionState(stateRow, now);
-                await createPlaybackEventFromSessionState(stateRow, "start", now);
+                await createPlaybackStartEventFromSessionState(stateRow, now);
               } else {
                 await upsertPlaybackSessionState(stateRow, prev.startedAt);
               }
@@ -392,23 +416,10 @@ export async function GET(req: Request) {
             });
           }
 
-          // 对于已不在 Sessions 的缓存会话，结算 stop 并清理
+          // 对于已不在 Sessions 的缓存会话，仅清理缓存（记录以开始播放时为准）
           for (const prev of existingStates) {
             if (activeSessionIds.has(prev.sessionId)) continue;
-            const endedAt = now;
-            await createPlaybackEventFromSessionState(prev, "stop", endedAt);
             await deletePlaybackSessionState(prev.embyServerId, prev.sessionId);
-
-            // 本次响应立即可见，避免“刚结束就消失”
-            rawEvents.push({
-              eventType: "stop",
-              mediaName: prev.mediaName,
-              mediaKey: normalizeMediaKey(prev.mediaKey || prev.mediaName),
-              client: prev.client,
-              ip: normalizeIp(prev.ip),
-              occurredAt: endedAt,
-              sourceJson: prev.sourceJson,
-            });
           }
         }
       } catch {
@@ -460,7 +471,7 @@ export async function GET(req: Request) {
     const displayMap = new Map<string, OutputRow & { __eventType: string; __ts: number }>();
     const ordered = Array.from(uniqueEvents.values()).sort((a, b) => b.occurredAt.getTime() - a.occurredAt.getTime());
     for (const ev of ordered) {
-      const mediaName = String(ev.mediaName || "").trim();
+      const mediaName = formatMediaNameFromSource(String(ev.mediaName || ""), ev.sourceJson).trim();
       if (!mediaName) continue;
       const mediaKey = normalizeMediaKey(ev.mediaKey || mediaName);
       const ts = ev.occurredAt.getTime();
@@ -485,9 +496,9 @@ export async function GET(req: Request) {
         continue;
       }
 
-      const preferNext =
-        (nextRow.__eventType === "stop" && prev.__eventType !== "stop") ||
-        (nextRow.__eventType === prev.__eventType && nextRow.__ts > prev.__ts);
+      const nextRichness = (nextRow.ip !== "-" ? 1 : 0) + (!isGenericClient(nextRow.client) ? 1 : 0);
+      const prevRichness = (prev.ip !== "-" ? 1 : 0) + (!isGenericClient(prev.client) ? 1 : 0);
+      const preferNext = nextRow.__ts > prev.__ts || (nextRow.__ts === prev.__ts && nextRichness > prevRichness);
       if (preferNext) displayMap.set(key, nextRow);
     }
 

@@ -37,6 +37,24 @@ function toDetailedClientFromSession(x: any) {
   return "-";
 }
 
+function formatMediaNameFromSession(x: any) {
+  const item = x?.NowPlayingItem ?? {};
+  const seriesName = String(item?.SeriesName || "").trim();
+  const itemName = String(item?.Name || "").trim();
+  const seasonNum = Number(item?.ParentIndexNumber);
+  const episodeNum = Number(item?.IndexNumber);
+
+  if (seriesName && itemName && seriesName !== itemName) {
+    const se: string[] = [];
+    if (Number.isFinite(seasonNum) && seasonNum > 0) se.push(`S${seasonNum}`);
+    if (Number.isFinite(episodeNum) && episodeNum > 0) se.push(`Ep${episodeNum}`);
+    const sePart = se.length ? ` - ${se.join(", ")}` : "";
+    return `${seriesName}${sePart} - ${itemName}`;
+  }
+
+  return itemName || seriesName || "";
+}
+
 type SessionStateRow = {
   embyServerId: string;
   sessionId: string;
@@ -137,9 +155,9 @@ async function deleteSessionState(embyServerId: string, sessionId: string) {
   await prisma.$executeRawUnsafe(`DELETE FROM "PlaybackSessionState" WHERE "embyServerId"=$1 AND "sessionId"=$2`, embyServerId, sessionId);
 }
 
-async function createPlaybackEvent(row: SessionStateRow, eventType: "start" | "stop", occurredAt: Date) {
-  const ts = Math.floor(occurredAt.getTime() / 1000);
-  const activityId = `session:${row.sessionId}:${eventType}:${row.mediaKey}:${ts}`;
+async function createPlaybackStartEvent(row: SessionStateRow, occurredAt: Date) {
+  const minuteBucket = Math.floor(occurredAt.getTime() / 60000);
+  const activityId = `session:${row.sessionId}:start:${row.mediaKey}:${minuteBucket}`;
   try {
     await prisma.playbackEvent.create({
       data: {
@@ -147,7 +165,7 @@ async function createPlaybackEvent(row: SessionStateRow, eventType: "start" | "s
         activityId,
         embyUserId: row.embyUserId,
         userName: row.userName,
-        eventType,
+        eventType: "start",
         mediaName: row.mediaName,
         mediaKey: row.mediaKey,
         client: row.client,
@@ -238,7 +256,7 @@ export async function POST(req: Request) {
         const sessionId = String(x?.Id || "").trim();
         if (!sessionId) continue;
 
-        const mediaName = String(x?.NowPlayingItem?.Name || x?.NowPlayingItem?.SeriesName || "").trim();
+        const mediaName = formatMediaNameFromSession(x).trim();
         if (!mediaName) continue;
 
         const userName = String(x?.UserName || "").trim() || null;
@@ -264,15 +282,14 @@ export async function POST(req: Request) {
         const prev = existingBySession.get(sessionId);
         if (!prev) {
           await insertSessionState(row);
-          collected += await createPlaybackEvent(row, "start", now);
+          collected += await createPlaybackStartEvent(row, now);
           continue;
         }
 
         const changedMedia = normalizeMediaKey(prev.mediaKey || prev.mediaName) !== row.mediaKey;
         if (changedMedia) {
-          collected += await createPlaybackEvent(prev, "stop", now);
           await updateSessionState(row, now);
-          collected += await createPlaybackEvent(row, "start", now);
+          collected += await createPlaybackStartEvent(row, now);
           continue;
         }
 
@@ -280,18 +297,9 @@ export async function POST(req: Request) {
         await updateSessionState(row, prev.startedAt);
       }
 
-      // 4) 不再出现在 /Sessions 的会话视为已结束：落 stop 并清理缓存
+      // 4) 不再出现在 /Sessions 的会话直接清理缓存（无需 stop 结算）
       for (const prev of existing) {
         if (activeSessionIds.has(prev.sessionId)) continue;
-
-        // 仅将最近 24 小时内的会话结算，避免历史残留噪声
-        const endedAt = prev.lastSeenAt && Number.isFinite(prev.lastSeenAt.getTime()) ? prev.lastSeenAt : now;
-        if (now.getTime() - endedAt.getTime() > 24 * 60 * 60 * 1000) {
-          await deleteSessionState(prev.embyServerId, prev.sessionId);
-          continue;
-        }
-
-        collected += await createPlaybackEvent(prev, "stop", endedAt);
         await deleteSessionState(prev.embyServerId, prev.sessionId);
       }
     }
