@@ -7,6 +7,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
 import { normalizeBaseUrl } from "@/lib/emby";
+import { embyFetchSessions } from "@/lib/emby-sessions";
 
 async function ensurePlaybackEventTable() {
   try {
@@ -317,7 +318,43 @@ export async function GET(req: Request) {
       }
     }
 
-    // 3) 最近会话快照（进一步补齐实时正在播放）
+    // 3) 实时 Sessions（直接复用 Emby “正在播放”数据，优先拿到 IP/设备/客户端）
+    if (apiKey) {
+      try {
+        const ses = await embyFetchSessions(srv.embyServer.baseUrl, apiKey);
+        if (ses.ok) {
+          const now = new Date();
+          const uname = user.username.toLowerCase();
+          for (const s of ses.sessions ?? []) {
+            const sameUser = srv.embyUserId
+              ? String(s?.UserId || "") === String(srv.embyUserId)
+              : String(s?.UserName || "").toLowerCase() === uname;
+            if (!sameUser) continue;
+
+            const mediaName = String(s?.NowPlayingItem?.Name || s?.NowPlayingItem?.SeriesName || "").trim();
+            if (!mediaName) continue;
+
+            rawEvents.push({
+              eventType: s?.PlayState?.IsPaused ? "live_session_paused" : "live_session_playing",
+              mediaName,
+              mediaKey: normalizeMediaKey(mediaName),
+              client: toDetailedClient("-", undefined, {
+                device: s?.DeviceName,
+                client: s?.Client,
+                app: s?.ApplicationVersion,
+              }),
+              ip: normalizeIp(s?.RemoteEndPoint || "-"),
+              occurredAt: now,
+              sourceJson: s,
+            });
+          }
+        }
+      } catch {
+        // ignore live session source failures
+      }
+    }
+
+    // 4) 最近会话快照（live sessions 失败时的兜底）
     try {
       const latestSnapshot = await prisma.sessionSnapshot.findFirst({
         where: { embyServerId: srv.embyServerId, capturedAt: { gte: new Date(Date.now() - 30 * 60 * 1000) } },
