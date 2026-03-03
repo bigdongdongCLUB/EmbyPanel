@@ -192,6 +192,19 @@ export async function GET(req: Request) {
           embyServer: { select: { id: true, name: true, baseUrl: true, enabled: true, apiKey: true, apiKeyEnc: true, apiKeyIv: true, apiKeyTag: true } },
         },
       },
+      subscriptions: {
+        where: { status: "ACTIVE", endAt: { gt: new Date() } },
+        orderBy: { endAt: "desc" },
+        take: 1,
+        select: {
+          servers: {
+            select: {
+              embyServerId: true,
+              embyServer: { select: { id: true, name: true, baseUrl: true, enabled: true, apiKey: true, apiKeyEnc: true, apiKeyIv: true, apiKeyTag: true } },
+            },
+          },
+        },
+      },
     },
   });
   if (!user) return NextResponse.json({ error: "not_found" }, { status: 404 });
@@ -199,10 +212,22 @@ export async function GET(req: Request) {
   const since = new Date(Date.now() - rangeDays * 24 * 60 * 60 * 1000);
   await ensurePlaybackEventTable();
 
-  const rows: OutputRow[] = [];
-
+  const serverCandidates = new Map<string, { embyServerId: string; embyUserId: string | null; embyServer: any }>();
   for (const link of user.embyLinks) {
     if (!link.embyServer?.enabled) continue;
+    serverCandidates.set(link.embyServerId, { embyServerId: link.embyServerId, embyUserId: link.embyUserId, embyServer: link.embyServer });
+  }
+  for (const ss of user.subscriptions?.[0]?.servers ?? []) {
+    if (!ss.embyServer?.enabled) continue;
+    if (!serverCandidates.has(ss.embyServerId)) {
+      serverCandidates.set(ss.embyServerId, { embyServerId: ss.embyServerId, embyUserId: null, embyServer: ss.embyServer });
+    }
+  }
+
+  const rows: OutputRow[] = [];
+
+  for (const srv of serverCandidates.values()) {
+    if (!srv.embyServer?.enabled) continue;
 
     const rawEvents: Array<{
       activityId?: string | null;
@@ -217,12 +242,15 @@ export async function GET(req: Request) {
 
     // 1) 历史采集库（快速）
     try {
+      const dbWhere: any = {
+        embyServerId: srv.embyServerId,
+        occurredAt: { gte: since },
+        OR: [{ userName: { equals: user.username, mode: "insensitive" } }],
+      };
+      if (srv.embyUserId) dbWhere.OR.unshift({ embyUserId: srv.embyUserId });
+
       const events = await prisma.playbackEvent.findMany({
-        where: {
-          embyServerId: link.embyServerId,
-          occurredAt: { gte: since },
-          OR: [{ embyUserId: link.embyUserId }, { userName: { equals: user.username, mode: "insensitive" } }],
-        },
+        where: dbWhere,
         orderBy: { occurredAt: "desc" },
         take: 2000,
         select: {
@@ -256,9 +284,9 @@ export async function GET(req: Request) {
     }
 
     // 2) 实时 Activity（补齐刚播放但采集任务未落库的窗口）
-    const apiKey = getEmbyApiKeyForServer(link.embyServer as any);
+    const apiKey = getEmbyApiKeyForServer(srv.embyServer as any);
     if (apiKey) {
-      const live = await fetchActivityEntries(link.embyServer.baseUrl, apiKey, 400);
+      const live = await fetchActivityEntries(srv.embyServer.baseUrl, apiKey, 400);
       if (live.length) {
         const parsed = live
           .map((x) => parseActivityEntryToPlayback(x, user.username))
@@ -292,7 +320,7 @@ export async function GET(req: Request) {
     // 3) 最近会话快照（进一步补齐实时正在播放）
     try {
       const latestSnapshot = await prisma.sessionSnapshot.findFirst({
-        where: { embyServerId: link.embyServerId, capturedAt: { gte: new Date(Date.now() - 30 * 60 * 1000) } },
+        where: { embyServerId: srv.embyServerId, capturedAt: { gte: new Date(Date.now() - 30 * 60 * 1000) } },
         select: { capturedAt: true, rawJson: true },
         orderBy: { capturedAt: "desc" },
       });
@@ -323,8 +351,8 @@ export async function GET(req: Request) {
     const uniqueEvents = new Map<string, (typeof rawEvents)[number]>();
     for (const ev of rawEvents) {
       const fingerprint = ev.activityId
-        ? `A:${link.embyServerId}:${ev.activityId}`
-        : `F:${link.embyServerId}:${ev.eventType}:${ev.mediaKey}:${Math.floor(ev.occurredAt.getTime() / 1000)}`;
+        ? `A:${srv.embyServerId}:${ev.activityId}`
+        : `F:${srv.embyServerId}:${ev.eventType}:${ev.mediaKey}:${Math.floor(ev.occurredAt.getTime() / 1000)}`;
       const prev = uniqueEvents.get(fingerprint);
       if (!prev || ev.occurredAt.getTime() > prev.occurredAt.getTime()) uniqueEvents.set(fingerprint, ev);
     }
@@ -338,11 +366,11 @@ export async function GET(req: Request) {
       const mediaKey = normalizeMediaKey(ev.mediaKey || mediaName);
       const ts = ev.occurredAt.getTime();
       const bucket = Math.floor(ts / (10 * 60 * 1000));
-      const key = `${link.embyServerId}:${mediaKey}:${bucket}`;
+      const key = `${srv.embyServerId}:${mediaKey}:${bucket}`;
 
       const nextRow: OutputRow & { __eventType: string; __ts: number } = {
-        serverId: link.embyServerId,
-        serverName: link.embyServer.name,
+        serverId: srv.embyServerId,
+        serverName: srv.embyServer.name,
         mediaName,
         mediaKey,
         client: toDetailedClient(ev.client || "-", ev.sourceJson),
@@ -410,11 +438,7 @@ export async function GET(req: Request) {
     }
   }
 
-  const cleanedRows = rows.filter((r) => {
-    // drop very low-quality samples: both ip missing and generic client
-    if (r.ip !== "-") return true;
-    return !isGenericClient(r.client);
-  });
+  const cleanedRows = rows;
 
   cleanedRows.sort((a, b) => new Date(b.lastPlayedAt).getTime() - new Date(a.lastPlayedAt).getTime());
 
