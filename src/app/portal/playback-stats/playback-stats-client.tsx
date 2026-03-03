@@ -38,7 +38,7 @@ function isTrimmed(v: string, max = 40) {
 }
 
 export function PortalPlaybackStatsClient() {
-  const [rangeDays, setRangeDays] = useState<7 | 30 | 90>(30);
+  const [rangeDays, setRangeDays] = useState<7 | 30 | 90>(7);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<Data | null>(null);
