@@ -432,13 +432,14 @@ function UsersTable({
             <div className="flex items-center justify-between">
               <div className="text-lg font-semibold">批量删除进度</div>
               <button
-                className="text-gray-500 hover:text-gray-700"
+                className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-[#f2d4d9] bg-[#fff7f8] hover:border-[#e3001b] hover:bg-[#fff0f1]"
                 onClick={() => {
                   deleteCancelRef.current = true;
                   setDeleteLogOpen(false);
                 }}
+                aria-label="关闭"
               >
-                关闭
+                <img src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
               </button>
             </div>
             <div className="mt-2 text-sm text-gray-600">关闭日志窗口或刷新页面会停止后续删除操作（不会后台继续）。</div>
@@ -697,8 +698,8 @@ export function ServersClient() {
           <div className="bg-white border border-[#eaeaea] rounded-2xl w-full max-w-lg p-4">
             <div className="flex items-center justify-between">
               <div className="font-semibold">统计 - {statsModal.name}</div>
-              <button className="text-sm underline" onClick={() => setStatsModal({ open: false })}>
-                关闭
+              <button className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-[#f2d4d9] bg-[#fff7f8] hover:border-[#e3001b] hover:bg-[#fff0f1]" onClick={() => setStatsModal({ open: false })} aria-label="关闭">
+                <img src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
               </button>
             </div>
 
@@ -732,12 +733,13 @@ export function ServersClient() {
             <div className="flex items-center justify-between">
               <div className="font-semibold">{usersModal.name} - 用户列表</div>
               <button
-                className="text-sm underline"
+                className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-[#f2d4d9] bg-[#fff7f8] hover:border-[#e3001b] hover:bg-[#fff0f1]"
                 onClick={() => {
                   setUsersModal({ open: false });
                 }}
+                aria-label="关闭"
               >
-                关闭
+                <img src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
               </button>
             </div>
 
@@ -777,8 +779,8 @@ export function ServersClient() {
           <div className="bg-white border border-[#eaeaea] rounded-2xl w-full max-w-lg p-4">
             <div className="flex items-center justify-between">
               <div className="font-semibold">编辑服务器</div>
-              <button className="text-sm underline" onClick={() => setModal({ open: false })}>
-                关闭
+              <button className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-[#f2d4d9] bg-[#fff7f8] hover:border-[#e3001b] hover:bg-[#fff0f1]" onClick={() => setModal({ open: false })} aria-label="关闭">
+                <img src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
               </button>
             </div>
 

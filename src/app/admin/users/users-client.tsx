@@ -978,8 +978,8 @@ export function UsersClient() {
           <div className="bg-white rounded-lg w-full max-w-md p-2 border shadow-lg">
             <div className="flex items-center justify-between">
               <div className="text-lg font-semibold">删除用户</div>
-              <button className="text-lg text-gray-400 hover:text-gray-700" onClick={() => setDeleteConfirmOpen(false)}>
-                ×
+              <button className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-[#f2d4d9] bg-[#fff7f8] hover:border-[#e3001b] hover:bg-[#fff0f1]" onClick={() => setDeleteConfirmOpen(false)} aria-label="关闭">
+                <img src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
               </button>
             </div>
 
@@ -1036,8 +1036,8 @@ export function UsersClient() {
           <div className="bg-white rounded-lg w-full max-w-2xl p-4">
             <div className="flex items-center justify-between border-b pb-3">
               <div className="font-semibold text-lg">为 {selectedIds.length} 个选中用户添加订阅时间</div>
-              <button className="text-sm underline" onClick={() => setBulkAddOpen(false)}>
-                关闭
+              <button className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-[#f2d4d9] bg-[#fff7f8] hover:border-[#e3001b] hover:bg-[#fff0f1]" onClick={() => setBulkAddOpen(false)} aria-label="关闭">
+                <img src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
               </button>
             </div>
 
@@ -1114,8 +1114,8 @@ export function UsersClient() {
           <div className="bg-white rounded-lg w-full max-w-md p-2 border shadow-lg">
             <div className="flex items-center justify-between">
               <div className="text-lg font-semibold">删除用户</div>
-              <button className="text-lg text-gray-400 hover:text-gray-700" onClick={() => setBulkDeleteConfirmOpen(false)}>
-                ×
+              <button className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-[#f2d4d9] bg-[#fff7f8] hover:border-[#e3001b] hover:bg-[#fff0f1]" onClick={() => setBulkDeleteConfirmOpen(false)} aria-label="关闭">
+                <img src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
               </button>
             </div>
 
@@ -1182,7 +1182,9 @@ export function UsersClient() {
           <div className="relative bg-white w-full max-w-[600px] max-h-[90vh] rounded-2xl border-2 border-[#e3001b] shadow-[0_12px_32px_rgba(227,0,27,0.12)] flex flex-col overflow-hidden">
             <div className="px-8 pt-6 pb-4 border-b border-[#eaeaea] flex items-center justify-between">
               <div className="text-lg font-bold text-[#222]">从 Emby 服务器导入用户</div>
-              <button className="text-2xl leading-none text-[#888] hover:text-[#e3001b]" onClick={() => setImportOpen(false)} aria-label="关闭">×</button>
+              <button className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-[#f2d4d9] bg-[#fff7f8] hover:border-[#e3001b] hover:bg-[#fff0f1]" onClick={() => setImportOpen(false)} aria-label="关闭">
+                <img src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
+              </button>
             </div>
 
             <div className="px-8 py-6 overflow-y-auto flex-1 space-y-4">
@@ -1374,7 +1376,9 @@ export function UsersClient() {
           <div className="bg-white w-full max-w-[680px] max-h-[90vh] rounded-2xl border-2 border-[#e3001b] shadow-[0_12px_32px_rgba(227,0,27,0.12)] flex flex-col overflow-hidden">
             <div className="px-8 pt-6 pb-4 flex items-center justify-between">
               <div className="text-[18px] font-bold text-[#222]">从 CSV 模板导入用户</div>
-              <button className="text-2xl leading-none text-[#666] hover:text-[#e3001b]" onClick={() => setCsvImportOpen(false)} aria-label="关闭">×</button>
+              <button className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-[#f2d4d9] bg-[#fff7f8] hover:border-[#e3001b] hover:bg-[#fff0f1]" onClick={() => setCsvImportOpen(false)} aria-label="关闭">
+                <img src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
+              </button>
             </div>
             <div className="px-8 pb-6 overflow-y-auto flex-1">
             {csvImportError ? <pre className="mt-2 text-xs text-red-600 whitespace-pre-wrap">{csvImportError}</pre> : null}
@@ -1508,7 +1512,9 @@ export function UsersClient() {
           <div className="bg-white rounded-lg w-full max-w-[760px] p-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between">
               <div className="text-lg font-semibold">CSV 导入进度</div>
-              <button className="text-gray-500 hover:text-gray-700" onClick={() => setCsvJobOpen(false)}>关闭</button>
+              <button className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-[#f2d4d9] bg-[#fff7f8] hover:border-[#e3001b] hover:bg-[#fff0f1]" onClick={() => setCsvJobOpen(false)} aria-label="关闭">
+                <img src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
+              </button>
             </div>
             <div className="mt-2 text-sm text-gray-600">刷新页面后任务仍会在后台继续执行；此窗口可查看实时进度。</div>
 

@@ -157,7 +157,9 @@ function DetailModal({
         <div className="p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="text-base font-semibold text-gray-800">确认点播请求</div>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+            <button onClick={onClose} className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-[#f2d4d9] bg-[#fff7f8] hover:border-[#e3001b] hover:bg-[#fff0f1]" aria-label="关闭">
+              <img src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
+            </button>
           </div>
 
           {allExist && (
@@ -645,7 +647,9 @@ export function VodClient() {
                 >
                   清空已完成
                 </button>
-                <button onClick={() => setShowMyRequests(false)} className="text-[#888] hover:text-[#e3001b] text-2xl leading-none">×</button>
+                <button onClick={() => setShowMyRequests(false)} className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-[#f2d4d9] bg-[#fff7f8] hover:border-[#e3001b] hover:bg-[#fff0f1]" aria-label="关闭">
+                  <img src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
+                </button>
               </div>
             </div>
 

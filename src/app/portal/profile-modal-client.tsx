@@ -45,7 +45,9 @@ export function PortalProfileModalClient() {
       <div className="bg-white border border-[#eaeaea] rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-auto p-5 space-y-2 text-[14px]">
         <div className="flex items-center justify-between">
           <div className="text-xl font-semibold">账户设置</div>
-          <button className="text-gray-500 hover:text-gray-700 text-xl leading-none" onClick={() => setOpen(false)}>×</button>
+          <button className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-[#f2d4d9] bg-[#fff7f8] hover:border-[#e3001b] hover:bg-[#fff0f1]" onClick={() => setOpen(false)} aria-label="关闭">
+            <img src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
+          </button>
         </div>
 
         {loading ? <div className="text-xs text-gray-500">加载中…</div> : null}
