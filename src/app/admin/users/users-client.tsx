@@ -1622,20 +1622,35 @@ export function UsersClient() {
                     if (!Number.isFinite(hoursNum) || hoursNum < 1 || hoursNum > 168) {
                       throw new Error("试用小时需在 1-168");
                     }
-                    const res = await fetch("/api/admin/users/create-trial", {
-                      method: "POST",
-                      headers: { "content-type": "application/json" },
-                      body: JSON.stringify({
-                        username: trialUsername.trim() || null,
-                        password: trialPassword.trim() || null,
-                        planId: trialPlanId,
-                        hours: hoursNum,
-                      }),
-                    });
+                    const controller = new AbortController();
+                    const timeoutId = window.setTimeout(() => controller.abort(), 5000);
+
+                    let res: Response;
+                    try {
+                      res = await fetch("/api/admin/users/create-trial", {
+                        method: "POST",
+                        headers: { "content-type": "application/json" },
+                        body: JSON.stringify({
+                          username: trialUsername.trim() || null,
+                          password: trialPassword.trim() || null,
+                          planId: trialPlanId,
+                          hours: hoursNum,
+                        }),
+                        signal: controller.signal,
+                      });
+                    } catch (fetchErr: any) {
+                      if (fetchErr?.name === "AbortError") {
+                        throw new Error("创建失败：服务器 5 秒无响应，已放弃本次创建");
+                      }
+                      throw fetchErr;
+                    } finally {
+                      window.clearTimeout(timeoutId);
+                    }
+
                     const json = await res.json().catch(() => null);
                     if (!res.ok) {
                       if (json?.error === "server_unreachable_generate_failed") {
-                        throw new Error("服务器无响应生成失败");
+                        throw new Error("创建失败：服务器无响应");
                       }
                       throw new Error(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
                     }
@@ -1645,7 +1660,9 @@ export function UsersClient() {
                     setTrialOutput(txt);
                     await refresh(false);
                   } catch (e: any) {
-                    setTrialError(e?.message ?? "trial_create_failed");
+                    const msg = e?.message ?? "trial_create_failed";
+                    setTrialError(msg);
+                    alert(msg.startsWith("创建失败") ? msg : `创建失败：${msg}`);
                   } finally {
                     setTrialLoading(false);
                   }
