@@ -11,6 +11,8 @@ import { embySetUserDisabled } from "@/lib/emby-provision";
 const PENALTY_STATE_KEY = "anomaly_penalty_state";
 const PENALTY_RECORDS_KEY = "anomaly_penalty_records";
 const PENALTY_CONFIG_KEY = "anomaly_penalty_config";
+const PENALTY_STACK_WINDOW_DAYS = 7;
+const PENALTY_STACK_MULTIPLIER_MAX = 4;
 
 function normalizeIp(ipRaw: string): string {
   const ip = (ipRaw ?? "").trim();
@@ -73,6 +75,25 @@ async function savePenaltyRecords(records: any[]) {
     create: { key: PENALTY_RECORDS_KEY, valueJson: records },
     update: { valueJson: records },
   });
+}
+
+function isAppliedPenaltyRecordInWindow(params: {
+  record: any;
+  embyServerId: string;
+  userId: string;
+  now: Date;
+}) {
+  const { record, embyServerId, userId, now } = params;
+  if (!record || typeof record !== "object") return false;
+  if (String(record.embyServerId ?? "") !== embyServerId) return false;
+  if (String(record.userId ?? "") !== userId) return false;
+  if (String(record.status ?? "") === "FAILED_DISABLE") return false;
+
+  const disabledAtMs = Date.parse(String(record.disabledAt ?? ""));
+  if (!Number.isFinite(disabledAtMs)) return false;
+
+  const cutoffMs = now.getTime() - PENALTY_STACK_WINDOW_DAYS * 24 * 3600 * 1000;
+  return disabledAtMs >= cutoffMs;
 }
 
 export async function POST(req: Request) {
@@ -221,7 +242,17 @@ export async function POST(req: Request) {
         createdEvents += 1;
 
         if (penaltyConfig.enabled && nextConsecutive >= 2 && !pendingPenaltyKeys.has(key)) {
-          const unlockAt = new Date(now.getTime() + penaltyConfig.durationMinutes * 60 * 1000);
+          const recentAppliedPenaltyCount = penaltyRecords.filter((r) =>
+            isAppliedPenaltyRecordInWindow({
+              record: r,
+              embyServerId: server.id,
+              userId: link.userId,
+              now,
+            })
+          ).length;
+          const penaltyMultiplier = Math.max(1, Math.min(PENALTY_STACK_MULTIPLIER_MAX, recentAppliedPenaltyCount + 1));
+          const penaltyMinutes = penaltyConfig.durationMinutes * penaltyMultiplier;
+          const unlockAt = new Date(now.getTime() + penaltyMinutes * 60 * 1000);
           const recId = `penalty_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
           let disabledOk = false;
           let disableError: string | null = null;
@@ -284,13 +315,17 @@ export async function POST(req: Request) {
               disabledAt: now.toISOString(),
               unlockAt: unlockAt.toISOString(),
               status: "PENDING",
+              baseDurationMinutes: penaltyConfig.durationMinutes,
+              penaltyMultiplier,
+              penaltyDurationMinutes: penaltyMinutes,
+              stackWindowDays: PENALTY_STACK_WINDOW_DAYS,
               stoppedSessions,
               loggedOutSessions,
               revokedTokens: revokeResult.revokedCount ?? 0,
               stopErrors: stopErrors.length ? stopErrors.slice(0, 5) : undefined,
               logoutErrors: logoutErrors.length ? logoutErrors.slice(0, 5) : undefined,
               revokeErrors: revokeResult.errors?.length ? revokeResult.errors : undefined,
-              reason: `连续两次5分钟检测命中异常并发播放，已停止播放、踢下线、撤销所有AccessToken后封禁${penaltyConfig.durationMinutes}分钟`,
+              reason: `连续两次5分钟检测命中异常并发播放，按1周内第${penaltyMultiplier}次处罚封禁${penaltyMinutes}分钟（基础${penaltyConfig.durationMinutes}分钟，倍率x${penaltyMultiplier}）`,
             });
           } else {
             warnings += 1;
@@ -304,10 +339,14 @@ export async function POST(req: Request) {
               disabledAt: now.toISOString(),
               unlockAt: unlockAt.toISOString(),
               status: "FAILED_DISABLE",
+              baseDurationMinutes: penaltyConfig.durationMinutes,
+              penaltyMultiplier,
+              penaltyDurationMinutes: penaltyMinutes,
+              stackWindowDays: PENALTY_STACK_WINDOW_DAYS,
               stoppedSessions,
               stopErrors: stopErrors.length ? stopErrors.slice(0, 5) : undefined,
               error: disableError || "disable_failed",
-              reason: `连续两次5分钟检测命中异常并发播放，已先停止播放，封禁失败`,
+              reason: `连续两次5分钟检测命中异常并发播放，计划按x${penaltyMultiplier}封禁${penaltyMinutes}分钟，但封禁失败`,
             });
           }
         }

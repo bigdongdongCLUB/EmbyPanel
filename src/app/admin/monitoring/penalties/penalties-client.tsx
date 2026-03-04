@@ -29,6 +29,7 @@ export function MonitoringPenaltiesClient() {
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [unbanningId, setUnbanningId] = useState<string | null>(null);
 
   async function refresh() {
     setLoading(true);
@@ -65,6 +66,24 @@ export function MonitoringPenaltiesClient() {
       setError(e?.message ?? "save_penalty_failed");
     } finally {
       setSavingPenalty(false);
+    }
+  }
+
+  async function manualUnban(recordId: string) {
+    setUnbanningId(recordId);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/monitoring/penalties/${encodeURIComponent(recordId)}/unban`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
+      await refresh();
+    } catch (e: any) {
+      setError(e?.message ?? "manual_unban_failed");
+    } finally {
+      setUnbanningId(null);
     }
   }
 
@@ -147,14 +166,42 @@ export function MonitoringPenaltiesClient() {
             </thead>
             <tbody>
               {pageRows.map((r) => {
-                const statusText = r.status === "UNBANNED" ? "已解禁" : r.status === "PENDING" ? "封禁中" : r.status === "SKIPPED_NOT_ELIGIBLE" ? "到期跳过" : r.status === "FAILED_UNBAN" ? "解禁失败" : r.status === "FAILED_DISABLE" ? "封禁失败" : r.status;
+                const isPending = r.status === "PENDING";
+                const statusText =
+                  r.status === "UNBANNED"
+                    ? "已解禁"
+                    : r.status === "UNBANNED_MANUAL"
+                    ? "已解禁（手动）"
+                    : r.status === "PENDING"
+                    ? "封禁中"
+                    : r.status === "SKIPPED_NOT_ELIGIBLE"
+                    ? "到期跳过"
+                    : r.status === "FAILED_UNBAN"
+                    ? "解禁失败"
+                    : r.status === "FAILED_DISABLE"
+                    ? "封禁失败"
+                    : r.status;
                 return (
                   <tr key={r.id} className="border-b last:border-b-0">
                     <td className="py-4 px-3 leading-6">{r.username || "-"}</td>
                     <td className="py-4 px-3 leading-6">{r.serverName || "-"}</td>
                     <td className="py-4 px-3 text-[13px] text-gray-700 leading-6">{formatDateTimeShanghai(r.disabledAt)}</td>
                     <td className="py-4 px-3 text-[13px] text-gray-700 leading-6">{formatDateTimeShanghai(r.unlockAt)}</td>
-                    <td className="py-4 px-3 leading-6">{statusText}</td>
+                    <td className="py-4 px-3 leading-6">
+                      <div className="flex items-center gap-2">
+                        <span>{statusText}</span>
+                        {isPending ? (
+                          <button
+                            type="button"
+                            className="border border-[#e3001b] text-[#e3001b] bg-white rounded-md px-2 py-1 text-xs hover:bg-[#fff3f4] disabled:opacity-50"
+                            onClick={() => manualUnban(r.id)}
+                            disabled={unbanningId === r.id}
+                          >
+                            {unbanningId === r.id ? "解禁中..." : "解禁"}
+                          </button>
+                        ) : null}
+                      </div>
+                    </td>
                   </tr>
                 );
               })}
