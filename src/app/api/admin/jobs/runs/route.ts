@@ -22,8 +22,7 @@ function mapJobName(jobName: string) {
     "anomaly-scan": "播放异常检测",
     "anomaly-unban": "处罚自动解禁",
     "cache-cleanup": "缓存清理",
-    "playback-collect": "播放记录采集",
-    "emby-enforce-stream-limit": "单设备并发限制同步",
+    "playback-collect": "播放记录采集", 
   };
   return m[jobName] || jobName;
 }
@@ -36,7 +35,6 @@ function triggerMode(jobName: string) {
   if (jobName === "anomaly-scan") return "定时任务（每5分钟）";
   if (jobName === "cache-cleanup") return "定时任务（每日 02:00）";
   if (jobName === "playback-collect") return "定时任务（每1分钟）";
-  if (jobName === "emby-enforce-stream-limit") return "定时任务（每日 02:20）";
   return "定时任务";
 }
 
@@ -52,7 +50,6 @@ function resultText(ok: boolean | null, message?: string | null) {
       if (typeof j?.linksDisabled === "number") return `成功：禁用${j.linksDisabled}，告警${j.apiWarnings ?? 0}`;
       if (typeof j?.sent === "number") return `成功：已发送${j.sent}`;
       if (typeof j?.snapshotsDeleted === "number") return `成功：快照清理${j.snapshotsDeleted}，任务日志清理${j.jobRunsDeleted ?? 0}`;
-      if (typeof j?.updated === "number") return `成功：已同步${j.updated}，失败${j.failed ?? 0}`;
       return "成功";
     } catch {
       return "成功";

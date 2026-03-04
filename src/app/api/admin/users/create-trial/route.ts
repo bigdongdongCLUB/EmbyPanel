@@ -8,7 +8,7 @@ import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
 import { encryptSyncPassword } from "@/lib/user-secrets";
 import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
-import { embyCreateUser, embyDeleteUser, embyEnforceSingleDevicePlayback, embySetUserDisabled, embySetUserPassword } from "@/lib/emby-provision";
+import { embyCreateUser, embyDeleteUser, embySetUserDisabled, embySetUserPassword } from "@/lib/emby-provision";
 import { embyFetchUsers } from "@/lib/emby";
 
 const Schema = z.object({
@@ -158,8 +158,6 @@ export async function POST(req: Request) {
 
         const pwSet = await embySetUserPassword(s.baseUrl, apiKey, embyUserId, password);
         if (!pwSet.ok) throw new Error("server_unreachable_generate_failed");
-        const limitSet = await embyEnforceSingleDevicePlayback(s.baseUrl, apiKey, embyUserId);
-        if (!limitSet.ok) throw new Error("server_unreachable_generate_failed");
         const enSet = await embySetUserDisabled(s.baseUrl, apiKey, embyUserId, false);
         if (!enSet.ok) throw new Error("server_unreachable_generate_failed");
 

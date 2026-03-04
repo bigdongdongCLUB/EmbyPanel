@@ -9,7 +9,7 @@ import { pickServerForPlan } from "@/lib/plan-assign";
 import { getSyncPassword } from "@/lib/user-secrets";
 import { embyFetchUsers } from "@/lib/emby";
 import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
-import { embyApplyTemplatePolicy, embyCreateUser, embyEnforceSingleDevicePlayback, embySetUserDisabled, embySetUserPassword } from "@/lib/emby-provision";
+import { embyApplyTemplatePolicy, embyCreateUser, embySetUserDisabled, embySetUserPassword } from "@/lib/emby-provision";
 import { autoCancelExpiredPendingOrders, isOrderPendingExpired } from "@/lib/order-expiry";
 
 const INVITE_REBATE_KEY = "invite_rebate";
@@ -223,9 +223,6 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
         await embySetUserPassword(s.baseUrl, apiKey, embyUserId, pw);
         const templateId = templateByServerId.get(s.id);
         if (templateId) await embyApplyTemplatePolicy(s.baseUrl, apiKey, embyUserId, templateId);
-        try {
-          await embyEnforceSingleDevicePlayback(s.baseUrl, apiKey, embyUserId);
-        } catch {}
         await embySetUserDisabled(s.baseUrl, apiKey, embyUserId, false);
 
         await prisma.embyUserLink.upsert({
