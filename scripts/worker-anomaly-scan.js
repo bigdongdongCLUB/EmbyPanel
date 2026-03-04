@@ -41,7 +41,7 @@ async function ensureRepeatable(queue) {
   // 清理历史重复任务（例如旧的10分钟scan），避免沿用旧节奏
   const all = await queue.getRepeatableJobs();
   for (const r of all) {
-    if (r?.name === "scan" || r?.name === "unban" || r?.name === "playback-collect" || r?.name === "cache-cleanup" || r?.name === "dashboard-active30d") {
+    if (r?.name === "scan" || r?.name === "unban" || r?.name === "playback-collect" || r?.name === "cache-cleanup" || r?.name === "dashboard-active30d" || r?.name === "stream-limit-enforce") {
       await queue.removeRepeatableByKey(r.key);
     }
   }
@@ -63,17 +63,6 @@ async function ensureRepeatable(queue) {
     { kind: "anomaly-unban" },
     {
       jobId: "repeat:unban",
-      repeat: { every: 60 * 1000 },
-      removeOnComplete: true,
-      removeOnFail: 1000,
-    }
-  );
-
-  await queue.add(
-    "playback-collect",
-    { kind: "playback-collect" },
-    {
-      jobId: "repeat:playback-collect",
       repeat: { every: 60 * 1000 },
       removeOnComplete: true,
       removeOnFail: 1000,
@@ -141,14 +130,6 @@ async function main() {
           console.log("[worker] anomaly-unban", { jobId: job.id, due: unban?.dueCount, unbanned: unban?.unbanned, skipped: unban?.skipped, failed: unban?.failed });
         }
         return { unban };
-      }
-
-      if (job.name === "playback-collect") {
-        const collected = await callInternal("/api/admin/jobs/playback-collect");
-        if ((collected?.collected || 0) > 0 || (collected?.snapshots || 0) > 0) {
-          console.log("[worker] playback-collect", { jobId: job.id, collected: collected?.collected, snapshots: collected?.snapshots });
-        }
-        return { collected };
       }
 
       if (job.name === "cache-cleanup") {
