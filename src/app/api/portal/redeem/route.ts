@@ -10,7 +10,7 @@ import { pickServerForPlan } from "@/lib/plan-assign";
 import { getSyncPassword } from "@/lib/user-secrets";
 import { embyFetchUsers } from "@/lib/emby";
 import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
-import { embyApplyTemplatePolicy, embyCreateUser, embySetUserDisabled, embySetUserPassword } from "@/lib/emby-provision";
+import { embyApplyTemplatePolicy, embyCreateUser, embyEnforceSingleDevicePlayback, embySetUserDisabled, embySetUserPassword } from "@/lib/emby-provision";
 
 const INVITE_REBATE_KEY = "invite_rebate";
 const INVITE_REL_KEY = "invite_relations";
@@ -352,6 +352,13 @@ export async function POST(req: Request) {
               } catch {
                 syncIssues.push(`${s.id}:apply_template_failed`);
               }
+            }
+
+            try {
+              const r = await embyEnforceSingleDevicePlayback(s.baseUrl, apiKey, embyUserId);
+              if (!r.ok) syncIssues.push(`${s.id}:single_device_limit_failed`);
+            } catch {
+              syncIssues.push(`${s.id}:single_device_limit_failed`);
             }
 
             try {

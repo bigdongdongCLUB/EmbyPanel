@@ -1,5 +1,12 @@
 import { normalizeBaseUrl } from "@/lib/emby";
 
+function getDesiredSimultaneousStreamLimit() {
+  const raw = Number(process.env.EMBY_SIMULTANEOUS_STREAM_LIMIT ?? "1");
+  if (!Number.isFinite(raw)) return 1;
+  const n = Math.trunc(raw);
+  return n >= 1 ? n : 1;
+}
+
 async function tryRequest(reqs: Array<() => Promise<Response>>) {
   let last: any = null;
   for (const fn of reqs) {
@@ -85,6 +92,16 @@ export async function embyClonePolicyFromTemplate(baseUrl: string, apiKey: strin
   const next: any = { ...templatePolicy };
   next.IsAdministrator = currentPolicy.IsAdministrator;
   next.IsDisabled = currentPolicy.IsDisabled;
+  next.SimultaneousStreamLimit = getDesiredSimultaneousStreamLimit();
 
   return embySetUserPolicy(baseUrl, apiKey, targetEmbyUserId, next);
+}
+
+export async function embyEnforceSimultaneousStreamLimit(baseUrl: string, apiKey: string, embyUserId: string, limit = getDesiredSimultaneousStreamLimit()) {
+  const cur = await embyFetchUserPolicy(baseUrl, apiKey, embyUserId);
+  if (!cur.ok) return cur;
+
+  const currentPolicy = typeof cur.policy === "object" && cur.policy ? (cur.policy as any) : {};
+  const next = { ...currentPolicy, SimultaneousStreamLimit: limit };
+  return embySetUserPolicy(baseUrl, apiKey, embyUserId, next);
 }

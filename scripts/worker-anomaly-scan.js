@@ -41,7 +41,7 @@ async function ensureRepeatable(queue) {
   // 清理历史重复任务（例如旧的10分钟scan），避免沿用旧节奏
   const all = await queue.getRepeatableJobs();
   for (const r of all) {
-    if (r?.name === "scan" || r?.name === "unban" || r?.name === "playback-collect" || r?.name === "cache-cleanup" || r?.name === "dashboard-active30d") {
+    if (r?.name === "scan" || r?.name === "unban" || r?.name === "playback-collect" || r?.name === "cache-cleanup" || r?.name === "dashboard-active30d" || r?.name === "stream-limit-enforce") {
       await queue.removeRepeatableByKey(r.key);
     }
   }
@@ -97,6 +97,17 @@ async function ensureRepeatable(queue) {
     {
       jobId: "repeat:dashboard-active30d",
       repeat: { pattern: "10 2 * * *", tz: "Asia/Shanghai" },
+      removeOnComplete: true,
+      removeOnFail: 1000,
+    }
+  );
+
+  await queue.add(
+    "stream-limit-enforce",
+    { kind: "stream-limit-enforce" },
+    {
+      jobId: "repeat:stream-limit-enforce",
+      repeat: { pattern: "20 2 * * *", tz: "Asia/Shanghai" },
       removeOnComplete: true,
       removeOnFail: 1000,
     }
@@ -161,6 +172,12 @@ async function main() {
         const snapshot = await callInternal("/api/admin/jobs/dashboard-active30d-snapshot");
         console.log("[worker] dashboard-active30d", { jobId: job.id, total: snapshot?.embyActive30dTotal, servers: snapshot?.serverCount, snapshotAt: snapshot?.snapshotAt });
         return { snapshot };
+      }
+
+      if (job.name === "stream-limit-enforce") {
+        const limit = await callInternal("/api/admin/jobs/emby-enforce-stream-limit");
+        console.log("[worker] stream-limit-enforce", { jobId: job.id, totalLinks: limit?.totalLinks, updated: limit?.updated, failed: limit?.failed });
+        return { limit };
       }
 
       const started = Date.now();

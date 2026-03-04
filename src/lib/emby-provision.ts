@@ -1,5 +1,5 @@
 import { normalizeBaseUrl } from "@/lib/emby";
-import { embyClonePolicyFromTemplate } from "@/lib/emby-user-policy";
+import { embyClonePolicyFromTemplate, embyEnforceSimultaneousStreamLimit } from "@/lib/emby-user-policy";
 
 async function tryRequest(reqs: Array<() => Promise<Response>>) {
   let last: any = null;
@@ -109,6 +109,14 @@ export async function embyApplyTemplatePolicy(baseUrl: string, apiKey: string, t
   const res = await embyClonePolicyFromTemplate(baseUrl, apiKey, templateEmbyUserId, targetEmbyUserId);
   if (!(res as any)?.ok) {
     return { ok: false as const, error: "template_policy_apply_failed", detail: res };
+  }
+  return { ok: true as const };
+}
+
+export async function embyEnforceSingleDevicePlayback(baseUrl: string, apiKey: string, targetEmbyUserId: string) {
+  const res = await embyEnforceSimultaneousStreamLimit(baseUrl, apiKey, targetEmbyUserId);
+  if (!(res as any)?.ok) {
+    return { ok: false as const, error: "single_device_limit_apply_failed", detail: res };
   }
   return { ok: true as const };
 }
