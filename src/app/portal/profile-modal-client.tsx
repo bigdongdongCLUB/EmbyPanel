@@ -61,9 +61,16 @@ export function PortalProfileModalClient() {
           <div>
             <div className="text-xs font-medium flex items-center gap-2">
               订阅到期提醒
-              <span className="relative inline-flex items-center group cursor-help">
-                <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border text-xs text-gray-500">?</span>
-                <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 -top-11 whitespace-nowrap rounded bg-black text-white text-xs px-2.5 py-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+              <span className="relative inline-flex items-center group">
+                <button
+                  type="button"
+                  className="p-0 m-0 border-0 bg-transparent leading-none cursor-help"
+                  aria-label="订阅到期提醒说明"
+                  title="订阅到期提醒说明"
+                >
+                  <img src="/icons/exclamation.svg" alt="提醒说明" className="w-4 h-4" />
+                </button>
+                <span className="absolute left-0 top-[calc(100%+8px)] z-[70] w-[260px] whitespace-normal rounded-lg bg-black text-white text-xs leading-5 px-3 py-2 shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-opacity">
                   开启后，将在订阅即将到期时收到提醒通知
                 </span>
               </span>
