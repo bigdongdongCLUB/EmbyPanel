@@ -33,7 +33,7 @@ function triggerMode(jobName: string) {
   if (jobName === "emby-health-check") return "定时任务（每10分钟）";
   if (jobName === "subscription-expiry-disable") return "定时任务（每10分钟）";
   if (jobName === "subscription-expiry-reminder") return "定时任务（每10分钟）";
-  if (jobName === "anomaly-scan") return "定时任务（每5分钟）";
+  if (jobName === "anomaly-scan") return "定时任务（每1分钟）";
   if (jobName === "cache-cleanup") return "定时任务（每日 02:00）";
   if (jobName === "playback-collect") return "定时任务（每1分钟）";
   if (jobName === "emby-enforce-stream-limit") return "定时任务（每日 02:20）";
@@ -46,7 +46,7 @@ function resultText(ok: boolean | null, message?: string | null) {
     if (!message) return "成功";
     try {
       const j = JSON.parse(message);
-      if (typeof j?.createdEvents === "number") return `成功：异常${j.createdEvents}，扫描${j.scannedSessions ?? 0}`;
+      if (typeof j?.createdEvents === "number") return `成功：异常${j.createdEvents}，扫描${j.scannedSessions ?? 0}，拦截${j.forcedSessionStops ?? 0}`;
       if (typeof j?.unbanned === "number") return `成功：解禁${j.unbanned}，跳过${j.skipped ?? 0}`;
       if (typeof j?.okCount === "number") return `成功：健康 ${j.okCount}，失败${j.failCount ?? 0}`;
       if (typeof j?.linksDisabled === "number") return `成功：禁用${j.linksDisabled}，告警${j.apiWarnings ?? 0}`;

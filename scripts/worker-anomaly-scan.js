@@ -52,7 +52,7 @@ async function ensureRepeatable(queue) {
     { kind: "anomaly-scan" },
     {
       jobId: "repeat:scan",
-      repeat: { every: 5 * 60 * 1000 },
+      repeat: { every: 60 * 1000 },
       removeOnComplete: true,
       removeOnFail: 1000,
     }
@@ -141,7 +141,14 @@ async function main() {
   const queue = new Queue(queueName, { connection });
 
   await ensureRepeatable(queue);
-  console.log(`[worker] repeatable job ensured: ${queueName} every 5min -> ${WEB_INTERNAL_URL}`);
+  console.log(`[worker] repeatable job ensured: ${queueName} every 1min -> ${WEB_INTERNAL_URL}`);
+
+  try {
+    const limit = await callInternal("/api/admin/jobs/emby-enforce-stream-limit");
+    console.log("[worker] stream-limit-enforce startup", { totalLinks: limit?.totalLinks, updated: limit?.updated, failed: limit?.failed });
+  } catch (e) {
+    console.warn("[worker] stream-limit-enforce startup failed", String(e?.message || e));
+  }
 
   const worker = new Worker(
     queueName,
@@ -200,6 +207,7 @@ async function main() {
         scannedSessions: result?.scannedSessions,
         warnings: result?.warnings,
         penaltiesApplied: result?.penaltiesApplied,
+        forcedSessionStops: result?.forcedSessionStops,
       });
       return { health, expiryDisable, expiryReminder, anomaly: result };
     },

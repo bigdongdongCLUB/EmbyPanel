@@ -6,7 +6,7 @@ import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
 import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
 import { embyFetchSessions, embyLogoutSession, embyRevokeAllUserTokens, embyStopSessionPlayback } from "@/lib/emby-sessions";
-import { embySetUserDisabled } from "@/lib/emby-provision";
+import { embyEnforceSingleDevicePlayback, embySetUserDisabled } from "@/lib/emby-provision";
 
 const PENALTY_STATE_KEY = "anomaly_penalty_state";
 const PENALTY_RECORDS_KEY = "anomaly_penalty_records";
@@ -34,6 +34,11 @@ function nowPlayingLabel(s: any): string {
 
 function stateKey(serverId: string, userId: string) {
   return `${serverId}:${userId}`;
+}
+
+function positionTicksOfSession(s: any): number {
+  const v = Number(s?.PlayState?.PositionTicks ?? 0);
+  return Number.isFinite(v) && v > 0 ? v : 0;
 }
 
 async function loadPenaltyState() {
@@ -121,6 +126,7 @@ export async function POST(req: Request) {
     let createdEvents = 0;
     let skippedOrphanSessions = 0;
     let penaltiesApplied = 0;
+    let forcedSessionStops = 0;
 
     const detectedKeys = new Set<string>();
 
@@ -170,6 +176,25 @@ export async function POST(req: Request) {
 
         const key = stateKey(server.id, link.userId);
         detectedKeys.add(key);
+
+        // 先兜底做硬拦截：同账号并发时保留进度最高的会话，立即停止其余会话
+        try {
+          await embyEnforceSingleDevicePlayback(server.baseUrl, apiKey, embyUserId);
+        } catch {}
+
+        const keep = [...sessions].sort((a: any, b: any) => positionTicksOfSession(b) - positionTicksOfSession(a))[0];
+        const toStop = sessions.filter((s: any) => String(s?.Id ?? "") && String(s?.Id ?? "") !== String(keep?.Id ?? ""));
+        for (const s of toStop) {
+          const sid = String(s?.Id ?? "").trim();
+          if (!sid) continue;
+          try {
+            const r = await embyStopSessionPlayback(server.baseUrl, apiKey, sid);
+            if (r.ok) forcedSessionStops += 1;
+          } catch {}
+          try {
+            await embyLogoutSession(server.baseUrl, apiKey, sid);
+          } catch {}
+        }
 
         const prev = penaltyState[key] ?? { consecutive: 0, penaltyActive: false };
         const nextConsecutive = Number(prev.consecutive ?? 0) + 1;
@@ -342,7 +367,7 @@ export async function POST(req: Request) {
       data: {
         finishedAt,
         ok: true,
-        message: JSON.stringify({ warnings, scannedSessions, createdEvents, skippedOrphanSessions, penaltiesApplied }),
+        message: JSON.stringify({ warnings, scannedSessions, createdEvents, skippedOrphanSessions, penaltiesApplied, forcedSessionStops }),
       },
     });
 
@@ -356,6 +381,7 @@ export async function POST(req: Request) {
       createdEvents,
       skippedOrphanSessions,
       penaltiesApplied,
+      forcedSessionStops,
       penaltyEnabled: penaltyConfig.enabled,
       penaltyDurationMinutes: penaltyConfig.durationMinutes,
     });
