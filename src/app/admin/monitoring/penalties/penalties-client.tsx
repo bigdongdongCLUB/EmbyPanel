@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ToggleSwitch } from "../../settings/toggle-switch";
 import { PaginationBar } from "@/components/pagination-bar";
 
@@ -30,8 +30,6 @@ export function MonitoringPenaltiesClient() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [unbanningId, setUnbanningId] = useState<string | null>(null);
-  const [showPenaltyTip, setShowPenaltyTip] = useState(false);
-  const penaltyTipRef = useRef<HTMLDivElement | null>(null);
 
   async function refresh() {
     setLoading(true);
@@ -108,18 +106,6 @@ export function MonitoringPenaltiesClient() {
     if (page !== safePage) setPage(safePage);
   }, [page, safePage]);
 
-  useEffect(() => {
-    if (!showPenaltyTip) return;
-    function onDocMouseDown(e: MouseEvent) {
-      const target = e.target as Node | null;
-      if (!target) return;
-      if (penaltyTipRef.current && !penaltyTipRef.current.contains(target)) {
-        setShowPenaltyTip(false);
-      }
-    }
-    document.addEventListener("mousedown", onDocMouseDown);
-    return () => document.removeEventListener("mousedown", onDocMouseDown);
-  }, [showPenaltyTip]);
 
   return (
     <div className="space-y-6">
@@ -134,35 +120,24 @@ export function MonitoringPenaltiesClient() {
           }}
         />
 
-        <div ref={penaltyTipRef} className="relative flex items-center gap-2 text-sm text-gray-700">
+        <div className="relative flex items-center gap-2 text-sm text-gray-700">
           <span>启用处罚</span>
-          <button
-            type="button"
-            className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-[#e3e3e3] bg-white hover:bg-[#fff5f6]"
-            onClick={() => setShowPenaltyTip((v) => !v)}
-            aria-label="处罚说明"
-            title="处罚说明"
-          >
-            <img src="/icons/exclamation.svg" alt="处罚说明" className="w-3.5 h-3.5" />
-          </button>
-          <ToggleSwitch checked={penaltyEnabled} onChange={setPenaltyEnabled} textOn="已启用" textOff="已禁用" />
-
-          {showPenaltyTip ? (
-            <div className="absolute left-0 top-[calc(100%+8px)] z-30 w-[360px] rounded-xl border border-[#f1d3d8] bg-white shadow-lg p-3">
+          <span className="relative inline-flex items-center group">
+            <button
+              type="button"
+              className="p-0 m-0 border-0 bg-transparent leading-none cursor-help"
+              aria-label="处罚说明"
+              title="处罚说明"
+            >
+              <img src="/icons/exclamation.svg" alt="处罚说明" className="w-4 h-4" />
+            </button>
+            <div className="hidden group-hover:block group-focus-within:block absolute left-0 top-[calc(100%+8px)] z-30 w-[360px] rounded-xl border border-[#f1d3d8] bg-white shadow-lg p-3">
               <div className="text-[13px] text-[#2d2d2d] leading-6">
                 可对连续触发异常播放的用户实行封禁处罚，且处罚一周内叠加，最多默认处罚时间*4。
               </div>
-              <div className="mt-2 flex justify-end">
-                <button
-                  type="button"
-                  className="border border-[#e3001b] text-[#e3001b] bg-white rounded-md px-2 py-1 text-xs hover:bg-[#fff3f4]"
-                  onClick={() => setShowPenaltyTip(false)}
-                >
-                  我知道了
-                </button>
-              </div>
             </div>
-          ) : null}
+          </span>
+          <ToggleSwitch checked={penaltyEnabled} onChange={setPenaltyEnabled} textOn="已启用" textOff="已禁用" />
         </div>
 
         <select className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={String(penaltyDuration)} onChange={(e) => setPenaltyDuration(Number(e.target.value))}>
