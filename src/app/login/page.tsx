@@ -241,7 +241,9 @@ export default function LoginPage() {
               {loginLoading ? "登录中..." : "登 录"}
             </button>
 
-            <div className="text-center text-[#888] text-sm">忘记密码?</div>
+            <div className="text-center text-[#888] text-sm">
+              <a href="/forgot-password" className="hover:text-[#e3001b]">忘记密码?</a>
+            </div>
             <div className="text-center text-sm">
               还没有账户？
               <button
