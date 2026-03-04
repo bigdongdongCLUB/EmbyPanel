@@ -57,22 +57,25 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f4f5f7] flex items-center justify-center p-5">
-      <div className="w-full max-w-[440px] bg-white rounded-[20px] border border-[#eaeaea] p-10 shadow-[0_10px_30px_rgba(0,0,0,0.04)] text-center">
-        <div className="flex items-center justify-center gap-3 mb-8">
-          <img src={siteLogoDataUrl || "/logo.png"} alt="logo" className="h-10 w-10 rounded-full object-cover" />
-          <div className="text-[32px] font-bold text-[#222] leading-none">{siteName}</div>
+    <main className="min-h-screen bg-[#f4f5f7] flex items-center justify-center p-6">
+      <div className="w-full max-w-[500px] bg-white rounded-2xl border border-[#eaeaea] shadow-sm p-5">
+        <div className="flex flex-col items-center text-center">
+          <div className="flex items-center gap-2">
+            <img src={siteLogoDataUrl || "/logo.png"} alt="logo" className="h-10 w-10 rounded-full object-cover" />
+            <div className="text-2xl font-semibold tracking-tight">{siteName}</div>
+          </div>
+          <p className="text-[#888] mt-1 text-sm">{siteDescription}</p>
         </div>
 
-        <h1 className="text-2xl font-bold text-[#222]">忘记密码</h1>
-        <p className="text-[15px] text-[#888] mt-3 mb-8 leading-6">输入您的邮箱地址，我们将发送重置链接给您</p>
+        <form className="mt-4 max-w-3xl mx-auto px-4 space-y-3" onSubmit={submit}>
+          <div className="text-center text-2xl font-semibold text-[#222]">忘记密码</div>
+          <div className="text-center text-[#888] text-sm">输入您的邮箱地址，我们将发送重置链接给您</div>
 
-        <form onSubmit={submit} className="space-y-6">
-          <div className="border border-[#eaeaea] rounded-[999px] px-5 flex items-center focus-within:border-[#e3001b] focus-within:shadow-[0_0_0_3px_rgba(227,0,27,0.1)]">
-            <img src="/icons/email.svg" alt="邮箱" className="h-5 w-5 opacity-60" />
+          <div className="border border-gray-200 rounded-xl px-3 py-1.5 flex items-center gap-2 mt-1">
+            <img src="/icons/email.svg" alt="邮箱" className="h-4 w-4 opacity-60" />
             <input
               type="email"
-              className="w-full bg-transparent outline-none px-3 py-4 text-base text-[#222]"
+              className="w-full text-sm outline-none"
               placeholder="请输入您的邮箱地址"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -80,25 +83,21 @@ export default function ForgotPasswordPage() {
             />
           </div>
 
-          {error ? <div className="text-sm text-[#e3001b] text-left">{error}</div> : null}
-          {success ? <div className="text-sm text-green-600 text-left">{success}</div> : null}
+          {error ? <div className="text-red-500 text-xs">{error}</div> : null}
+          {success ? <div className="text-green-600 text-xs">{success}</div> : null}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-[#e3001b] hover:bg-[#c20017] text-white rounded-[999px] py-4 text-base font-bold disabled:opacity-60"
+            className="w-full bg-[#e3001b] hover:bg-[#c20017] text-white rounded-xl py-2.5 text-base font-semibold disabled:opacity-60"
           >
             {loading ? "发送中..." : "发送重置邮件"}
           </button>
-        </form>
 
-        <div className="mt-6">
-          <Link href="/login" className="inline-flex items-center gap-1 text-[15px] text-[#888] hover:text-[#e3001b]">
-            <span>←</span>
-            <span>返回登录</span>
-          </Link>
-        </div>
-        <div className="mt-2 text-xs text-[#aaa]">{siteDescription}</div>
+          <div className="text-center text-[#888] text-sm">
+            <Link href="/login" className="hover:text-[#e3001b]">← 返回登录</Link>
+          </div>
+        </form>
       </div>
     </main>
   );
