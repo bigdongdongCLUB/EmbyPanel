@@ -414,7 +414,6 @@ export function CardCodesClient() {
             <div className="text-2xl font-semibold">批量创建卡密</div>
             <div className="rounded-lg border border-green-200 bg-green-50 p-4">
               <div className="text-2xl font-semibold text-green-700">已生成 {createdCodes.length} 个卡密</div>
-              <div className="text-sm text-gray-700 mt-2">请及时复制，卡密仅显示一次。</div>
             </div>
 
             <div className="flex items-center gap-2">
