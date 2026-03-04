@@ -8,7 +8,6 @@ type Template = { label: string; subject: string; bodyHtml: string };
 const ORDER = [
   "register_verify",
   "reset_password",
-  "change_email",
   "sub_expiring",
   "sub_expired",
   "order_confirm",
@@ -19,7 +18,6 @@ const ORDER = [
 const LABELS: Record<string, string> = {
   register_verify: "注册验证邮件",
   reset_password: "忘记密码邮件",
-  change_email: "邮箱变更验证邮件",
   sub_expiring: "订阅即将到期警告",
   sub_expired: "订阅已过期通知",
   order_confirm: "订单确认邮件",

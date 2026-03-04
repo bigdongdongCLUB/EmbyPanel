@@ -46,11 +46,6 @@ const DEFAULT_TEMPLATES: Record<string, { label: string; subject: string; bodyHt
     subject: "{{siteName}} 密码重置通知",
     bodyHtml: "<p>您好 {{username}}，点击链接重置密码：{{resetUrl}}</p>",
   },
-  change_email: {
-    label: "邮箱变更验证邮件",
-    subject: "{{siteName}} 邮箱变更验证",
-    bodyHtml: "<p>您好 {{username}}，您的邮箱变更验证码：{{verificationCode}}</p>",
-  },
   sub_expiring: {
     label: "订阅即将到期警告",
     subject: "{{siteName}} 订阅即将到期提醒",
@@ -149,28 +144,6 @@ const PRESET_OVERRIDES: Record<string, { subject: string; bodyHtml: string }> = 
   
   <p>您的服务将在付款确认后立即激活。如有任何问题，请联系客服。</p>
   
-  <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-  <p style="color: #666; font-size: 12px;">
-    此邮件由 {{siteName}} 系统自动发送，请勿回复。<br>
-    © {{currentYear}} {{siteName}}. 保留所有权利。
-  </p>
-</div>`,
-  },
-  change_email: {
-    subject: "邮箱变更验证 - {{siteName}}",
-    bodyHtml: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <h2 style="color: #1890ff;">邮箱变更验证</h2>
-  <p>您好，{{username}}！</p>
-  <p>您正在 {{siteName}} 上更改邮箱地址。为确保您的账户安全，请使用以下验证码完成验证：</p>
-
-  <div style="background: #f5f5f5; padding: 20px; text-align: center; margin: 20px 0;">
-    <span style="font-size: 24px; font-weight: bold; color: #1890ff;">{{verificationCode}}</span>
-  </div>
-
-  <p>此验证码将在 <strong>3分钟</strong> 后过期，请尽快完成验证。</p>
-  <p><strong>新邮箱：</strong>{{email}}</p>
-  <p>如果这不是您的操作，请忽略此邮件，您的原邮箱地址不会被更改。</p>
-
   <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
   <p style="color: #666; font-size: 12px;">
     此邮件由 {{siteName}} 系统自动发送，请勿回复。<br>
