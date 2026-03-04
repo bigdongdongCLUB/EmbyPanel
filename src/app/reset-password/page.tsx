@@ -13,6 +13,7 @@ function ResetPasswordContent() {
   const token = (searchParams.get("token") || "").trim();
 
   const [siteName, setSiteName] = useState("BestEmby");
+  const [siteDescription, setSiteDescription] = useState("See the BestEmby");
   const [siteLogoDataUrl, setSiteLogoDataUrl] = useState<string | null>(null);
 
   const [checking, setChecking] = useState(true);
@@ -35,6 +36,7 @@ function ResetPasswordContent() {
       .then((j) => {
         if (!j?.data) return;
         setSiteName(j.data.siteName || "BestEmby");
+        setSiteDescription(j.data.siteDescription || "See the BestEmby");
         setSiteLogoDataUrl(j.data.siteLogoDataUrl ?? null);
       })
       .catch(() => null);
@@ -126,34 +128,39 @@ function ResetPasswordContent() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f4f5f7] flex items-center justify-center p-5">
-      <div className="w-full max-w-[440px] bg-white rounded-[20px] border border-[#eaeaea] p-10 shadow-[0_10px_30px_rgba(0,0,0,0.04)] text-center">
-        <div className="flex items-center justify-center gap-3 mb-8">
-          <img src={siteLogoDataUrl || "/logo.png"} alt="logo" className="h-10 w-10 rounded-full object-cover" />
-          <div className="text-[32px] font-bold text-[#222] leading-none">{siteName}</div>
+    <main className="min-h-screen bg-[#f4f5f7] flex items-center justify-center p-6">
+      <div className="w-full max-w-[500px] bg-white rounded-2xl border border-[#eaeaea] shadow-sm p-5">
+        <div className="flex flex-col items-center text-center">
+          <div className="flex items-center gap-2">
+            <img src={siteLogoDataUrl || "/logo.png"} alt="logo" className="h-10 w-10 rounded-full object-cover" />
+            <div className="text-2xl font-semibold tracking-tight">{siteName}</div>
+          </div>
+          <p className="text-[#888] mt-1 text-sm">{siteDescription}</p>
         </div>
 
-        <h1 className="text-2xl font-bold text-[#222]">重置密码</h1>
-        <p className="text-[15px] text-[#888] mt-3 mb-8 leading-6">请输入新的登录密码</p>
-
-        {checking ? <div className="text-sm text-[#666]">正在校验重置链接...</div> : null}
+        {checking ? (
+          <div className="mt-4 max-w-3xl mx-auto px-4 text-sm text-[#666] text-center">正在校验重置链接...</div>
+        ) : null}
 
         {!checking && !tokenValid ? (
-          <div className="space-y-4">
+          <div className="mt-4 max-w-3xl mx-auto px-4 text-center space-y-2">
             <div className="text-sm text-[#e3001b]">{tokenError || "重置链接无效"}</div>
-            <Link href="/forgot-password" className="inline-flex items-center text-sm text-[#e3001b] hover:underline">
+            <Link href="/forgot-password" className="text-sm text-[#e3001b] hover:underline">
               重新获取重置链接
             </Link>
           </div>
         ) : null}
 
         {!checking && tokenValid ? (
-          <form onSubmit={submit} className="space-y-3 text-left">
-            <div className={`border rounded-[999px] px-5 flex items-center ${passwordErrors.length ? "border-red-300" : "border-[#eaeaea]"}`}>
-              <img src="/icons/lock.svg" alt="密码" className="h-5 w-5 opacity-60" />
+          <form onSubmit={submit} className="mt-4 max-w-3xl mx-auto px-4 space-y-3">
+            <div className="text-center text-2xl font-semibold text-[#222]">重置密码</div>
+            <div className="text-center text-[#888] text-sm">请输入新的登录密码</div>
+
+            <div className={`border border-gray-200 rounded-xl px-3 py-2 flex items-center gap-2 ${passwordErrors.length ? "border-red-300" : ""}`}>
+              <img src="/icons/lock.svg" alt="密码" className="h-4 w-4 opacity-60" />
               <input
                 type={pwdVisible ? "text" : "password"}
-                className="w-full bg-transparent outline-none px-3 py-4 text-base text-[#222]"
+                className="w-full text-sm outline-none"
                 placeholder="请输入新密码"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -164,14 +171,14 @@ function ResetPasswordContent() {
             </div>
 
             {passwordErrors.map((x) => (
-              <div key={x} className="text-xs text-[#e3001b]">{x}</div>
+              <div key={x} className="text-red-500 text-xs">{x}</div>
             ))}
 
-            <div className={`border rounded-[999px] px-5 flex items-center ${confirmError ? "border-red-300" : "border-[#eaeaea]"}`}>
-              <img src="/icons/lock.svg" alt="确认密码" className="h-5 w-5 opacity-60" />
+            <div className={`border border-gray-200 rounded-xl px-3 py-2 flex items-center gap-2 ${confirmError ? "border-red-300" : ""}`}>
+              <img src="/icons/lock.svg" alt="确认密码" className="h-4 w-4 opacity-60" />
               <input
                 type={confirmVisible ? "text" : "password"}
-                className="w-full bg-transparent outline-none px-3 py-4 text-base text-[#222]"
+                className="w-full text-sm outline-none"
                 placeholder="请再次输入新密码"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
@@ -181,26 +188,23 @@ function ResetPasswordContent() {
               </button>
             </div>
 
-            {confirmError ? <div className="text-xs text-[#e3001b]">{confirmError}</div> : null}
-            {submitError ? <div className="text-sm text-[#e3001b]">{submitError}</div> : null}
-            {submitSuccess ? <div className="text-sm text-green-600">{submitSuccess}</div> : null}
+            {confirmError ? <div className="text-red-500 text-xs">{confirmError}</div> : null}
+            {submitError ? <div className="text-red-500 text-xs">{submitError}</div> : null}
+            {submitSuccess ? <div className="text-green-600 text-xs">{submitSuccess}</div> : null}
 
             <button
               type="submit"
               disabled={!canSubmit || submitting}
-              className="w-full bg-[#e3001b] hover:bg-[#c20017] text-white rounded-[999px] py-4 text-base font-bold disabled:opacity-60 mt-3"
+              className="w-full bg-[#e3001b] hover:bg-[#c20017] text-white rounded-xl py-2.5 text-base font-semibold disabled:opacity-60"
             >
               {submitting ? "提交中..." : "确认重置"}
             </button>
+
+            <div className="text-center text-[#888] text-sm">
+              <Link href="/login" className="hover:text-[#e3001b]">← 返回登录</Link>
+            </div>
           </form>
         ) : null}
-
-        <div className="mt-6">
-          <Link href="/login" className="inline-flex items-center gap-1 text-[15px] text-[#888] hover:text-[#e3001b]">
-            <span>←</span>
-            <span>返回登录</span>
-          </Link>
-        </div>
       </div>
     </main>
   );
