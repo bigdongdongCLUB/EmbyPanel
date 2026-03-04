@@ -6,6 +6,7 @@ import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
 import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
 import { embySetUserDisabled } from "@/lib/emby-provision";
+import { embyClearSimultaneousStreamLimit } from "@/lib/emby-user-policy";
 
 const PENALTY_STATE_KEY = "anomaly_penalty_state";
 const PENALTY_RECORDS_KEY = "anomaly_penalty_records";
@@ -117,6 +118,9 @@ export async function POST(req: Request) {
         continue;
       }
 
+      // 解封后清理历史遗留的并发限制（旧方案可能将其设置为1）
+      const clearLimit = await embyClearSimultaneousStreamLimit(server.baseUrl, apiKey, String(r.embyUserId));
+
       await prisma.embyUserLink.updateMany({
         where: { userId: String(r.userId), embyServerId: String(r.embyServerId), embyUserId: String(r.embyUserId) },
         data: { disabled: false },
@@ -124,6 +128,11 @@ export async function POST(req: Request) {
 
       r.status = "UNBANNED";
       r.unbannedAt = now.toISOString();
+      if (!(clearLimit as any)?.ok) {
+        r.unbanWarn = `clear_stream_limit_failed: ${String((clearLimit as any)?.body || `HTTP ${(clearLimit as any)?.status || "?"}`)}`;
+      } else {
+        delete r.unbanWarn;
+      }
       unbanned += 1;
       const k = stateKey(String(r.embyServerId || ""), String(r.userId || ""));
       if (state[k]) state[k] = { ...state[k], penaltyActive: false, consecutive: 0, lastUnbanAt: now.toISOString() };

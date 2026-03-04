@@ -88,3 +88,16 @@ export async function embyClonePolicyFromTemplate(baseUrl: string, apiKey: strin
 
   return embySetUserPolicy(baseUrl, apiKey, targetEmbyUserId, next);
 }
+
+export async function embyClearSimultaneousStreamLimit(baseUrl: string, apiKey: string, embyUserId: string) {
+  const cur = await embyFetchUserPolicy(baseUrl, apiKey, embyUserId);
+  if (!cur.ok) return cur;
+
+  const currentPolicy = typeof cur.policy === "object" && cur.policy ? (cur.policy as any) : {};
+  const nextPolicy: any = { ...currentPolicy };
+
+  // 0 means unlimited on Emby/Jellyfin-style policy models.
+  nextPolicy.SimultaneousStreamLimit = 0;
+
+  return embySetUserPolicy(baseUrl, apiKey, embyUserId, nextPolicy);
+}

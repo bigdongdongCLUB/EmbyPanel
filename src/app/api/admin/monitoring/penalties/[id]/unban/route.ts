@@ -6,6 +6,7 @@ import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
 import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
 import { embySetUserDisabled } from "@/lib/emby-provision";
+import { embyClearSimultaneousStreamLimit } from "@/lib/emby-user-policy";
 
 const PENALTY_STATE_KEY = "anomaly_penalty_state";
 const PENALTY_RECORDS_KEY = "anomaly_penalty_records";
@@ -82,6 +83,8 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
       );
     }
 
+    const clearLimit = await embyClearSimultaneousStreamLimit(server.baseUrl, apiKey, embyUserId);
+
     await prisma.embyUserLink.updateMany({
       where: { userId, embyServerId, embyUserId },
       data: { disabled: false },
@@ -93,6 +96,9 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
       status: "UNBANNED_MANUAL",
       unbannedAt: nowIso,
       unbanSource: "MANUAL",
+      ...(clearLimit?.ok
+        ? { unbanWarn: undefined }
+        : { unbanWarn: `clear_stream_limit_failed: ${String((clearLimit as any)?.body || `HTTP ${(clearLimit as any)?.status || "?"}`)}` }),
     };
 
     const k = stateKey(embyServerId, userId);
