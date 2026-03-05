@@ -34,7 +34,7 @@ function triggerMode(jobName: string) {
   if (jobName === "subscription-expiry-reminder") return "定时任务（每10分钟）";
   if (jobName === "anomaly-scan") return "定时任务（每5分钟）";
   if (jobName === "cache-cleanup") return "定时任务（每日 02:00）";
-  if (jobName === "playback-collect") return "定时任务（每1分钟）";
+  if (jobName === "playback-collect") return "定时任务（每20秒）";
   return "定时任务";
 }
 
