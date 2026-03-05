@@ -43,7 +43,7 @@ function isTrimmed(v: string, max = 40) {
 export function AdminPlaybackStatsClient() {
   const [usernameInput, setUsernameInput] = useState("");
   const [searchedUsername, setSearchedUsername] = useState("");
-  const [rangeDays, setRangeDays] = useState<7 | 30 | 90>(7);
+  const rangeDays: 7 | 30 | 90 = 7;
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -132,15 +132,6 @@ export function AdminPlaybackStatsClient() {
             }}
           />
 
-          <select
-            className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none"
-            value={String(rangeDays)}
-            onChange={(e) => setRangeDays(Number(e.target.value) as 7 | 30 | 90)}
-          >
-            <option value="7">最近7天</option>
-            <option value="30">最近30天</option>
-            <option value="90">最近90天</option>
-          </select>
 
           <button
             className="bg-[#e3001b] hover:bg-[#c20017] text-white rounded-lg px-3 py-2 disabled:opacity-60"
