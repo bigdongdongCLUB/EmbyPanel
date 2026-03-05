@@ -214,10 +214,6 @@ function isGenericClient(v: string) {
 }
 
 
-function isRealtimeEventType(v: string) {
-  return String(v || "").startsWith("live_session_") || String(v || "").startsWith("snapshot_");
-}
-
 type OutputRow = {
   serverId: string;
   serverName: string;
@@ -420,32 +416,42 @@ export async function getPlaybackStatsForUsername(params: { username: string; ra
             };
 
             const prev = existingBySession.get(sessionId);
-            let displayOccurredAt = now;
             if (!prev) {
               await upsertPlaybackSessionState(stateRow);
-              await createPlaybackStartEventFromSessionState(stateRow, now);
+              const created = await createPlaybackStartEventFromSessionState(stateRow, now);
+              if (created) {
+                rawEvents.push({
+                  activityId: `session:${stateRow.sessionId}:start:${stateRow.mediaKey}:${Math.floor(now.getTime() / 60000)}`,
+                  eventType: "start",
+                  mediaName,
+                  mediaKey: stateRow.mediaKey,
+                  client: stateRow.client,
+                  ip: stateRow.ip,
+                  occurredAt: now,
+                  sourceJson: s,
+                });
+              }
             } else {
               const changedMedia = normalizeMediaKey(prev.mediaKey || prev.mediaName) !== stateRow.mediaKey;
               if (changedMedia) {
                 await upsertPlaybackSessionState(stateRow, now);
-                await createPlaybackStartEventFromSessionState(stateRow, now);
-                displayOccurredAt = now;
+                const created = await createPlaybackStartEventFromSessionState(stateRow, now);
+                if (created) {
+                  rawEvents.push({
+                    activityId: `session:${stateRow.sessionId}:start:${stateRow.mediaKey}:${Math.floor(now.getTime() / 60000)}`,
+                    eventType: "start",
+                    mediaName,
+                    mediaKey: stateRow.mediaKey,
+                    client: stateRow.client,
+                    ip: stateRow.ip,
+                    occurredAt: now,
+                    sourceJson: s,
+                  });
+                }
               } else {
                 await upsertPlaybackSessionState(stateRow, prev.startedAt);
-                displayOccurredAt = prev.startedAt;
               }
             }
-
-            // 实时展示（开始播放时间保持稳定，不随刷新漂移）
-            rawEvents.push({
-              eventType: s?.PlayState?.IsPaused ? "live_session_paused" : "live_session_playing",
-              mediaName,
-              mediaKey: stateRow.mediaKey,
-              client: stateRow.client,
-              ip: stateRow.ip,
-              occurredAt: displayOccurredAt,
-              sourceJson: s,
-            });
           }
 
           // 对于已不在 Sessions 的缓存会话，仅清理缓存（记录以开始播放时为准）
@@ -500,18 +506,15 @@ export async function getPlaybackStatsForUsername(params: { username: string; ra
       if (!prev || ev.occurredAt.getTime() > prev.occurredAt.getTime()) uniqueEvents.set(fingerprint, ev);
     }
 
-    // 5) 展示去重：同媒体10分钟窗口只保留一条；若有 stop 则优先 stop
-    const displayMap = new Map<string, OutputRow & { __eventType: string; __ts: number }>();
+    // 5) 展示输出：按“开始播放事件”逐条展示，不做跨设备/跨会话合并覆盖。
     const ordered = Array.from(uniqueEvents.values()).sort((a, b) => b.occurredAt.getTime() - a.occurredAt.getTime());
     for (const ev of ordered) {
+      if (String(ev.eventType || "") !== "start") continue;
       const mediaName = formatMediaNameFromSource(String(ev.mediaName || ""), ev.sourceJson).trim();
       if (!mediaName) continue;
       const mediaKey = normalizeMediaKey(ev.mediaKey || mediaName);
-      const ts = ev.occurredAt.getTime();
-      const bucket = Math.floor(ts / (10 * 60 * 1000));
-      const key = `${srv.embyServerId}:${mediaKey}:${bucket}`;
 
-      const nextRow: OutputRow & { __eventType: string; __ts: number } = {
+      rows.push({
         serverId: srv.embyServerId,
         serverName: srv.embyServer.name,
         mediaName,
@@ -519,43 +522,6 @@ export async function getPlaybackStatsForUsername(params: { username: string; ra
         client: toDetailedClient(ev.client || "-", ev.sourceJson),
         ip: normalizeIp(ev.ip),
         lastPlayedAt: ev.occurredAt.toISOString(),
-        __eventType: ev.eventType,
-        __ts: ts,
-      };
-
-      const prev = displayMap.get(key);
-      if (!prev) {
-        displayMap.set(key, nextRow);
-        continue;
-      }
-
-      if (prev.__eventType === "start" && isRealtimeEventType(nextRow.__eventType)) {
-        const merged = { ...prev };
-        if (merged.ip === "-" && nextRow.ip !== "-") merged.ip = nextRow.ip;
-        if (isGenericClient(merged.client) && !isGenericClient(nextRow.client)) merged.client = nextRow.client;
-        displayMap.set(key, merged);
-        continue;
-      }
-      if (isRealtimeEventType(prev.__eventType) && nextRow.__eventType === "start") {
-        displayMap.set(key, nextRow);
-        continue;
-      }
-
-      const nextRichness = (nextRow.ip !== "-" ? 1 : 0) + (!isGenericClient(nextRow.client) ? 1 : 0);
-      const prevRichness = (prev.ip !== "-" ? 1 : 0) + (!isGenericClient(prev.client) ? 1 : 0);
-      const preferNext = nextRow.__ts > prev.__ts || (nextRow.__ts === prev.__ts && nextRichness > prevRichness);
-      if (preferNext) displayMap.set(key, nextRow);
-    }
-
-    for (const r of displayMap.values()) {
-      rows.push({
-        serverId: r.serverId,
-        serverName: r.serverName,
-        mediaName: r.mediaName,
-        mediaKey: r.mediaKey,
-        client: r.client,
-        ip: r.ip,
-        lastPlayedAt: r.lastPlayedAt,
       });
     }
   }
