@@ -228,9 +228,11 @@ type OutputRow = {
   lastPlayedAt: string;
 };
 
-// 为稳定性优先：播放统计读取走本地事件库，避免请求时依赖 Emby 实时接口导致超时/502。
-const ENABLE_REALTIME_SESSION_ENRICH = false;
+// 播放统计以本地事件库为主，同时保留实时会话补全（限时）以实现“开播即记录”。
+const ENABLE_REALTIME_SESSION_ENRICH = true;
 const ENABLE_SNAPSHOT_ENRICH = false;
+const REALTIME_SESSION_TIMEOUT_MS = 1800;
+const REALTIME_TOTAL_BUDGET_MS = 6000;
 
 export type PlaybackStatsRangeDays = 7 | 30 | 90;
 
@@ -305,6 +307,7 @@ export async function getPlaybackStatsForUsername(params: { username: string; ra
   }
 
   const rows: OutputRow[] = [];
+  const realtimeDeadlineMs = Date.now() + REALTIME_TOTAL_BUDGET_MS;
 
   for (const srv of serverCandidates.values()) {
     if (!srv.embyServer?.enabled) continue;
@@ -372,9 +375,12 @@ export async function getPlaybackStatsForUsername(params: { username: string; ra
 
     // 2) 基于实时 Sessions 的状态机：先缓存详细信息，结束后结算 stop 事件
     if (ENABLE_REALTIME_SESSION_ENRICH && apiKey) {
-      try {
-        const ses = await embyFetchSessions(srv.embyServer.baseUrl, apiKey);
-        if (ses.ok) {
+      const remainBudget = realtimeDeadlineMs - Date.now();
+      if (remainBudget > 600) {
+        try {
+          const timeoutMs = Math.max(600, Math.min(REALTIME_SESSION_TIMEOUT_MS, remainBudget));
+          const ses = await embyFetchSessions(srv.embyServer.baseUrl, apiKey, timeoutMs);
+          if (ses.ok) {
           const now = new Date();
           const uname = user.username.toLowerCase();
           const existingStates = await loadPlaybackSessionStatesForUser(srv.embyServerId, srv.embyUserId, user.username);
@@ -448,8 +454,9 @@ export async function getPlaybackStatsForUsername(params: { username: string; ra
             await deletePlaybackSessionState(prev.embyServerId, prev.sessionId);
           }
         }
-      } catch {
-        // ignore live session source failures
+        } catch {
+          // ignore live session source failures
+        }
       }
     }
 
