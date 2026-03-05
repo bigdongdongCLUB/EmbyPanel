@@ -150,6 +150,7 @@ model EmbyServer {
   name          String
   baseUrl       String
   externalUrl   String?
+  backupUrl     String?
   // API key is stored encrypted (prefer apiKeyEnc/iv/tag). apiKey kept for backward compat.
   apiKey        String?
   apiKeyEnc     String?

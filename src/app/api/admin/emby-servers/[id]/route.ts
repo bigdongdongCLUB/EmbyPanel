@@ -9,14 +9,16 @@ import { normalizeBaseUrl } from "@/lib/emby";
 import { encryptString } from "@/lib/crypto";
 import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
 
-async function ensureExternalUrlColumn() {
+async function ensureServerExtraColumns() {
   await prisma.$executeRawUnsafe('ALTER TABLE "EmbyServer" ADD COLUMN IF NOT EXISTS "externalUrl" TEXT');
+  await prisma.$executeRawUnsafe('ALTER TABLE "EmbyServer" ADD COLUMN IF NOT EXISTS "backupUrl" TEXT');
 }
 
 const PatchSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   baseUrl: z.string().url().optional(),
   externalUrl: z.string().url().nullable().optional(),
+  backupUrl: z.string().url().nullable().optional(),
   apiKey: z.string().min(10).optional(),
   enabled: z.boolean().optional(),
 });
@@ -24,6 +26,8 @@ const PatchSchema = z.object({
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const auth = await requireAdmin();
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
+  await ensureServerExtraColumns();
 
   const { id } = await ctx.params;
   let server: any = null;
@@ -35,6 +39,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
         name: true,
         baseUrl: true,
         externalUrl: true,
+        backupUrl: true,
         enabled: true,
         apiKey: true,
         apiKeyEnc: true,
@@ -66,6 +71,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
       name: server.name,
       baseUrl: server.baseUrl,
       externalUrl: server.externalUrl,
+      backupUrl: (server as any).backupUrl ?? null,
       enabled: server.enabled,
       apiKey,
     },
@@ -85,6 +91,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if (parsed.data.name !== undefined) data.name = parsed.data.name;
   if (parsed.data.baseUrl !== undefined) data.baseUrl = normalizeBaseUrl(parsed.data.baseUrl);
   if (parsed.data.externalUrl !== undefined) data.externalUrl = parsed.data.externalUrl ? normalizeBaseUrl(parsed.data.externalUrl) : null;
+  if (parsed.data.backupUrl !== undefined) data.backupUrl = parsed.data.backupUrl ? normalizeBaseUrl(parsed.data.backupUrl) : null;
   if (parsed.data.enabled !== undefined) data.enabled = parsed.data.enabled;
   if (parsed.data.apiKey !== undefined) {
     const enc = encryptString(parsed.data.apiKey);
@@ -94,7 +101,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     data.apiKey = null;
   }
 
-  await ensureExternalUrlColumn();
+  await ensureServerExtraColumns();
   const updated = await prisma.embyServer.update({
     where: { id },
     data,
@@ -103,6 +110,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       name: true,
       baseUrl: true,
       externalUrl: true,
+      backupUrl: true,
       enabled: true,
       lastHealthAt: true,
       lastHealthOk: true,

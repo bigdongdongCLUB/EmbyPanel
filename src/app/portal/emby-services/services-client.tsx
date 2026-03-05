@@ -13,6 +13,7 @@ type Data = {
     version: string;
     baseUrl: string;
     externalUrl?: string | null;
+    backupUrl?: string | null;
     embyUserId: string | null;
     counts: { movieCount: number; seriesCount: number; episodeCount: number; songCount: number };
   }>;
@@ -140,8 +141,9 @@ export function PortalEmbyServicesClient() {
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
         {(data?.servers ?? []).map((s) => {
-          const visitUrl = (s.externalUrl || s.baseUrl || "").trim();
-          const endpoint = parseBaseUrl(visitUrl || s.baseUrl);
+          const visitUrl = (s.baseUrl || "").trim();
+          const mainEndpoint = parseBaseUrl(visitUrl);
+          const backupEndpoint = s.backupUrl ? parseBaseUrl(String(s.backupUrl)) : null;
           const stateText = s.banned ? "封禁中" : s.online ? "在线" : "离线";
           return (
             <div key={s.id} className="relative bg-white border-2 border-[#e3001b] rounded-2xl p-8 shadow-[0_8px_24px_rgba(227,0,27,0.08)]">
@@ -165,9 +167,22 @@ export function PortalEmbyServicesClient() {
               <div className="bg-[#f4f5f7] rounded-xl p-5 mb-6 space-y-1.5 text-sm">
                 <div className="flex py-2 border-b border-dashed border-[#dcdcdc]"><span className="w-20 text-[#e3001b] font-bold">用户名:</span><span className="font-mono text-[15px] text-[#222]">{data?.user.username ?? "-"}</span></div>
                 <div className="flex py-2 border-b border-dashed border-[#dcdcdc]"><span className="w-20 text-[#e3001b] font-bold">密码:</span><span className="font-mono text-[15px] text-[#222]">当前站点密码</span></div>
-                <div className="flex py-2 border-b border-dashed border-[#dcdcdc]"><span className="w-20 text-[#e3001b] font-bold">地址:</span><span className="font-mono text-[15px] text-[#222]">{endpoint.host}</span></div>
-                <div className="flex py-2 border-b border-dashed border-[#dcdcdc]"><span className="w-20 text-[#e3001b] font-bold">端口:</span><span className="font-mono text-[15px] text-[#222]">{endpoint.port}</span></div>
-                <div className="flex py-2"><span className="w-20 text-[#e3001b] font-bold">协议:</span><span className="font-mono text-[15px] text-[#222]">{endpoint.protocol}</span></div>
+
+                <div className="pt-1">
+                  <div className="text-center text-[#8aaec2] text-xs font-semibold tracking-wide mb-1">主线路</div>
+                  <div className="flex py-2 border-b border-dashed border-[#dcdcdc]"><span className="w-20 text-[#e3001b] font-bold">地址:</span><span className="font-mono text-[15px] text-[#222]">{mainEndpoint.host}</span></div>
+                  <div className="flex py-2 border-b border-dashed border-[#dcdcdc]"><span className="w-20 text-[#e3001b] font-bold">端口:</span><span className="font-mono text-[15px] text-[#222]">{mainEndpoint.port}</span></div>
+                  <div className="flex py-2 border-b border-dashed border-[#dcdcdc]"><span className="w-20 text-[#e3001b] font-bold">协议:</span><span className="font-mono text-[15px] text-[#222]">{mainEndpoint.protocol}</span></div>
+                </div>
+
+                {backupEndpoint ? (
+                  <div className="pt-1">
+                    <div className="text-center text-[#8aaec2] text-xs font-semibold tracking-wide mb-1">备用线路</div>
+                    <div className="flex py-2 border-b border-dashed border-[#dcdcdc]"><span className="w-20 text-[#e3001b] font-bold">地址:</span><span className="font-mono text-[15px] text-[#222]">{backupEndpoint.host}</span></div>
+                    <div className="flex py-2 border-b border-dashed border-[#dcdcdc]"><span className="w-20 text-[#e3001b] font-bold">端口:</span><span className="font-mono text-[15px] text-[#222]">{backupEndpoint.port}</span></div>
+                    <div className="flex py-2"><span className="w-20 text-[#e3001b] font-bold">协议:</span><span className="font-mono text-[15px] text-[#222]">{backupEndpoint.protocol}</span></div>
+                  </div>
+                ) : null}
               </div>
 
               <div className="flex flex-col gap-3">

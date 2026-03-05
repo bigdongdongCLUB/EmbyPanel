@@ -95,7 +95,7 @@ export async function GET() {
   try {
     servers = await prisma.embyServer.findMany({
       where: { id: { in: Array.from(serverIds) } },
-      select: { id: true, name: true, baseUrl: true, externalUrl: true, enabled: true, apiKey: true, apiKeyEnc: true, apiKeyIv: true, apiKeyTag: true, lastHealthOk: true },
+      select: { id: true, name: true, baseUrl: true, externalUrl: true, backupUrl: true, enabled: true, apiKey: true, apiKeyEnc: true, apiKeyIv: true, apiKeyTag: true, lastHealthOk: true },
       orderBy: { createdAt: "asc" },
     });
   } catch {
@@ -126,6 +126,7 @@ export async function GET() {
         banned: !!link?.disabled,
         version,
         baseUrl: s.externalUrl || s.baseUrl,
+        backupUrl: (s as any).backupUrl || null,
         embyUserId: link?.embyUserId ?? null,
         counts: counts ?? { movieCount: 0, seriesCount: 0, episodeCount: 0, songCount: 0 },
       };

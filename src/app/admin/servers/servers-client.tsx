@@ -8,6 +8,7 @@ type Server = {
   name: string;
   baseUrl: string;
   externalUrl?: string | null;
+  backupUrl?: string | null;
   enabled: boolean;
   lastHealthAt: string | null;
   lastHealthOk: boolean | null;
@@ -22,6 +23,7 @@ type ModalState =
       name: string;
       baseUrl: string;
       externalUrl: string;
+      backupUrl: string;
       apiKey: string;
       enabled: boolean;
       showApiKey: boolean;
@@ -466,6 +468,7 @@ export function ServersClient() {
   const [name, setName] = useState("");
   const [baseUrl, setBaseUrl] = useState("");
   const [externalUrl, setExternalUrl] = useState("");
+  const [backupUrl, setBackupUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
 
   const [modal, setModal] = useState<ModalState>({ open: false });
@@ -500,7 +503,7 @@ export function ServersClient() {
     <div className="space-y-8">
       <section className="border border-[#eaeaea] rounded-2xl p-4 bg-white shadow-sm">
         <h2 className="font-semibold">新增服务器</h2>
-        <div className="mt-3 grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div className="mt-3 grid grid-cols-1 md:grid-cols-5 gap-3">
           <div>
             <label className="text-sm">名称</label>
             <input className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={name} onChange={(e) => setName(e.target.value)} placeholder="比如：4U Emby" />
@@ -512,6 +515,10 @@ export function ServersClient() {
           <div>
             <label className="text-sm">外部访问地址（选填）</label>
             <input className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={externalUrl} onChange={(e) => setExternalUrl(e.target.value)} placeholder="https://emby.example.com" />
+          </div>
+          <div>
+            <label className="text-sm">备用地址（选填）</label>
+            <input className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={backupUrl} onChange={(e) => setBackupUrl(e.target.value)} placeholder="https://emby-backup.example.com" />
           </div>
           <div>
             <label className="text-sm">API Key</label>
@@ -527,7 +534,7 @@ export function ServersClient() {
               const res = await fetch("/api/admin/emby-servers", {
                 method: "POST",
                 headers: { "content-type": "application/json" },
-                body: JSON.stringify({ name, baseUrl, externalUrl: externalUrl.trim() || null, apiKey }),
+                body: JSON.stringify({ name, baseUrl, externalUrl: externalUrl.trim() || null, backupUrl: backupUrl.trim() || null, apiKey }),
               });
               if (!res.ok) {
                 const t = await res.text();
@@ -538,6 +545,7 @@ export function ServersClient() {
               setBaseUrl("");
               setApiKey("");
               setExternalUrl("");
+              setBackupUrl("");
               await refresh();
             }}
           >
@@ -572,6 +580,7 @@ export function ServersClient() {
                   外部访问地址：{s.externalUrl || s.baseUrl}
                   <span className="text-xs text-gray-500">{renderOneHealth(detail?.external, s.lastHealthMsg, s.lastHealthOk)}</span>
                 </div>
+                {s.backupUrl ? <div className="text-sm text-gray-600">备用地址：{s.backupUrl}</div> : null}
               </div>
               <div className="flex gap-2">
                 <button
@@ -641,6 +650,7 @@ export function ServersClient() {
                       name: s.name,
                       baseUrl: s.baseUrl,
                       externalUrl: s.externalUrl || "",
+                      backupUrl: s.backupUrl || "",
                       apiKey: "",
                       enabled: true,
                       showApiKey: false,
@@ -656,6 +666,7 @@ export function ServersClient() {
                         name: s.name,
                         baseUrl: json?.server?.baseUrl || s.baseUrl,
                         externalUrl: json?.server?.externalUrl || "",
+                        backupUrl: json?.server?.backupUrl || "",
                         apiKey: json?.server?.apiKey || "",
                         enabled: true,
                         showApiKey: false,
@@ -810,6 +821,14 @@ export function ServersClient() {
                 />
               </div>
               <div>
+                <label className="text-sm">备用地址（选填）</label>
+                <input
+                  className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none"
+                  value={modal.backupUrl}
+                  onChange={(e) => setModal({ ...modal, backupUrl: e.target.value })}
+                />
+              </div>
+              <div>
                 <label className="text-sm">API Key</label>
                 <div className="mt-1 relative">
                   <input
@@ -848,6 +867,7 @@ export function ServersClient() {
                     name: modal.name,
                     baseUrl: modal.baseUrl,
                     externalUrl: modal.externalUrl.trim() || null,
+                    backupUrl: modal.backupUrl.trim() || null,
                     apiKey: modal.apiKey.trim(),
                   };
 

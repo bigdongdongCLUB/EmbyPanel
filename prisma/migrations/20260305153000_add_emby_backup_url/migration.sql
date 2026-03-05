@@ -1,0 +1,2 @@
+ALTER TABLE "EmbyServer"
+ADD COLUMN IF NOT EXISTS "backupUrl" TEXT;
