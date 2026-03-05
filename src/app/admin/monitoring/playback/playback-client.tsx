@@ -1,187 +1,244 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { PaginationBar } from "@/components/pagination-bar";
 
-type ServerOption = { id: string; name: string; enabled: boolean };
-
-type Data = {
-  ok: boolean;
-  server: { id: string; name: string; baseUrl: string };
-  rangeDays: number;
-  requirePlugin?: boolean;
-  pluginInstalled?: boolean;
-  message?: string;
-  activeUsers?: number;
-  topMovies?: Array<{ id: string; name: string; playCount: number | null; lastPlayed: string | null; year: number | null }>;
-  topEpisodes?: Array<{ id: string; seriesName: string; name: string; season: number | null; episode: number | null; playCount: number | null; lastPlayed: string | null }>;
-  warn?: any;
+type RecordRow = {
+  serverId: string;
+  serverName: string;
+  mediaName: string;
+  mediaKey: string;
+  client: string;
+  ip: string;
+  lastPlayedAt: string;
 };
 
-export function PlaybackStatsClient() {
-  const [servers, setServers] = useState<ServerOption[]>([]);
-  const [serverId, setServerId] = useState("");
-  const [rangeDays, setRangeDays] = useState<7 | 30 | 180 | 365>(30);
+type Data = {
+  ok: true;
+  username: string;
+  rangeDays: 7 | 30 | 90;
+  summary: {
+    watchedItemCount: number;
+    totalRecords: number;
+  };
+  records: RecordRow[];
+};
+
+function fmtTime(v: string) {
+  const d = new Date(v);
+  if (!Number.isFinite(d.getTime())) return "-";
+  return d.toLocaleString("zh-CN", { hour12: false, timeZone: "Asia/Shanghai" });
+}
+
+function trimTitle(v: string, max = 40) {
+  const s = String(v || "");
+  if (s.length <= max) return s;
+  return s.slice(0, max) + "...";
+}
+
+function isTrimmed(v: string, max = 40) {
+  return String(v || "").length > max;
+}
+
+export function AdminPlaybackStatsClient() {
+  const [usernameInput, setUsernameInput] = useState("");
+  const [searchedUsername, setSearchedUsername] = useState("");
+  const [rangeDays, setRangeDays] = useState<7 | 30 | 90>(7);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<Data | null>(null);
 
-  async function loadServers() {
-    const res = await fetch("/api/admin/emby-servers", { cache: "no-store" });
-    const json = await res.json().catch(() => null);
-    if (!res.ok) throw new Error(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
-    const list = (json.servers ?? []).filter((s: any) => s.enabled);
-    setServers(list);
-    if (!serverId && list.length) setServerId(list[0].id);
-  }
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
-  async function refresh() {
-    if (!serverId) return;
+  const tableWrapRef = useRef<HTMLDivElement | null>(null);
+  const [openTitleKey, setOpenTitleKey] = useState<string | null>(null);
+
+  async function searchPlayback(targetUsername?: string) {
+    const u = String(targetUsername ?? usernameInput).trim();
+    if (!u) {
+      setError("请输入用户名");
+      setData(null);
+      setSearchedUsername("");
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
-      const url = new URL(window.location.origin + "/api/admin/monitoring/playback");
-      url.searchParams.set("serverId", serverId);
-      url.searchParams.set("rangeDays", String(rangeDays));
-      const res = await fetch(url.toString(), { cache: "no-store" });
+      const res = await fetch(`/api/admin/monitoring/playback-stats?username=${encodeURIComponent(u)}&rangeDays=${rangeDays}`, {
+        cache: "no-store",
+      });
       const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
+      if (!res.ok) {
+        if (json?.error === "user_not_found") {
+          setError("未找到该用户");
+        } else {
+          setError(json?.error || `HTTP ${res.status}`);
+        }
+        setData(null);
+        setSearchedUsername(u);
+        return;
+      }
+
       setData(json);
-    } catch (e: any) {
-      setError(e?.message ?? "load_failed");
+      setSearchedUsername(u);
+      setPage(1);
+      setOpenTitleKey(null);
     } finally {
       setLoading(false);
     }
   }
 
-  useEffect(() => {
-    loadServers().catch((e) => setError(e?.message ?? "load_servers_failed"));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const rows = data?.records ?? [];
+  const total = rows.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const pageRows = useMemo(() => rows.slice((safePage - 1) * pageSize, safePage * pageSize), [rows, safePage, pageSize]);
 
-  useEffect(() => {
-    refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [serverId, rangeDays]);
+  function ensureTooltipVisibleByKey(tipKey: string) {
+    const wrap = tableWrapRef.current;
+    if (!wrap) return;
 
-  const titleRange = useMemo(() => {
-    if (rangeDays === 7) return "近 7 天";
-    if (rangeDays === 30) return "近 30 天";
-    if (rangeDays === 180) return "近 180 天";
-    return "近 365 天";
-  }, [rangeDays]);
+    requestAnimationFrame(() => {
+      const tipEl = wrap.querySelector(`[data-tip-key="${tipKey}"]`) as HTMLElement | null;
+      if (!tipEl) return;
+
+      const wrapRect = wrap.getBoundingClientRect();
+      const tipRect = tipEl.getBoundingClientRect();
+
+      const overflowBottom = tipRect.bottom - wrapRect.bottom;
+      if (overflowBottom > 0) {
+        wrap.scrollBy({ top: overflowBottom + 10, behavior: "smooth" });
+      }
+    });
+  }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap gap-2 items-center">
-        <select className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={serverId} onChange={(e) => setServerId(e.target.value)}>
-          <option value="">选择服务器…</option>
-          {servers.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
+    <div className="space-y-5">
+      <div className="bg-white border border-[#eaeaea] rounded-xl p-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          <input
+            className="w-[260px] border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none"
+            placeholder="输入用户名搜索播放统计"
+            value={usernameInput}
+            onChange={(e) => setUsernameInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                searchPlayback();
+              }
+            }}
+          />
 
-        <select className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={rangeDays} onChange={(e) => setRangeDays(Number(e.target.value) as any)}>
-          <option value={7}>7天</option>
-          <option value={30}>30天</option>
-          <option value={180}>180天</option>
-          <option value={365}>365天</option>
-        </select>
+          <select
+            className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none"
+            value={String(rangeDays)}
+            onChange={(e) => setRangeDays(Number(e.target.value) as 7 | 30 | 90)}
+          >
+            <option value="7">最近7天</option>
+            <option value="30">最近30天</option>
+            <option value="90">最近90天</option>
+          </select>
 
-        <button className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" onClick={refresh} disabled={loading || !serverId}>
-          刷新
-        </button>
+          <button
+            className="bg-[#e3001b] hover:bg-[#c20017] text-white rounded-lg px-3 py-2 disabled:opacity-60"
+            onClick={() => searchPlayback()}
+            disabled={loading}
+          >
+            {loading ? "搜索中..." : "搜索"}
+          </button>
 
-        {loading ? <div className="text-sm text-gray-500">加载中…</div> : null}
+          <button
+            className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none disabled:opacity-60"
+            onClick={() => searchPlayback(searchedUsername)}
+            disabled={loading || !searchedUsername}
+          >
+            刷新
+          </button>
+
+          {searchedUsername ? <span className="text-sm text-[#666]">当前用户：{searchedUsername}</span> : null}
+        </div>
       </div>
 
-      {error ? <pre className="text-xs text-red-600 whitespace-pre-wrap">{error}</pre> : null}
+      {error ? <div className="text-sm text-red-600">{error}</div> : null}
 
-      {data?.requirePlugin ? (
-        <div className="bg-yellow-50 border border-yellow-200 rounded p-4 text-sm text-yellow-900">
-          {data.message ?? "需要安装 Playback Reporting 插件才可以进行统计"}
-        </div>
+      {!searchedUsername && !loading ? <div className="text-sm text-gray-500">请输入用户名后搜索播放统计。</div> : null}
+
+      {searchedUsername ? (
+        <>
+          <div className="rounded-2xl border border-transparent bg-[#f8f9fa] p-6 max-w-sm">
+            <div className="text-sm text-[#888]">观看影片数量</div>
+            <div className="text-3xl font-bold text-[#222] mt-2">{data?.summary.watchedItemCount ?? 0} <span className="text-sm font-normal">部</span></div>
+          </div>
+
+          <div className="border border-[#eaeaea] rounded-2xl overflow-hidden bg-white">
+            <div className="px-5 py-3 border-b border-[#eaeaea] font-semibold text-[#222]">播放记录</div>
+            <div ref={tableWrapRef} className="overflow-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-[#f8f9fa] text-[#666]">
+                  <tr>
+                    <th className="text-left px-4 py-3 whitespace-nowrap">服务器名称</th>
+                    <th className="text-left px-4 py-3 whitespace-nowrap">媒体名称</th>
+                    <th className="text-left px-4 py-3 whitespace-nowrap">客户端</th>
+                    <th className="text-left px-4 py-3 whitespace-nowrap">IP地址</th>
+                    <th className="text-left px-4 py-3 whitespace-nowrap">开始播放时间</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageRows.length === 0 ? (
+                    <tr>
+                      <td className="px-4 py-10 text-center text-[#888]" colSpan={5}>暂无记录</td>
+                    </tr>
+                  ) : (
+                    pageRows.map((r, i) => (
+                      <tr key={`${r.serverName}_${r.mediaName}_${r.lastPlayedAt}_${i}`} className="border-t border-[#eaeaea]">
+                        <td className="px-4 py-3 text-[#222]">{r.serverName}</td>
+                        <td className="px-4 py-3 text-[#222]">
+                          <div className="relative inline-block max-w-[520px] align-middle">
+                            <button
+                              type="button"
+                              className="text-left hover:text-[#e3001b]"
+                              onClick={() => {
+                                if (!isTrimmed(r.mediaName, 40)) return;
+                                const key = `${safePage}-${i}`;
+                                const next = openTitleKey === key ? null : key;
+                                setOpenTitleKey(next);
+                                if (next) ensureTooltipVisibleByKey(next);
+                              }}
+                              title={r.mediaName}
+                            >
+                              {trimTitle(r.mediaName, 40)}
+                            </button>
+                            {isTrimmed(r.mediaName, 40) && openTitleKey === `${safePage}-${i}` ? (
+                              <div data-tip-key={`${safePage}-${i}`} className="absolute left-0 top-full z-20 mt-1 min-w-[260px] max-w-[560px] rounded border border-[#eaeaea] bg-[#222] px-2 py-1 text-xs text-white shadow-lg">
+                                {r.mediaName}
+                              </div>
+                            ) : null}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-[#666]">{r.client || "-"}</td>
+                        <td className="px-4 py-3 text-[#666]">{r.ip || "-"}</td>
+                        <td className="px-4 py-3 text-[#666]">{fmtTime(r.lastPlayedAt)}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <PaginationBar
+              total={total}
+              page={safePage}
+              totalPages={totalPages}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+              pageSizeOptions={[10, 20, 50]}
+            />
+          </div>
+        </>
       ) : null}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div className="bg-white border border-[#eaeaea] rounded-2xl p-4">
-          <div className="text-xs text-gray-500">活跃人数（{titleRange}）</div>
-          <div className="mt-2 text-2xl font-semibold">{data && !data.requirePlugin ? String(data.activeUsers ?? "-") : "-"}</div>
-          <div className="mt-1 text-xs text-gray-500">按 Emby 用户 LastActivityDate 统计</div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <div className="bg-white border border-[#eaeaea] rounded-2xl p-4">
-          <div className="font-medium text-sm">电影播放榜（{titleRange}）</div>
-          <div className="mt-3 overflow-auto">
-            <table className="min-w-[520px] w-full text-sm">
-              <thead className="text-left text-gray-600 border-b">
-                <tr>
-                  <th className="py-2 px-3">电影</th>
-                  <th className="py-2 px-3">播放次数</th>
-                  <th className="py-2 px-3">最近播放</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(data?.topMovies ?? []).map((m) => (
-                  <tr key={m.id} className="border-b last:border-b-0">
-                    <td className="py-2 px-3">{m.year ? `${m.name} (${m.year})` : m.name}</td>
-                    <td className="py-2 px-3">{m.playCount ?? "-"}</td>
-                    <td className="py-2 px-3 font-mono text-xs">{m.lastPlayed ? String(m.lastPlayed).slice(0, 19) : "-"}</td>
-                  </tr>
-                ))}
-                {data && !data.requirePlugin && (data.topMovies ?? []).length === 0 ? (
-                  <tr>
-                    <td className="py-6 px-3 text-gray-500" colSpan={3}>
-                      暂无数据（可能该时间范围内无 LastPlayedDate，或 Emby 未提供）
-                    </td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div className="bg-white border border-[#eaeaea] rounded-2xl p-4">
-          <div className="font-medium text-sm">剧集播放榜（{titleRange}）</div>
-          <div className="mt-3 overflow-auto">
-            <table className="min-w-[640px] w-full text-sm">
-              <thead className="text-left text-gray-600 border-b">
-                <tr>
-                  <th className="py-2 px-3">剧集</th>
-                  <th className="py-2 px-3">播放次数</th>
-                  <th className="py-2 px-3">最近播放</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(data?.topEpisodes ?? []).map((e) => (
-                  <tr key={e.id} className="border-b last:border-b-0">
-                    <td className="py-2 px-3">
-                      {e.seriesName ? `${e.seriesName} S${e.season ?? "?"}E${e.episode ?? "?"}` : e.name}
-                    </td>
-                    <td className="py-2 px-3">{e.playCount ?? "-"}</td>
-                    <td className="py-2 px-3 font-mono text-xs">{e.lastPlayed ? String(e.lastPlayed).slice(0, 19) : "-"}</td>
-                  </tr>
-                ))}
-                {data && !data.requirePlugin && (data.topEpisodes ?? []).length === 0 ? (
-                  <tr>
-                    <td className="py-6 px-3 text-gray-500" colSpan={3}>
-                      暂无数据（可能该时间范围内无 LastPlayedDate，或 Emby 未提供）
-                    </td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <div className="text-xs text-gray-500">
-        说明：播放榜单使用 Emby Items 的 PlayCount + (LastPlayedDate/DateLastPlayed) 做近似筛选；如果你的 Emby 未提供这些字段或需要插件，我们再按实际接口适配。
-      </div>
     </div>
   );
 }
