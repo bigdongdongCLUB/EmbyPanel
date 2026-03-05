@@ -63,12 +63,15 @@ export function VodSettingsClient() {
     }
   }
 
-  if (loading) return <div className="text-sm text-gray-500 py-8 text-center">加载中…</div>;
+  if (loading) return <div className="text-sm text-gray-500">加载中…</div>;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      <h1 className="text-xl font-semibold">系统设置</h1>
       <SettingsTabs />
-      <div className="space-y-6 max-w-2xl">
+
+      <div className="border border-[#eaeaea] rounded-2xl bg-white p-6 space-y-5">
+        <div className="text-lg font-semibold">点播功能</div>
 
         {/* 说明卡片 */}
       <div className="flex gap-3 rounded-xl border border-[#f3d4d8] bg-[#fff7f8] px-4 py-4">
@@ -94,7 +97,7 @@ export function VodSettingsClient() {
       {/* TMDB API Key */}
       <div className="space-y-1.5">
         <label className="text-sm font-medium text-gray-700">TMDB API Key</label>
-        <div className="flex items-center border rounded-lg px-3 py-2 gap-2 bg-white">
+        <div className="flex items-center border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 gap-2">
           <input
             type={keyVisible ? "text" : "password"}
             className="flex-1 text-sm outline-none font-mono"
@@ -117,7 +120,7 @@ export function VodSettingsClient() {
         <label className="text-sm font-medium text-gray-700">
           <span className="text-red-500 mr-0.5">*</span>TMDB 数据缓存时间
         </label>
-        <div className="flex items-center border rounded-lg px-3 py-2 gap-2 bg-white max-w-xs">
+        <div className="flex items-center border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 gap-2 max-w-xs">
           <input
             type="number"
             min={1}
@@ -139,7 +142,7 @@ export function VodSettingsClient() {
         <label className="text-sm font-medium text-gray-700">
           <span className="text-red-500 mr-0.5">*</span>每人每天点播上限
         </label>
-        <div className="flex items-center border rounded-lg px-3 py-2 gap-2 bg-white max-w-xs">
+        <div className="flex items-center border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 gap-2 max-w-xs">
           <input
             type="number"
             min={1}
@@ -170,16 +173,16 @@ export function VodSettingsClient() {
       )}
 
       {/* 操作按钮 */}
-      <div className="flex gap-3">
+      <div className="pt-3 border-t flex gap-2 items-center flex-wrap">
         <button
-          className="px-5 py-2 rounded-lg bg-gray-700 text-white text-sm font-medium hover:bg-gray-800 disabled:opacity-50"
+          className="bg-[#e3001b] text-white rounded px-4 py-2 disabled:opacity-60"
           onClick={save}
           disabled={saving}
         >
           {saving ? "保存中…" : "保存设置"}
         </button>
         <button
-          className="px-5 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
+          className="border border-[#eaeaea] bg-white rounded-lg px-4 py-2 hover:bg-[#f4f5f7] disabled:opacity-60"
           onClick={testApi}
           disabled={testing}
         >
