@@ -1574,6 +1574,10 @@ export function UsersClient() {
               <textarea className="mt-1 w-full border rounded px-3 py-2 text-sm h-24" value={trialTemplate} onChange={(e) => setTrialTemplate(e.target.value)} />
             </div>
 
+            <div className="mt-3 rounded-[8px] border border-[#ffe58f] bg-[#fff9e6] px-3 py-2 text-xs text-[#665000]">
+              创建请求超时阈值已调整为 20 秒。若提示超时，请先刷新用户列表确认是否已创建成功，避免重复点击导致重复创建。
+            </div>
+
             {trialOutput ? (
               <div className="mt-3">
                 <label className="text-sm">生成结果</label>
@@ -1623,7 +1627,8 @@ export function UsersClient() {
                       throw new Error("试用小时需在 1-168");
                     }
                     const controller = new AbortController();
-                    const timeoutId = window.setTimeout(() => controller.abort(), 5000);
+                    const requestTimeoutMs = 20000;
+                    const timeoutId = window.setTimeout(() => controller.abort(), requestTimeoutMs);
 
                     let res: Response;
                     try {
@@ -1640,7 +1645,7 @@ export function UsersClient() {
                       });
                     } catch (fetchErr: any) {
                       if (fetchErr?.name === "AbortError") {
-                        throw new Error("创建失败：服务器 5 秒无响应，已放弃本次创建");
+                        throw new Error("创建请求超时（20秒）。服务器可能已成功创建，请先刷新用户列表确认后再重试，避免重复创建。");
                       }
                       throw fetchErr;
                     } finally {
