@@ -359,7 +359,12 @@ export async function getPlaybackStatsForUsername(params: { username: string; ra
       // ignore and fallback to live sources
     }
 
-    const apiKey = getEmbyApiKeyForServer(srv.embyServer as any);
+    let apiKey = "";
+    try {
+      apiKey = getEmbyApiKeyForServer(srv.embyServer as any);
+    } catch {
+      apiKey = "";
+    }
 
     // 2) 基于实时 Sessions 的状态机：先缓存详细信息，结束后结算 stop 事件
     if (apiKey) {

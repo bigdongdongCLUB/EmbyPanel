@@ -23,21 +23,36 @@ export type EmbySession = {
   };
 };
 
-export async function embyFetchSessions(baseUrl: string, apiKey: string) {
+export async function embyFetchSessions(baseUrl: string, apiKey: string, timeoutMs = 7000) {
   const u = new URL(normalizeBaseUrl(baseUrl) + "/Sessions");
   u.searchParams.set("api_key", apiKey);
 
-  const res = await fetch(u.toString(), {
-    method: "GET",
-    headers: { Accept: "application/json" },
-    cache: "no-store",
-  });
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), Math.max(1000, timeoutMs));
 
-  const text = await res.text();
-  if (!res.ok) return { ok: false as const, status: res.status, body: text };
+  try {
+    const res = await fetch(u.toString(), {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+      signal: ac.signal,
+    });
 
-  const json = JSON.parse(text);
-  return { ok: true as const, status: res.status, sessions: json as EmbySession[] };
+    const text = await res.text();
+    if (!res.ok) return { ok: false as const, status: res.status, body: text };
+
+    try {
+      const json = JSON.parse(text);
+      return { ok: true as const, status: res.status, sessions: json as EmbySession[] };
+    } catch {
+      return { ok: false as const, status: res.status, body: "invalid_json" };
+    }
+  } catch (e: any) {
+    if (e?.name === "AbortError") return { ok: false as const, status: 0, body: "timeout" };
+    return { ok: false as const, status: 0, body: String(e?.message || e || "fetch_failed") };
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export async function embyStopSessionPlayback(baseUrl: string, apiKey: string, sessionId: string) {
