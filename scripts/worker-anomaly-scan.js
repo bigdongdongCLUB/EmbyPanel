@@ -69,6 +69,18 @@ async function ensureRepeatable(queue) {
     }
   );
 
+  // 播放记录采集：用于“开播即入库”后台持续检测（不依赖页面刷新）
+  await queue.add(
+    "playback-collect",
+    { kind: "playback-collect" },
+    {
+      jobId: "repeat:playback-collect",
+      repeat: { every: 20 * 1000 },
+      removeOnComplete: true,
+      removeOnFail: 1000,
+    }
+  );
+
   await queue.add(
     "cache-cleanup",
     { kind: "cache-cleanup" },
@@ -130,6 +142,18 @@ async function main() {
           console.log("[worker] anomaly-unban", { jobId: job.id, due: unban?.dueCount, unbanned: unban?.unbanned, skipped: unban?.skipped, failed: unban?.failed });
         }
         return { unban };
+      }
+
+      if (job.name === "playback-collect") {
+        const collected = await callInternal("/api/admin/jobs/playback-collect");
+        if ((collected?.collected || 0) > 0) {
+          console.log("[worker] playback-collect", {
+            jobId: job.id,
+            collected: collected?.collected,
+            snapshots: collected?.snapshots,
+          });
+        }
+        return { collected };
       }
 
       if (job.name === "cache-cleanup") {
