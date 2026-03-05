@@ -813,7 +813,22 @@ export function ServersClient() {
                 />
               </div>
               <div>
-                <label className="text-sm">外部访问地址（选填）</label>
+                <div className="text-sm flex items-center gap-1.5">
+                  <span>外部访问地址（选填）</span>
+                  <span className="relative inline-flex items-center group">
+                    <button
+                      type="button"
+                      className="p-0 m-0 border-0 bg-transparent leading-none cursor-help"
+                      aria-label="外部访问地址说明"
+                      title="外部访问地址说明"
+                    >
+                      <img src="/icons/exclamation.svg" alt="说明" className="w-4 h-4" />
+                    </button>
+                    <span className="absolute left-0 top-[calc(100%+8px)] z-[80] w-[300px] whitespace-normal rounded-lg bg-black text-white text-xs leading-5 px-3 py-2 shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-opacity">
+                      该地址为用户端展示主线路地址，如果缺失则使用BaseURL
+                    </span>
+                  </span>
+                </div>
                 <input
                   className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none"
                   value={modal.externalUrl}
@@ -821,7 +836,22 @@ export function ServersClient() {
                 />
               </div>
               <div>
-                <label className="text-sm">备用地址（选填）</label>
+                <div className="text-sm flex items-center gap-1.5">
+                  <span>备用地址（选填）</span>
+                  <span className="relative inline-flex items-center group">
+                    <button
+                      type="button"
+                      className="p-0 m-0 border-0 bg-transparent leading-none cursor-help"
+                      aria-label="备用地址说明"
+                      title="备用地址说明"
+                    >
+                      <img src="/icons/exclamation.svg" alt="说明" className="w-4 h-4" />
+                    </button>
+                    <span className="absolute left-0 top-[calc(100%+8px)] z-[80] w-[260px] whitespace-normal rounded-lg bg-black text-white text-xs leading-5 px-3 py-2 shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-opacity">
+                      该地址仅在用户端做备用线路展示
+                    </span>
+                  </span>
+                </div>
                 <input
                   className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none"
                   value={modal.backupUrl}
