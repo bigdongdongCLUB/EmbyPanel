@@ -123,7 +123,23 @@ export default function LoginPage() {
       });
 
       if ((res as any)?.error || !(res as any)?.ok) {
-        setLoginError("用户名或密码错误");
+        let msg = "用户名或密码错误";
+        try {
+          const riskRes = await fetch("/api/auth/login-risk-status", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ username: u }),
+          });
+          const riskJson = await riskRes.json().catch(() => null);
+          if (riskRes.ok && riskJson?.locked) {
+            const remainingSeconds = Number(riskJson?.remainingSeconds || 0);
+            const minutes = Math.max(1, Math.ceil(remainingSeconds / 60));
+            msg = `尝试次数过多，请 ${minutes} 分钟后再试`;
+          }
+        } catch {
+          // fallback to generic message
+        }
+        setLoginError(msg);
         return;
       }
 

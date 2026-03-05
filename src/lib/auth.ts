@@ -4,6 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/db";
 import { verifyPassword } from "@/lib/password";
 import { encryptSyncPassword } from "@/lib/user-secrets";
+import { clearLoginRiskOnSuccess, getLoginRiskStatus, recordLoginFailure } from "@/lib/login-risk";
 
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
@@ -19,11 +20,22 @@ export const authOptions: NextAuthOptions = {
         const password = credentials?.password?.toString() ?? "";
         if (!username || !password) return null;
 
+        const risk = await getLoginRiskStatus(username);
+        if (risk.locked) return null;
+
         const user = await prisma.user.findFirst({ where: { username: { equals: username, mode: "insensitive" } } });
-        if (!user) return null;
+        if (!user) {
+          await recordLoginFailure(username);
+          return null;
+        }
 
         const ok = await verifyPassword(password, user.passwordHash);
-        if (!ok) return null;
+        if (!ok) {
+          await recordLoginFailure(username);
+          return null;
+        }
+
+        await clearLoginRiskOnSuccess(username);
 
         // Backfill sync password for old users created before this field existed.
         if (!user.syncPasswordEnc || !user.syncPasswordIv || !user.syncPasswordTag) {
