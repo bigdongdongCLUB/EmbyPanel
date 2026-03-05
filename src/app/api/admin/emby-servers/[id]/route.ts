@@ -17,8 +17,8 @@ async function ensureServerExtraColumns() {
 const PatchSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   baseUrl: z.string().url().optional(),
-  externalUrl: z.string().url().nullable().optional(),
-  backupUrl: z.string().url().nullable().optional(),
+  externalUrl: z.string().nullable().optional(),
+  backupUrl: z.string().nullable().optional(),
   apiKey: z.string().min(10).optional(),
   enabled: z.boolean().optional(),
 });
@@ -90,8 +90,12 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   const data: any = {};
   if (parsed.data.name !== undefined) data.name = parsed.data.name;
   if (parsed.data.baseUrl !== undefined) data.baseUrl = normalizeBaseUrl(parsed.data.baseUrl);
-  if (parsed.data.externalUrl !== undefined) data.externalUrl = parsed.data.externalUrl ? normalizeBaseUrl(parsed.data.externalUrl) : null;
-  if (parsed.data.backupUrl !== undefined) data.backupUrl = parsed.data.backupUrl ? normalizeBaseUrl(parsed.data.backupUrl) : null;
+  try {
+    if (parsed.data.externalUrl !== undefined) data.externalUrl = parsed.data.externalUrl?.trim() ? normalizeBaseUrl(parsed.data.externalUrl.trim()) : null;
+    if (parsed.data.backupUrl !== undefined) data.backupUrl = parsed.data.backupUrl?.trim() ? normalizeBaseUrl(parsed.data.backupUrl.trim()) : null;
+  } catch {
+    return NextResponse.json({ error: "invalid_url" }, { status: 400 });
+  }
   if (parsed.data.enabled !== undefined) data.enabled = parsed.data.enabled;
   if (parsed.data.apiKey !== undefined) {
     const enc = encryptString(parsed.data.apiKey);

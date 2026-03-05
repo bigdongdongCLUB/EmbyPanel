@@ -877,7 +877,13 @@ export function ServersClient() {
                     body: JSON.stringify(payload),
                   });
                   if (!res.ok) {
-                    alert(`保存失败: ${await res.text()}`);
+                    const txt = await res.text();
+                    let msg = txt;
+                    try {
+                      const j = JSON.parse(txt || "{}");
+                      if (j?.error) msg = String(j.error);
+                    } catch {}
+                    alert(`保存失败: ${msg || `HTTP ${res.status}`}`);
                     return;
                   }
                   setModal({ open: false });

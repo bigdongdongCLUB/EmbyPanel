@@ -61,8 +61,8 @@ export async function GET() {
 const CreateSchema = z.object({
   name: z.string().min(1).max(100),
   baseUrl: z.string().url(),
-  externalUrl: z.string().url().optional().nullable(),
-  backupUrl: z.string().url().optional().nullable(),
+  externalUrl: z.string().optional().nullable(),
+  backupUrl: z.string().optional().nullable(),
   apiKey: z.string().min(10),
   enabled: z.boolean().optional(),
 });
@@ -78,12 +78,21 @@ export async function POST(req: Request) {
   const enc = encryptString(parsed.data.apiKey);
   await ensureServerExtraColumns();
 
+  let normalizedExternalUrl: string | null = null;
+  let normalizedBackupUrl: string | null = null;
+  try {
+    normalizedExternalUrl = parsed.data.externalUrl?.trim() ? normalizeBaseUrl(parsed.data.externalUrl.trim()) : null;
+    normalizedBackupUrl = parsed.data.backupUrl?.trim() ? normalizeBaseUrl(parsed.data.backupUrl.trim()) : null;
+  } catch {
+    return NextResponse.json({ error: "invalid_url" }, { status: 400 });
+  }
+
   const server = await prisma.embyServer.create({
     data: {
       name: parsed.data.name,
       baseUrl: normalizeBaseUrl(parsed.data.baseUrl),
-      externalUrl: parsed.data.externalUrl ? normalizeBaseUrl(parsed.data.externalUrl) : null,
-      backupUrl: parsed.data.backupUrl ? normalizeBaseUrl(parsed.data.backupUrl) : null,
+      externalUrl: normalizedExternalUrl,
+      backupUrl: normalizedBackupUrl,
       apiKeyEnc: enc.enc,
       apiKeyIv: enc.iv,
       apiKeyTag: enc.tag,
