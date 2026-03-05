@@ -824,7 +824,7 @@ export function ServersClient() {
                     >
                       <img src="/icons/exclamation.svg" alt="说明" className="w-4 h-4" />
                     </button>
-                    <span className="absolute left-0 top-[calc(100%+8px)] z-[80] w-[300px] whitespace-normal rounded-lg bg-black text-white text-xs leading-5 px-3 py-2 shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-opacity">
+                    <span className="absolute left-0 top-[calc(100%+8px)] z-[80] w-[300px] whitespace-normal rounded-xl border border-[#f1d3d8] bg-white text-[#2d2d2d] text-xs leading-5 px-3 py-2 shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-opacity">
                       该地址为用户端展示主线路地址，如果缺失则使用BaseURL
                     </span>
                   </span>
@@ -847,7 +847,7 @@ export function ServersClient() {
                     >
                       <img src="/icons/exclamation.svg" alt="说明" className="w-4 h-4" />
                     </button>
-                    <span className="absolute left-0 top-[calc(100%+8px)] z-[80] w-[260px] whitespace-normal rounded-lg bg-black text-white text-xs leading-5 px-3 py-2 shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-opacity">
+                    <span className="absolute left-0 top-[calc(100%+8px)] z-[80] w-[260px] whitespace-normal rounded-xl border border-[#f1d3d8] bg-white text-[#2d2d2d] text-xs leading-5 px-3 py-2 shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-opacity">
                       该地址仅在用户端做备用线路展示
                     </span>
                   </span>

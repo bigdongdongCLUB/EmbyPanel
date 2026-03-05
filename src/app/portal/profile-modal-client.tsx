@@ -70,7 +70,7 @@ export function PortalProfileModalClient() {
                 >
                   <img src="/icons/exclamation.svg" alt="提醒说明" className="w-4 h-4" />
                 </button>
-                <span className="absolute left-0 top-[calc(100%+8px)] z-[70] w-[260px] whitespace-normal rounded-lg bg-black text-white text-xs leading-5 px-3 py-2 shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-opacity">
+                <span className="absolute left-0 top-[calc(100%+8px)] z-[70] w-[260px] whitespace-normal rounded-xl border border-[#f1d3d8] bg-white text-[#2d2d2d] text-xs leading-5 px-3 py-2 shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-opacity">
                   开启后，将在订阅即将到期时收到提醒通知
                 </span>
               </span>
