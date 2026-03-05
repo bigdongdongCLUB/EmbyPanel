@@ -228,6 +228,10 @@ type OutputRow = {
   lastPlayedAt: string;
 };
 
+// 为稳定性优先：播放统计读取走本地事件库，避免请求时依赖 Emby 实时接口导致超时/502。
+const ENABLE_REALTIME_SESSION_ENRICH = false;
+const ENABLE_SNAPSHOT_ENRICH = false;
+
 export type PlaybackStatsRangeDays = 7 | 30 | 90;
 
 export type PlaybackStatsPayload = {
@@ -367,7 +371,7 @@ export async function getPlaybackStatsForUsername(params: { username: string; ra
     }
 
     // 2) 基于实时 Sessions 的状态机：先缓存详细信息，结束后结算 stop 事件
-    if (apiKey) {
+    if (ENABLE_REALTIME_SESSION_ENRICH && apiKey) {
       try {
         const ses = await embyFetchSessions(srv.embyServer.baseUrl, apiKey);
         if (ses.ok) {
@@ -551,7 +555,7 @@ export async function getPlaybackStatsForUsername(params: { username: string; ra
 
   // secondary enrichment by session snapshots for missing ip/client
   const missing = rows.filter((r) => r.ip === "-" || isGenericClient(r.client));
-  if (missing.length) {
+  if (ENABLE_SNAPSHOT_ENRICH && missing.length) {
     const snapshots = await prisma.sessionSnapshot.findMany({
       where: { capturedAt: { gte: since }, embyServerId: { in: Array.from(new Set(missing.map((x) => x.serverId))) } },
       select: { embyServerId: true, capturedAt: true, rawJson: true },
