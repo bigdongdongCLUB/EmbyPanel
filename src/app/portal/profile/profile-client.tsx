@@ -2,6 +2,27 @@
 
 import { useEffect, useState } from "react";
 
+function mapProfileErrorMessage(code?: string, fallback?: string) {
+  switch (String(code || "")) {
+    case "unauthorized":
+      return "登录已失效，请重新登录";
+    case "not_found":
+      return "未找到当前用户";
+    case "invalid_payload":
+      return "提交参数有误，请检查后重试";
+    case "password_fields_required":
+      return "请完整填写当前密码、新密码和确认密码";
+    case "password_too_short":
+      return "新密码长度至少 6 位";
+    case "password_confirm_mismatch":
+      return "两次输入的新密码不一致";
+    case "current_password_invalid":
+      return "当前密码不正确";
+    default:
+      return fallback || code || "操作失败";
+  }
+}
+
 export function PortalProfileClient() {
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState("");
@@ -16,7 +37,7 @@ export function PortalProfileClient() {
     const res = await fetch("/api/portal/profile", { cache: "no-store" });
     const json = await res.json().catch(() => null);
     if (!res.ok) {
-      alert(json?.error || `HTTP ${res.status}`);
+      alert(mapProfileErrorMessage(json?.error, `HTTP ${res.status}`));
       setLoading(false);
       return;
     }
@@ -64,7 +85,7 @@ export function PortalProfileClient() {
                 });
                 const json = await res.json().catch(() => null);
                 if (!res.ok) {
-                  alert(json?.error || `HTTP ${res.status}`);
+                  alert(mapProfileErrorMessage(json?.error, `HTTP ${res.status}`));
                   return;
                 }
                 alert("资料已更新");
@@ -105,7 +126,7 @@ export function PortalProfileClient() {
                 });
                 const json = await res.json().catch(() => null);
                 if (!res.ok) {
-                  alert(`修改失败: ${json?.error || `HTTP ${res.status}`}`);
+                  alert(`修改失败: ${mapProfileErrorMessage(json?.error, `HTTP ${res.status}`)}`);
                   return;
                 }
                 setCurrentPassword("");
