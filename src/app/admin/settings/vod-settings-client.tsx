@@ -173,7 +173,7 @@ export function VodSettingsClient() {
       )}
 
       {/* 操作按钮 */}
-      <div className="pt-3 border-t flex gap-2 items-center flex-wrap">
+      <div className="pt-3 flex gap-2 items-center flex-wrap">
         <button
           className="bg-[#e3001b] text-white rounded px-4 py-2 disabled:opacity-60"
           onClick={save}
