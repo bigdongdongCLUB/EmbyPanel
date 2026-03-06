@@ -122,7 +122,7 @@ export function MailSettingsClient() {
           <input className="mt-2 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={form.fromName} onChange={(e) => setForm((s) => ({ ...s, fromName: e.target.value }))} />
         </div>
 
-        <div className="pt-3 border-t flex gap-2 items-center flex-wrap">
+        <div className="pt-3 flex gap-2 items-center flex-wrap">
           <button
             className="bg-[#e3001b] text-white rounded px-4 py-2 disabled:opacity-60"
             disabled={saving || !canSave}

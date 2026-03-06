@@ -102,7 +102,7 @@ export function SettingsClient() {
           {form.siteLogoDataUrl ? <img src={form.siteLogoDataUrl} alt="logo" className="mt-3 h-14 w-14 rounded-full object-cover border" /> : null}
         </div>
 
-        <div className="pt-3 border-t">
+        <div className="pt-3">
           <button
             className="bg-[#e3001b] text-white rounded px-4 py-2 disabled:opacity-60"
             disabled={saving || !form.siteName.trim()}
