@@ -244,13 +244,14 @@ export function VodRequestsAdminClient() {
                     <div className="relative inline-block">
                       <button
                         type="button"
-                        className="p-1 hover:bg-[#f4f5f7] rounded"
+                        className="p-0.5 hover:bg-[#f4f5f7] rounded flex items-center justify-center"
+                        style={{ minWidth: '20px', minHeight: '20px' }}
                         onMouseEnter={() => setNoteTooltipId(r.id)}
                         onMouseLeave={() => setNoteTooltipId(null)}
                         onClick={() => setNoteTooltipId(noteTooltipId === r.id ? null : r.id)}
                         aria-label="查看备注"
                       >
-                        <img src="/icons/exclamation.svg" alt="备注" className="w-4 h-4" />
+                        <img src="/icons/exclamation.svg" alt="备注" className="w-4 h-4 flex-shrink-0" style={{ width: '16px', height: '16px' }} />
                       </button>
                       {noteTooltipId === r.id && (
                         <div className="absolute left-0 top-full mt-1 z-50 w-64 rounded-xl border border-[#f3d4d8] bg-white text-gray-800 text-xs leading-relaxed px-3 py-2 shadow-lg">
