@@ -19,37 +19,52 @@ function norm(s: string) {
   return s.toLowerCase().replace(/[^\w\u4e00-\u9fff]/g, "");
 }
 
-function titleMatch(embyName: string, item: CheckItem, embyYear?: number) {
+function titleMatch(embyName: string, embyOriginalTitle: string | null, item: CheckItem, embyYear?: number) {
   const n = norm(embyName);
+  const nOrig = norm(embyOriginalTitle || "");
   const t = norm(item.title);
   const o = norm(item.titleOriginal || "");
   const itemYear = item.year ? Number(item.year) : null;
   
   if (!n) return false;
   
-  // 1. 精确匹配优先（完全相等）
-  if (n === t || n === o) {
-    // 如果有年份信息，验证年份差异不超过 1 年
+  // 1. OriginalTitle（原始英文名）精确匹配 - 最高优先级（不同地区译名但同一部）
+  if (nOrig && o && nOrig === o) {
     if (itemYear && embyYear) {
       return Math.abs(embyYear - itemYear) <= 1;
     }
     return true;
   }
   
-  // 2. 宽松匹配：只有当标题长度差异不大时才考虑包含关系
-  // 避免"摩斯探长"匹配到"摩斯探长前传"
+  // 2. 本地译名精确匹配
+  if (n === t || n === o) {
+    if (itemYear && embyYear) {
+      return Math.abs(embyYear - itemYear) <= 1;
+    }
+    return true;
+  }
+  
+  // 3. OriginalTitle 包含匹配（处理副标题等情况）
+  if (nOrig && o && (nOrig.includes(o) || o.includes(nOrig))) {
+    if (itemYear && embyYear) {
+      return Math.abs(embyYear - itemYear) <= 1;
+    }
+    // 无年份时要求较高的重叠度
+    const overlap = Math.min(nOrig.length, o.length) / Math.max(nOrig.length, o.length);
+    return overlap >= 0.6;
+  }
+  
+  // 4. 本地译名包含匹配 - 需要更严格的长度验证（避免摩斯探长问题）
   const lenRatio = n.length / Math.max(t.length, o.length || 1);
   if (lenRatio > 1.5 || lenRatio < 0.67) {
     // 长度差异超过 50%，不考虑包含匹配
     return false;
   }
   
-  // 3. 包含匹配（需要年份验证）
   if (n.includes(t) || (!!o && n.includes(o)) || t.includes(n) || (!!o && o.includes(n))) {
     if (itemYear && embyYear) {
       return Math.abs(embyYear - itemYear) <= 1;
     }
-    // 无年份时，要求更严格的标题匹配（至少 70% 重叠）
     const overlap = Math.min(n.length, t.length) / Math.max(n.length, t.length);
     return overlap >= 0.7;
   }
@@ -106,7 +121,7 @@ export async function POST(req: Request) {
             const list = data.Items ?? [];
             let found = list.some((e: any) => byTmdbId(e, item.id));
             if (!found) {
-              found = list.some((e: any) => titleMatch(e.Name ?? e.OriginalTitle ?? "", item, e.ProductionYear));
+              found = list.some((e: any) => titleMatch(e.Name ?? "", e.OriginalTitle ?? null, item, e.ProductionYear));
             }
             if (found) {
               inLibraryIds.add(item.id);
@@ -119,7 +134,7 @@ export async function POST(req: Request) {
               if (!res2.ok) return;
               const data2 = await res2.json();
               const list2 = data2.Items ?? [];
-              const found2 = list2.some((e: any) => byTmdbId(e, item.id)) || list2.some((e: any) => titleMatch(e.Name ?? e.OriginalTitle ?? "", item, e.ProductionYear));
+              const found2 = list2.some((e: any) => byTmdbId(e, item.id)) || list2.some((e: any) => titleMatch(e.Name ?? "", e.OriginalTitle ?? null, item, e.ProductionYear));
               if (found2) {
                 inLibraryIds.add(item.id);
                 return;
