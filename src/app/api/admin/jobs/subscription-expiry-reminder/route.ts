@@ -125,8 +125,10 @@ export async function POST(req: Request) {
     const prev = sentState[key];
     if (prev?.endAt === endAtIso) continue;
 
-    const remainingDays = Math.ceil((new Date(sub.endAt).getTime() - now.getTime()) / (24 * 3600 * 1000));
-    if (remainingDays > noticeDays || remainingDays <= 0) continue;
+    // 使用 Math.floor 向下取整，避免"3 天 5 小时"被算作 4 天而跳过
+    const remainingDays = Math.floor((new Date(sub.endAt).getTime() - now.getTime()) / (24 * 3600 * 1000));
+    // 剩余天数在 1~noticeDays 范围内才发送（包含 noticeDays 当天）
+    if (remainingDays < 1 || remainingDays > noticeDays) continue;
 
     const vars = {
       siteName,
