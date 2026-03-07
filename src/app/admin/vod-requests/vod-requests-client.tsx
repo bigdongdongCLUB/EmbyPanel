@@ -79,6 +79,7 @@ export function VodRequestsAdminClient() {
   const [error, setError] = useState<string | null>(null);
   const [replyMap, setReplyMap] = useState<Record<string, string>>({});
   const [actionMap, setActionMap] = useState<Record<string, string>>({});
+  const [noteTooltipId, setNoteTooltipId] = useState<string | null>(null);
   const saveTimerRef = useRef<Record<string, any>>({});
 
   const canPrev = page > 1;
@@ -238,7 +239,30 @@ export function VodRequestsAdminClient() {
                   </div>
                 </td>
                 <td className="px-3 py-3 whitespace-nowrap align-middle">{r.user.username || r.user.email || "-"}</td>
-                <td className="px-3 py-3 text-xs text-gray-600 max-w-[220px] align-middle">{r.note || "-"}</td>
+                <td className="px-3 py-3 align-middle">
+                  {r.note ? (
+                    <div className="relative inline-block">
+                      <button
+                        type="button"
+                        className="p-1 hover:bg-[#f4f5f7] rounded"
+                        onMouseEnter={() => setNoteTooltipId(r.id)}
+                        onMouseLeave={() => setNoteTooltipId(null)}
+                        onClick={() => setNoteTooltipId(noteTooltipId === r.id ? null : r.id)}
+                        aria-label="查看备注"
+                      >
+                        <img src="/icons/exclamation.svg" alt="备注" className="w-4 h-4" />
+                      </button>
+                      {noteTooltipId === r.id && (
+                        <div className="absolute left-0 top-full mt-1 z-50 w-64 rounded-xl border border-[#f3d4d8] bg-white text-gray-800 text-xs leading-relaxed px-3 py-2 shadow-lg">
+                          <div className="font-medium text-gray-700 mb-1">用户备注</div>
+                          <div className="break-words">{r.note}</div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-gray-400">-</span>
+                  )}
+                </td>
                 <td className="px-3 py-3 min-w-[220px] align-middle">
                   <input
                     className="w-full h-8 border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-2 text-xs focus:border-[#e3001b] outline-none"
