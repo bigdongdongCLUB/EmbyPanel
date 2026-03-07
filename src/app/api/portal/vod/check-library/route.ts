@@ -19,12 +19,42 @@ function norm(s: string) {
   return s.toLowerCase().replace(/[^\w\u4e00-\u9fff]/g, "");
 }
 
-function titleMatch(embyName: string, item: CheckItem) {
+function titleMatch(embyName: string, item: CheckItem, embyYear?: number) {
   const n = norm(embyName);
   const t = norm(item.title);
   const o = norm(item.titleOriginal || "");
+  const itemYear = item.year ? Number(item.year) : null;
+  
   if (!n) return false;
-  return n === t || n === o || n.includes(t) || (!!o && n.includes(o)) || t.includes(n) || (!!o && o.includes(n));
+  
+  // 1. 精确匹配优先（完全相等）
+  if (n === t || n === o) {
+    // 如果有年份信息，验证年份差异不超过 1 年
+    if (itemYear && embyYear) {
+      return Math.abs(embyYear - itemYear) <= 1;
+    }
+    return true;
+  }
+  
+  // 2. 宽松匹配：只有当标题长度差异不大时才考虑包含关系
+  // 避免"摩斯探长"匹配到"摩斯探长前传"
+  const lenRatio = n.length / Math.max(t.length, o.length || 1);
+  if (lenRatio > 1.5 || lenRatio < 0.67) {
+    // 长度差异超过 50%，不考虑包含匹配
+    return false;
+  }
+  
+  // 3. 包含匹配（需要年份验证）
+  if (n.includes(t) || (!!o && n.includes(o)) || t.includes(n) || (!!o && o.includes(n))) {
+    if (itemYear && embyYear) {
+      return Math.abs(embyYear - itemYear) <= 1;
+    }
+    // 无年份时，要求更严格的标题匹配（至少 70% 重叠）
+    const overlap = Math.min(n.length, t.length) / Math.max(n.length, t.length);
+    return overlap >= 0.7;
+  }
+  
+  return false;
 }
 
 function byTmdbId(entry: any, tmdbId: number) {
@@ -76,7 +106,7 @@ export async function POST(req: Request) {
             const list = data.Items ?? [];
             let found = list.some((e: any) => byTmdbId(e, item.id));
             if (!found) {
-              found = list.some((e: any) => titleMatch(e.Name ?? e.OriginalTitle ?? "", item));
+              found = list.some((e: any) => titleMatch(e.Name ?? e.OriginalTitle ?? "", item, e.ProductionYear));
             }
             if (found) {
               inLibraryIds.add(item.id);
@@ -89,7 +119,7 @@ export async function POST(req: Request) {
               if (!res2.ok) return;
               const data2 = await res2.json();
               const list2 = data2.Items ?? [];
-              const found2 = list2.some((e: any) => byTmdbId(e, item.id)) || list2.some((e: any) => titleMatch(e.Name ?? e.OriginalTitle ?? "", item));
+              const found2 = list2.some((e: any) => byTmdbId(e, item.id)) || list2.some((e: any) => titleMatch(e.Name ?? e.OriginalTitle ?? "", item, e.ProductionYear));
               if (found2) {
                 inLibraryIds.add(item.id);
                 return;
