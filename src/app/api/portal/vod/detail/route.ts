@@ -11,6 +11,7 @@ const TMDB_BASE = "https://api.themoviedb.org/3";
 type EmbyItem = {
   Id?: string;
   Name?: string;
+  OriginalTitle?: string;
   ProductionYear?: number;
   ProviderIds?: Record<string, string>;
 };
@@ -27,26 +28,76 @@ function getTmdbProviderId(item: EmbyItem) {
   return String(p.Tmdb ?? p.TMDb ?? p.tmdb ?? "").trim();
 }
 
-function scoreMatch(item: EmbyItem, title: string, originalTitle: string, year: number | null, tmdbId: string) {
+function scoreMatch(item: EmbyItem, title: string, originalTitle: string, year: number | null, tmdbId: string, embyOriginalTitle?: string) {
   let score = 0;
   const name = String(item?.Name ?? "");
   const n = norm(name);
+  const nOrig = norm(embyOriginalTitle ?? "");
   const t1 = norm(title);
   const t2 = norm(originalTitle);
 
   const providerTmdb = getTmdbProviderId(item);
   if (providerTmdb && providerTmdb === tmdbId) score += 1000;
 
-  if (n && t1 && n === t1) score += 120;
-  else if (n && t1 && (n.includes(t1) || t1.includes(n))) score += 70;
+  // 1. OriginalTitle（Emby 原始英文名）精确匹配 - 最高优先级（跨地区译名）
+  if (nOrig && t2 && nOrig === t2) {
+    score += 150;
+    if (year && item?.ProductionYear) {
+      const dy = Math.abs(Number(item.ProductionYear) - year);
+      if (dy === 0) score += 40;
+      else if (dy <= 1) score += 20;
+    }
+    return score;
+  }
 
-  if (n && t2 && n === t2) score += 110;
-  else if (n && t2 && (n.includes(t2) || t2.includes(n))) score += 65;
+  // 2. 本地译名精确匹配
+  if (n && t1 && n === t1) {
+    score += 120;
+    if (year && item?.ProductionYear) {
+      const dy = Math.abs(Number(item.ProductionYear) - year);
+      if (dy === 0) score += 40;
+      else if (dy <= 1) score += 20;
+    }
+    return score;
+  }
+  if (n && t2 && n === t2) {
+    score += 110;
+    if (year && item?.ProductionYear) {
+      const dy = Math.abs(Number(item.ProductionYear) - year);
+      if (dy === 0) score += 40;
+      else if (dy <= 1) score += 20;
+    }
+    return score;
+  }
 
-  if (year && item?.ProductionYear) {
-    const dy = Math.abs(Number(item.ProductionYear) - year);
-    if (dy === 0) score += 40;
-    else if (dy <= 1) score += 20;
+  // 3. OriginalTitle 包含匹配（需要长度验证）
+  if (nOrig && t2) {
+    const lenRatio = nOrig.length / Math.max(t2.length, 1);
+    if (lenRatio <= 1.5 && lenRatio >= 0.67) {
+      if (nOrig.includes(t2) || t2.includes(nOrig)) {
+        score += 65;
+        if (year && item?.ProductionYear) {
+          const dy = Math.abs(Number(item.ProductionYear) - year);
+          if (dy === 0) score += 40;
+          else if (dy <= 1) score += 20;
+        }
+        return score;
+      }
+    }
+  }
+
+  // 4. 本地译名包含匹配 - 严格长度验证（避免摩斯探长问题）
+  const lenRatio = n.length / Math.max(t1.length, t2.length || 1);
+  if (lenRatio <= 1.5 && lenRatio >= 0.67) {
+    if ((n && t1 && (n.includes(t1) || t1.includes(n))) || (n && t2 && (n.includes(t2) || t2.includes(n)))) {
+      score += 50;
+      if (year && item?.ProductionYear) {
+        const dy = Math.abs(Number(item.ProductionYear) - year);
+        if (dy === 0) score += 40;
+        else if (dy <= 1) score += 20;
+      }
+      return score;
+    }
   }
 
   return score;
@@ -79,7 +130,7 @@ async function searchBestItemByTitle(params: {
   const all: EmbyItem[] = [];
 
   for (const term of terms) {
-    const u = `${params.base}/Items?SearchTerm=${encodeURIComponent(term)}&IncludeItemTypes=${params.includeType}&Recursive=true&api_key=${params.embyKey}&Limit=50&Fields=Name,ProductionYear,ProviderIds`;
+    const u = `${params.base}/Items?SearchTerm=${encodeURIComponent(term)}&IncludeItemTypes=${params.includeType}&Recursive=true&api_key=${params.embyKey}&Limit=50&Fields=Name,OriginalTitle,ProductionYear,ProviderIds`;
     try {
       const data = await fetchJsonWithRetry(u, 5000, 1);
       all.push(...(data?.Items ?? []));
@@ -98,7 +149,7 @@ async function searchBestItemByTitle(params: {
   let best: EmbyItem | null = null;
   let bestScore = -1;
   for (const x of dedup.values()) {
-    const s = scoreMatch(x, params.title, params.originalTitle, params.year, params.tmdbId);
+    const s = scoreMatch(x, params.title, params.originalTitle, params.year, params.tmdbId, x.OriginalTitle);
     if (s > bestScore) {
       bestScore = s;
       best = x;
