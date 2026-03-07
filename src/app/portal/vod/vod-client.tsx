@@ -675,10 +675,10 @@ export function VodClient() {
                       ) : (
                         <div className="w-[70px] h-[105px] rounded-[8px] bg-gradient-to-br from-[#e4eaf5] to-[#cbd6e9] shrink-0" />
                       )}
-                      <div className="flex-1 min-w-0 flex flex-col justify-center">
+                      <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
                         <div className="text-[18px] font-bold text-[#222] truncate">{r.title}</div>
-                        <div className="text-sm text-[#888] mt-1">{r.mediaType === "TV" && r.season ? `第${r.season}季 · ` : ""}{r.year || "-"}</div>
-                        <div className="mt-2">
+                        <div className="text-sm text-[#888]">{r.mediaType === "TV" && r.season ? `第${r.season}季 · ` : ""}{r.year || "-"}</div>
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className={`inline-flex items-center px-3 py-1 rounded-[6px] text-[13px] font-bold ${
                             r.bizStatus === "COMPLETED"
                               ? "bg-[#f0f0f0] text-[#888]"
@@ -687,8 +687,15 @@ export function VodClient() {
                             {r.bizStatus === "COMPLETED" ? "已完成" : r.bizStatus === "PENDING" ? "待处理" : r.bizStatus === "NO_RESOURCE" ? "无资源" : r.bizStatus === "CANNOT_UPDATE" ? "无法更新" : "进行中"}
                           </span>
                         </div>
+                        {r.note ? (
+                          <div className="text-[12px] text-[#666] bg-[#f8f9fa] border border-[#eaeaea] rounded px-2 py-1">
+                            备注：{r.note}
+                          </div>
+                        ) : null}
                         {r.adminNote ? (
-                          <div className="text-[12px] text-[#888] mt-2 truncate">管理员回复：{String(r.adminNote).slice(0, 30)}</div>
+                          <div className="text-[12px] text-[#e3001b] bg-[#fff7f8] border border-[#f3d4d8] rounded px-2 py-1">
+                            管理员回复：{r.adminNote}
+                          </div>
                         ) : null}
                       </div>
                       <div className="shrink-0 self-start">

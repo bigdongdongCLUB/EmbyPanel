@@ -113,7 +113,7 @@ export async function GET(req: Request) {
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * pageSize,
       take: pageSize,
-      select: { id: true, title: true, titleOriginal: true, mediaType: true, season: true, status: true, bizStatus: true, createdAt: true, adminNote: true, posterPath: true, year: true },
+      select: { id: true, title: true, titleOriginal: true, mediaType: true, season: true, status: true, bizStatus: true, createdAt: true, adminNote: true, posterPath: true, year: true, note: true },
     }),
   ]);
 
