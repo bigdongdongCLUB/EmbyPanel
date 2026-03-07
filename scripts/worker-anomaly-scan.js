@@ -102,6 +102,18 @@ async function ensureRepeatable(queue) {
       removeOnFail: 1000,
     }
   );
+
+  // 订阅到期提醒：每小时运行一次（减少资源消耗）
+  await queue.add(
+    "expiry-reminder",
+    { kind: "subscription-expiry-reminder" },
+    {
+      jobId: "repeat:expiry-reminder",
+      repeat: { pattern: "0 * * * *", tz: "Asia/Shanghai" },
+      removeOnComplete: true,
+      removeOnFail: 1000,
+    }
+  );
 }
 
 async function callInternal(path) {
@@ -168,10 +180,21 @@ async function main() {
         return { snapshot };
       }
 
+      if (job.name === "expiry-reminder") {
+        const expiryReminder = await callInternal("/api/admin/jobs/subscription-expiry-reminder");
+        console.log("[worker] expiry-reminder", {
+          jobId: job.id,
+          noticeDays: expiryReminder?.noticeDays,
+          checked: expiryReminder?.checked,
+          sent: expiryReminder?.sent,
+          errors: expiryReminder?.errors,
+        });
+        return { expiryReminder };
+      }
+
       const started = Date.now();
       const health = await callInternal("/api/admin/jobs/emby-health-check");
       const expiryDisable = await callInternal("/api/admin/jobs/subscription-expiry-disable");
-      const expiryReminder = await callInternal("/api/admin/jobs/subscription-expiry-reminder");
       const result = await callInternal("/api/admin/jobs/anomaly-scan");
       const ms = Date.now() - started;
       console.log(`[worker] periodic jobs ok in ${ms}ms`, {
@@ -181,15 +204,12 @@ async function main() {
         expiryUsers: expiryDisable?.usersScanned,
         expiryLinksDisabled: expiryDisable?.linksDisabled,
         expiryWarnings: expiryDisable?.apiWarnings,
-        reminderChecked: expiryReminder?.checked,
-        reminderSent: expiryReminder?.sent,
-        reminderErrors: expiryReminder?.errors,
         createdEvents: result?.createdEvents,
         scannedSessions: result?.scannedSessions,
         warnings: result?.warnings,
         penaltiesApplied: result?.penaltiesApplied,
       });
-      return { health, expiryDisable, expiryReminder, anomaly: result };
+      return { health, expiryDisable, anomaly: result };
     },
     {
       connection,
