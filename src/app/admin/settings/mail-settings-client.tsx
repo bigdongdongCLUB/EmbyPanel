@@ -20,6 +20,7 @@ export function MailSettingsClient() {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [smtpTestedOk, setSmtpTestedOk] = useState(false);
   const [form, setForm] = useState<FormState>({
     enabled: false,
     smtpHost: "",
@@ -38,16 +39,20 @@ export function MailSettingsClient() {
       const res = await fetch("/api/admin/settings/mail", { cache: "no-store" });
       const json = await res.json().catch(() => null);
       if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+      const data = json?.data ?? {};
+      const smtpConfigured = !!(data.smtpHost && data.smtpPort && data.fromEmail);
       setForm({
-        enabled: !!json?.data?.enabled,
-        smtpHost: String(json?.data?.smtpHost ?? ""),
-        secureMode: (json?.data?.secureMode as any) || "ssl",
-        smtpPort: String(json?.data?.smtpPort ?? "465"),
-        smtpUser: String(json?.data?.smtpUser ?? ""),
+        enabled: !!data.enabled,
+        smtpHost: String(data.smtpHost ?? ""),
+        secureMode: (data.secureMode as any) || "ssl",
+        smtpPort: String(data.smtpPort ?? "465"),
+        smtpUser: String(data.smtpUser ?? ""),
         smtpPassword: "",
-        fromEmail: String(json?.data?.fromEmail ?? ""),
-        fromName: String(json?.data?.fromName ?? ""),
+        fromEmail: String(data.fromEmail ?? ""),
+        fromName: String(data.fromName ?? ""),
       });
+      // 如果 SMTP 配置已保存且启用，认为已测试通过（宽松模式）
+      setSmtpTestedOk(smtpConfigured && !!data.enabled);
     } catch (e: any) {
       setError(e?.message || "load_failed");
     } finally {
@@ -74,7 +79,21 @@ export function MailSettingsClient() {
 
         <div className="space-y-1.5">
           <div className="text-sm">启用邮件通知</div>
-          <ToggleSwitch checked={form.enabled} onChange={(next) => setForm((s) => ({ ...s, enabled: next }))} textOn="已启用" textOff="已禁用" />
+          <ToggleSwitch
+            checked={form.enabled}
+            onChange={(next) => {
+              if (next && !smtpTestedOk) {
+                alert("需要先设置 SMTP 服务器且测试成功后才可以启用邮件通知");
+                return;
+              }
+              setForm((s) => ({ ...s, enabled: next }));
+            }}
+            textOn="已启用"
+            textOff="已禁用"
+          />
+          {!smtpTestedOk && form.enabled ? (
+            <p className="text-xs text-orange-600">⚠️ SMTP 未测试或测试失败，邮件通知可能无法正常工作</p>
+          ) : null}
         </div>
 
         <div>
@@ -139,6 +158,10 @@ export function MailSettingsClient() {
                 if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
                 alert("保存设置成功");
                 setForm((s) => ({ ...s, smtpPassword: "" }));
+                // 保存成功后如果 SMTP 配置完整，标记为已测试（宽松模式，允许先保存再测试）
+                if (form.smtpHost && form.smtpPort && form.fromEmail) {
+                  setSmtpTestedOk(true);
+                }
               } catch (e: any) {
                 setError(e?.message || "save_failed");
               } finally {
@@ -163,6 +186,7 @@ export function MailSettingsClient() {
                 });
                 const json = await res.json().catch(() => null);
                 if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+                setSmtpTestedOk(true);
                 alert("测试邮件发送成功");
               } catch (e: any) {
                 setError(e?.message || "test_failed");
