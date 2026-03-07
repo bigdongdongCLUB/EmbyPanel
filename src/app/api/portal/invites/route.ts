@@ -158,6 +158,7 @@ export async function GET() {
       })();
       const eligibleByTime = enabledAtMs ? !!(invitedAtMs && invitedAtMs >= enabledAtMs) : true;
 
+      // 返利系统关闭时，返利金额为 0；否则正常计算
       const rebateAmountYuan = rebateEnabled && eligibleByTime ? ((amountCents / 100) * (Number.isFinite(rate1) ? rate1 : 0)) / 100 : 0;
 
       return {
@@ -166,7 +167,7 @@ export async function GET() {
         planName,
         payCycle: payCycleText(payCycle),
         paidAt: fmtYmd(orderRef?.paidAt ?? orderRef?.createdAt ?? subRef?.createdAt ?? null),
-        rebateAmount: amountCents > 0 ? rebateAmountYuan.toFixed(2) : "0.00",
+        rebateAmount: rebateAmountYuan.toFixed(2),
       };
     })
     .sort((a, b) => b.registerDate.localeCompare(a.registerDate));

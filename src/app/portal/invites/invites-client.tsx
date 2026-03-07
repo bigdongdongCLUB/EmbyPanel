@@ -150,7 +150,12 @@ export function InvitesClient() {
           </div>
         </div>
       ) : (
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-600 font-medium">系统暂时未启用返利系统，您的邀请无法获得返利</div>
+        <div className="bg-[#f4f5f7] rounded-2xl p-8">
+          <div className="text-base font-bold mb-3 text-[#222]">返利说明</div>
+          <div className="text-sm text-[#666] leading-relaxed">
+            返利系统暂未开启，您的邀请记录仍会正常显示，但返利金额为 ¥0.00
+          </div>
+        </div>
       )}
 
       <div className="bg-white rounded-2xl border border-[#eaeaea] overflow-auto">
