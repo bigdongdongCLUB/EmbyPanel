@@ -13,6 +13,7 @@ const PENALTY_RECORDS_KEY = "anomaly_penalty_records";
 const PENALTY_CONFIG_KEY = "anomaly_penalty_config";
 const PENALTY_STACK_WINDOW_DAYS = 7;
 const PENALTY_STACK_MULTIPLIER_MAX = 4;
+const PENALTY_DETECTION_WINDOW_MINUTES = 30;
 
 function normalizeIp(ipRaw: string): string {
   const ip = (ipRaw ?? "").trim();
@@ -192,11 +193,14 @@ export async function POST(req: Request) {
         const key = stateKey(server.id, link.userId);
         detectedKeys.add(key);
 
-        const prev = penaltyState[key] ?? { consecutive: 0, penaltyActive: false };
-        const nextConsecutive = Number(prev.consecutive ?? 0) + 1;
+        const prev = penaltyState[key] ?? { detectionTimes: [], penaltyActive: false };
+        const detectionTimes: string[] = Array.isArray(prev.detectionTimes) ? prev.detectionTimes : [];
+        const cutoffMs = now.getTime() - PENALTY_DETECTION_WINDOW_MINUTES * 60 * 1000;
+        const recentDetections = detectionTimes.filter((t: string) => Date.parse(t) >= cutoffMs);
+        recentDetections.push(now.toISOString());
         penaltyState[key] = {
           ...prev,
-          consecutive: nextConsecutive,
+          detectionTimes: recentDetections,
           lastDetectedAt: now.toISOString(),
           penaltyActive: pendingPenaltyKeys.has(key),
         };
@@ -241,7 +245,7 @@ export async function POST(req: Request) {
         });
         createdEvents += 1;
 
-        if (penaltyConfig.enabled && nextConsecutive >= 2 && !pendingPenaltyKeys.has(key)) {
+        if (penaltyConfig.enabled && recentDetections.length >= 2 && !pendingPenaltyKeys.has(key)) {
           const recentAppliedPenaltyCount = penaltyRecords.filter((r) =>
             isAppliedPenaltyRecordInWindow({
               record: r,
@@ -325,7 +329,7 @@ export async function POST(req: Request) {
               stopErrors: stopErrors.length ? stopErrors.slice(0, 5) : undefined,
               logoutErrors: logoutErrors.length ? logoutErrors.slice(0, 5) : undefined,
               revokeErrors: revokeResult.errors?.length ? revokeResult.errors : undefined,
-              reason: `连续两次5分钟检测命中异常并发播放，按1周内第${penaltyMultiplier}次处罚封禁${penaltyMinutes}分钟（基础${penaltyConfig.durationMinutes}分钟，倍率x${penaltyMultiplier}）`,
+              reason: `30 分钟内累计 2 次检测命中异常并发播放，按1周内第${penaltyMultiplier}次处罚封禁${penaltyMinutes}分钟（基础${penaltyConfig.durationMinutes}分钟，倍率x${penaltyMultiplier}）`,
             });
           } else {
             warnings += 1;
@@ -346,7 +350,7 @@ export async function POST(req: Request) {
               stoppedSessions,
               stopErrors: stopErrors.length ? stopErrors.slice(0, 5) : undefined,
               error: disableError || "disable_failed",
-              reason: `连续两次5分钟检测命中异常并发播放，计划按x${penaltyMultiplier}封禁${penaltyMinutes}分钟，但封禁失败`,
+              reason: `30 分钟内累计 2 次检测命中异常并发播放，计划按x${penaltyMultiplier}封禁${penaltyMinutes}分钟，但封禁失败`,
             });
           }
         }
@@ -354,16 +358,23 @@ export async function POST(req: Request) {
     }
 
     for (const k of Object.keys(penaltyState)) {
+      const prev = penaltyState[k] ?? {};
+      const detectionTimes: string[] = Array.isArray(prev.detectionTimes) ? prev.detectionTimes : [];
+      const cutoffMs = now.getTime() - PENALTY_DETECTION_WINDOW_MINUTES * 60 * 1000;
+      const recentDetections = detectionTimes.filter((t: string) => Date.parse(t) >= cutoffMs);
+      
       if (!detectedKeys.has(k)) {
-        const prev = penaltyState[k] ?? {};
         penaltyState[k] = {
           ...prev,
-          consecutive: 0,
+          detectionTimes: recentDetections,
           penaltyActive: pendingPenaltyKeys.has(k),
         };
       }
+      
       const v = penaltyState[k] ?? {};
-      if (!v.penaltyActive && !v.consecutive) delete penaltyState[k];
+      if (!v.penaltyActive && (!v.detectionTimes || !Array.isArray(v.detectionTimes) || v.detectionTimes.length === 0)) {
+        delete penaltyState[k];
+      }
     }
 
     const recordsRetentionCutoff = Date.now() - 7 * 24 * 3600 * 1000;
