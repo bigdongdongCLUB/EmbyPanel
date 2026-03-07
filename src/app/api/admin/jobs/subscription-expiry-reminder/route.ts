@@ -123,6 +123,8 @@ export async function POST(req: Request) {
     const key = String(sub.id);
     const endAtIso = new Date(sub.endAt).toISOString();
     const prev = sentState[key];
+    // 去重逻辑：在通知窗口内（noticeDays 天）只发送一次
+    // 如果该订阅已发送过且 endAt 未变，跳过（避免重复发送）
     if (prev?.endAt === endAtIso) continue;
 
     // 剩余天数计算：向下取整，例如剩余 2 天 23 小时 = 2 天
@@ -154,6 +156,15 @@ export async function POST(req: Request) {
       sent += 1;
     } catch {
       errors += 1;
+    }
+  }
+
+  // 清理过期的发送记录（超过 noticeDays + 7 天的记录）
+  const cleanupCutoff = now.getTime() - (noticeDays + 7) * 24 * 3600 * 1000;
+  for (const k of Object.keys(sentState)) {
+    const sentAtMs = Date.parse(sentState[k]?.sentAt || "");
+    if (!Number.isFinite(sentAtMs) || sentAtMs < cleanupCutoff) {
+      delete sentState[k];
     }
   }
 
