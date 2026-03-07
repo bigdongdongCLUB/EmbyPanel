@@ -11,8 +11,6 @@ const ORDER = [
   "sub_expiring",
   "sub_expired",
   "order_confirm",
-  "worker_reply",
-  "invite_user",
 ] as const;
 
 const LABELS: Record<string, string> = {
@@ -21,11 +19,9 @@ const LABELS: Record<string, string> = {
   sub_expiring: "订阅即将到期警告",
   sub_expired: "订阅已过期通知",
   order_confirm: "订单确认邮件",
-  worker_reply: "工单回复通知",
-  invite_user: "用户邀请邮件",
 };
 
-const VARS = ["{{siteName}}", "{{siteUrl}}", "{{username}}", "{{email}}", "{{verificationCode}}", "{{resetUrl}}", "{{expireAt}}", "{{orderNo}}", "{{amount}}", "{{ticketNo}}", "{{inviterName}}", "{{inviteUrl}}"];
+const VARS = ["{{siteName}}", "{{siteUrl}}", "{{username}}", "{{email}}", "{{verificationCode}}", "{{resetUrl}}", "{{expireAt}}", "{{orderNo}}", "{{amount}}"];
 
 export function MailTemplatesClient() {
   const [loading, setLoading] = useState(true);
@@ -152,10 +148,7 @@ export function MailTemplatesClient() {
                 .replaceAll("{{resetUrl}}", "https://example.com/reset")
                 .replaceAll("{{expireAt}}", "2026-12-31")
                 .replaceAll("{{orderNo}}", "NO20260001")
-                .replaceAll("{{amount}}", "99")
-                .replaceAll("{{ticketNo}}", "TK10086")
-                .replaceAll("{{inviterName}}", "admin")
-                .replaceAll("{{inviteUrl}}", "https://example.com/invite");
+                .replaceAll("{{amount}}", "99");
               const w = window.open("", "_blank", "width=900,height=700");
               if (!w) return;
               w.document.write(html);
