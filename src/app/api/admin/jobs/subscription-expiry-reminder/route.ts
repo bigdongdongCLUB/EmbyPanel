@@ -140,7 +140,7 @@ export async function POST(req: Request) {
       expireAt: formatYmd(new Date(sub.endAt)),
       expiryDate: formatYmd(new Date(sub.endAt)),
       subscriptionName: String(sub.plan?.name || "订阅"),
-      renewUrl: siteUrl ? `${siteUrl.replace(/\/+$/, "")}/portal/purchase` : "/portal/purchase",
+      renewUrl: siteUrl ? `${siteUrl.replace(/\/+$/, "")}` : "/",
       remainingDays: String(remainingDays),
       currentYear: String(new Date().getFullYear()),
     };

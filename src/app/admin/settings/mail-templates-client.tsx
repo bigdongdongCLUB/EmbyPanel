@@ -149,7 +149,7 @@ export function MailTemplatesClient() {
                 .replaceAll("{{expireAt}}", "2026-12-31")
                 .replaceAll("{{orderNo}}", "NO20260001")
                 .replaceAll("{{amount}}", "99")
-                .replaceAll("{{renewUrl}}", "https://panel.bestemby.com");
+                .replaceAll("{{renewUrl}}", "https://example.com");
               const w = window.open("", "_blank", "width=900,height=700");
               if (!w) return;
               w.document.write(html);
