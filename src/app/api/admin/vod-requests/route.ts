@@ -44,16 +44,29 @@ export async function GET(req: Request) {
 
   const since30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-  const [total, pending, noResource, processing, cannotUpdate, completed, recentTvCount, recentMovieCount, recentTopUserGroup, rows] = await Promise.all([
-    prisma.vodRequest.count({ where }),
-    prisma.vodRequest.count({ where: { ...where, bizStatus: "PENDING" } }),
-    prisma.vodRequest.count({ where: { ...where, bizStatus: "NO_RESOURCE" } }),
-    prisma.vodRequest.count({ where: { ...where, bizStatus: "PROCESSING" } }),
-    prisma.vodRequest.count({ where: { ...where, bizStatus: "CANNOT_UPDATE" } }),
-    prisma.vodRequest.count({ where: { ...where, bizStatus: "COMPLETED" } }),
+  const [
+    total,
+    pending,
+    noResource,
+    processing,
+    cannotUpdate,
+    completed,
+    recentTvCount,
+    recentMovieCount,
+    recentTopUserGroup,
+    filteredTotal,
+    rows,
+  ] = await Promise.all([
+    prisma.vodRequest.count(),
+    prisma.vodRequest.count({ where: { bizStatus: "PENDING" } }),
+    prisma.vodRequest.count({ where: { bizStatus: "NO_RESOURCE" } }),
+    prisma.vodRequest.count({ where: { bizStatus: "PROCESSING" } }),
+    prisma.vodRequest.count({ where: { bizStatus: "CANNOT_UPDATE" } }),
+    prisma.vodRequest.count({ where: { bizStatus: "COMPLETED" } }),
     prisma.vodRequest.count({ where: { createdAt: { gte: since30 }, mediaType: "TV" } }),
     prisma.vodRequest.count({ where: { createdAt: { gte: since30 }, mediaType: "MOVIE" } }),
     prisma.vodRequest.groupBy({ by: ["userId"], where: { createdAt: { gte: since30 } }, _count: { _all: true }, orderBy: { _count: { userId: "desc" } }, take: 1 }),
+    prisma.vodRequest.count({ where }),
     prisma.vodRequest.findMany({
       where,
       include: { user: { select: { id: true, username: true, email: true } } },
@@ -83,7 +96,7 @@ export async function GET(req: Request) {
       recentTopUser: topUser ? (topUser.username || topUser.email || "-") : "-",
       recentTopUserCount: topUserCount,
     },
-    pagination: { page, pageSize, total, totalPages: Math.max(1, Math.ceil(total / pageSize)) },
+    pagination: { page, pageSize, total: filteredTotal, totalPages: Math.max(1, Math.ceil(filteredTotal / pageSize)) },
     rows: rows.map((r) => ({
       id: r.id,
       tmdbId: r.tmdbId,
