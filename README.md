@@ -6,7 +6,7 @@
 
 基于 Next.js 打造 · 用户门户 + 管理后台双界面架构 · 高效管理订阅、用户与运维流程
 
-<img width="3060" height="1570" alt="ScreenShot_2026-02-26_140841_827" src="https://github.com/user-attachments/assets/d2edef28-0868-4510-8229-62ee292433c0" />
+<img width="3316" height="1996" alt="ScreenShot_2026-03-09_022342_895" src="https://github.com/user-attachments/assets/5730daa3-3737-4268-bf9a-16e0414c8a95" />
 
 </div>
 
