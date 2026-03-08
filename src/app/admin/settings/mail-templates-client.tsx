@@ -21,7 +21,7 @@ const LABELS: Record<string, string> = {
   order_confirm: "订单确认邮件",
 };
 
-const VARS = ["{{siteName}}", "{{siteUrl}}", "{{username}}", "{{email}}", "{{verificationCode}}", "{{resetUrl}}", "{{expireAt}}", "{{orderNo}}", "{{amount}}"];
+const VARS = ["{{siteName}}", "{{siteUrl}}", "{{username}}", "{{email}}", "{{verificationCode}}", "{{resetUrl}}", "{{expireAt}}", "{{orderNo}}", "{{amount}}", "{{renewUrl}}"];
 
 export function MailTemplatesClient() {
   const [loading, setLoading] = useState(true);
@@ -148,7 +148,8 @@ export function MailTemplatesClient() {
                 .replaceAll("{{resetUrl}}", "https://example.com/reset")
                 .replaceAll("{{expireAt}}", "2026-12-31")
                 .replaceAll("{{orderNo}}", "NO20260001")
-                .replaceAll("{{amount}}", "99");
+                .replaceAll("{{amount}}", "99")
+                .replaceAll("{{renewUrl}}", "https://panel.bestemby.com");
               const w = window.open("", "_blank", "width=900,height=700");
               if (!w) return;
               w.document.write(html);

@@ -113,7 +113,7 @@ const PRESET_OVERRIDES: Record<string, { subject: string; bodyHtml: string }> = 
   <p>您的账户已暂停使用，请续费以恢复服务：</p>
   
   <div style="text-align: center; margin: 30px 0;">
-    <a href="{{renewUrl}}" style="background: #dc3545; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">
+    <a href="https://panel.bestemby.com" style="background: #dc3545; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">
       立即续费恢复服务
     </a>
   </div>
