@@ -27,6 +27,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [inviteCode, setInviteCode] = useState("");
+  const [inviteCodeStatus, setInviteCodeStatus] = useState<"idle" | "checking" | "valid" | "invalid">("idle");
   const [pwdVisible, setPwdVisible] = useState(false);
   const [confirmPwdVisible, setConfirmPwdVisible] = useState(false);
   const [registerError, setRegisterError] = useState<string | null>(null);
@@ -81,6 +82,7 @@ export default function LoginPage() {
     !!confirmPassword &&
     !confirmError &&
     (!inviteOnly || !!inviteCode.trim()) &&
+    (inviteCode.trim() ? inviteCodeStatus === "valid" : true) &&
     (!requireEmailVerification || !!emailCode.trim());
 
   useEffect(() => {
@@ -105,6 +107,32 @@ export default function LoginPage() {
       })
       .catch(() => null);
   }, []);
+
+  useEffect(() => {
+    const code = inviteCode.trim();
+    if (!code) {
+      setInviteCodeStatus("idle");
+      return;
+    }
+
+    let cancelled = false;
+    setInviteCodeStatus("checking");
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/public/invite-code?code=${encodeURIComponent(code)}`, { cache: "no-store" });
+        const json = await res.json().catch(() => null);
+        if (cancelled) return;
+        setInviteCodeStatus(json?.valid ? "valid" : "invalid");
+      } catch {
+        if (!cancelled) setInviteCodeStatus("invalid");
+      }
+    }, 300);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [inviteCode]);
 
   async function doLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -173,6 +201,7 @@ export default function LoginPage() {
         else if (json?.error === "email_taken") setRegisterError("邮箱已被使用");
         else if (json?.error === "registration_closed") setRegisterError("当前已关闭注册");
         else if (json?.error === "invite_required") setRegisterError("当前仅限邀请码注册");
+        else if (json?.error === "invite_invalid") setRegisterError("邀请码错误");
         else if (json?.error === "reserved_username") setRegisterError("该用户名为系统保留，无法注册");
         else if (json?.error === "weak_password") setRegisterError("密码复杂度不符合要求");
         else if (json?.error === "email_code_required") setRegisterError("请先输入邮箱验证码");
@@ -335,14 +364,19 @@ export default function LoginPage() {
             </div>
             {confirmError ? <div className="text-red-500 text-[11px]">{confirmError}</div> : null}
 
-            <div className="border border-gray-200 rounded-xl px-3 py-1.5 flex items-center gap-2">
+            <div className={`border border-gray-200 rounded-xl px-3 py-1.5 flex items-center gap-2 ${inviteCode && inviteCodeStatus === "invalid" ? "border-red-300 bg-red-50" : inviteCode && inviteCodeStatus === "valid" ? "border-green-300 bg-green-50" : ""}`}>
               <input
-                className="w-full text-sm outline-none"
+                className="w-full text-sm outline-none bg-transparent"
                 placeholder={inviteOnly ? "邀请码（必填）" : "邀请码（选填）"}
                 value={inviteCode}
                 onChange={(e) => setInviteCode(e.target.value)}
               />
             </div>
+            {inviteCode.trim() ? (
+              inviteCodeStatus === "checking" ? <div className="text-gray-500 text-[11px]">校验中...</div> :
+              inviteCodeStatus === "valid" ? <div className="text-green-600 text-[11px]">✓ 邀请码有效</div> :
+              inviteCodeStatus === "invalid" ? <div className="text-red-500 text-[11px]">邀请码错误</div> : null
+            ) : null}
 
             {requireEmailVerification ? (
               <div className="border border-gray-200 rounded-xl px-3 py-1.5 flex items-center gap-2">

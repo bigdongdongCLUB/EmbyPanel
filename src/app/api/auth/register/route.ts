@@ -103,6 +103,31 @@ export async function POST(req: Request) {
   const inviteCodeRaw = (parsed.data.inviteCode || "").trim();
   const inviteCode = inviteCodeRaw.toUpperCase();
 
+  let inviterUserId: string | null = null;
+  if (inviteCode) {
+    const codeRow = await prisma.appSetting.findUnique({ where: { key: CODE_MAP_KEY } });
+    const codeMap = ((codeRow?.valueJson as any) ?? {}) as Record<string, string>;
+
+    for (const [uid, code] of Object.entries(codeMap)) {
+      if (String(code || "").toUpperCase() === inviteCode) {
+        inviterUserId = uid;
+        break;
+      }
+    }
+
+    if (!inviterUserId) {
+      const inviter = await prisma.user.findFirst({
+        where: { username: { equals: inviteCodeRaw, mode: "insensitive" } },
+        select: { id: true },
+      });
+      inviterUserId = inviter?.id ?? null;
+    }
+
+    if (!inviterUserId) {
+      return NextResponse.json({ error: "invite_invalid" }, { status: 400 });
+    }
+  }
+
   const userCount = await prisma.user.count();
   const role = userCount === 0 ? "ADMIN" : "USER";
 
@@ -123,26 +148,8 @@ export async function POST(req: Request) {
 
   // 邀请关系记录（轻量存于 AppSetting）
   if (inviteCode) {
-    const [codeRow, relRow] = await Promise.all([
-      prisma.appSetting.findUnique({ where: { key: CODE_MAP_KEY } }),
-      prisma.appSetting.findUnique({ where: { key: REL_KEY } }),
-    ]);
-
-    const codeMap = ((codeRow?.valueJson as any) ?? {}) as Record<string, string>;
+    const relRow = await prisma.appSetting.findUnique({ where: { key: REL_KEY } });
     const relMap = ((relRow?.valueJson as any) ?? {}) as Record<string, any>;
-
-    let inviterUserId: string | null = null;
-    for (const [uid, code] of Object.entries(codeMap)) {
-      if (String(code).toUpperCase() === inviteCode) {
-        inviterUserId = uid;
-        break;
-      }
-    }
-
-    if (!inviterUserId) {
-      const inviter = await prisma.user.findUnique({ where: { username: inviteCodeRaw }, select: { id: true } });
-      inviterUserId = inviter?.id ?? null;
-    }
 
     if (inviterUserId && inviterUserId !== user.id) {
       relMap[user.id] = { inviterUserId, inviteCode: inviteCodeRaw || inviteCode, createdAt: new Date().toISOString() };
