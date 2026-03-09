@@ -584,7 +584,7 @@ export function ServersClient() {
               </div>
               <div className="flex gap-2">
                 <button
-                  className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none"
+                  className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none cursor-pointer transition-colors hover:bg-white hover:border-[#d9d9d9] hover:shadow-sm"
                   onClick={async () => {
                     const res = await fetch(`/api/admin/emby-servers/${s.id}/test`, { method: "POST" });
                     const txt = await res.text();
@@ -605,7 +605,7 @@ export function ServersClient() {
                 </button>
 
                 <button
-                  className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none"
+                  className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none cursor-pointer transition-colors hover:bg-white hover:border-[#d9d9d9] hover:shadow-sm"
                   onClick={async () => {
                     setStatsModal({ open: true, id: s.id, name: s.name, loading: true, data: null, error: null });
                     try {
@@ -622,7 +622,7 @@ export function ServersClient() {
                 </button>
 
                 <button
-                  className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none"
+                  className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none cursor-pointer transition-colors hover:bg-white hover:border-[#d9d9d9] hover:shadow-sm"
                   onClick={async () => {
                     setUsersQ("");
                     setUsersPage(1);
@@ -642,7 +642,7 @@ export function ServersClient() {
                 </button>
 
                 <button
-                  className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none"
+                  className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none cursor-pointer transition-colors hover:bg-white hover:border-[#d9d9d9] hover:shadow-sm"
                   onClick={async () => {
                     setModal({
                       open: true,
@@ -684,7 +684,7 @@ export function ServersClient() {
                 {/* 服务器默认常驻启用，移除启用/禁用按钮 */}
 
                 <button
-                  className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none text-red-600"
+                  className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none text-red-600 cursor-pointer transition-colors hover:bg-red-50 hover:border-red-200 hover:shadow-sm"
                   onClick={async () => {
                     if (!(await (window as any).showConfirm(`确定删除服务器：${s.name} ?`))) return;
                     const res = await fetch(`/api/admin/emby-servers/${s.id}`, { method: "DELETE" });
