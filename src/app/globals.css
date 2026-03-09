@@ -51,6 +51,11 @@ body {
   padding-bottom: 4px;
 }
 
+/* 面板按钮统一圆角：与“+创建用户”按钮保持一致（rounded-lg），但不覆盖圆形按钮 */
+.panel-compact button:not([class*="rounded-full"]):not([class*="rounded-none"]) {
+  border-radius: 0.5rem !important;
+}
+
 /* 面板按钮/下拉统一交互反馈 */
 .panel-compact button:not(:disabled),
 .panel-compact select:not(:disabled) {
