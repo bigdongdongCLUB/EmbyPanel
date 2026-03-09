@@ -216,7 +216,7 @@ export function MonitoringPenaltiesClient() {
                             onClick={() => manualUnban(r.id)}
                             disabled={unbanningId === r.id}
                           >
-                            {unbanningId === r.id ? "解禁中..." : isPending ? "解禁" : "重试解禁"}
+                            {unbanningId === r.id ? "解禁中..." : "解禁"}
                           </button>
                         ) : null}
                       </div>
