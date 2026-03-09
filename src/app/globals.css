@@ -51,6 +51,42 @@ body {
   padding-bottom: 4px;
 }
 
+/* 面板按钮统一交互反馈 */
+.panel-compact button:not(:disabled) {
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    filter 0.18s ease,
+    transform 0.18s ease;
+}
+
+.panel-compact button:not(:disabled):hover {
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+}
+
+/* 默认浅色按钮：hover 时背景/边框更明显 */
+.panel-compact button[class*="bg-white"]:not(:disabled):hover,
+.panel-compact button[class*="bg-[#f4f5f7]"]:not(:disabled):hover,
+.panel-compact button[class*="bg-gray-"]:not(:disabled):hover {
+  background-color: #ffffff;
+  border-color: #d9d9d9 !important;
+}
+
+/* 删除/危险按钮：单独使用浅红 hover */
+.panel-compact button[class*="text-red-600"]:not(:disabled):hover,
+.panel-compact button[class*="text-red-500"]:not(:disabled):hover {
+  background-color: #fef2f2;
+  border-color: #fecaca !important;
+}
+
+/* 红色主按钮：保留红色，不改成其它边框色，仅做轻微明暗和阴影反馈 */
+.panel-compact button[class*="bg-[#e3001b]"]:not(:disabled):hover,
+.panel-compact button[class*="bg-red-"]:not(:disabled):hover {
+  filter: brightness(0.97);
+}
+
 /* 侧栏分割线单独覆盖（避免被面板全局边框色规则覆盖） */
 .panel-compact .sidebar-divider {
   border-color: rgb(41 41 41) !important;
