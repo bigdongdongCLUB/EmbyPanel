@@ -12,6 +12,7 @@ type PenaltyRecord = {
   disabledAt: string;
   unlockAt: string;
   status: string;
+  lastError?: string;
 };
 
 function formatDateTimeShanghai(v?: string) {
@@ -183,6 +184,8 @@ export function MonitoringPenaltiesClient() {
             <tbody>
               {pageRows.map((r) => {
                 const isPending = r.status === "PENDING";
+                const isRetryableFailedUnban = r.status === "FAILED_UNBAN";
+                const canManualUnban = isPending || isRetryableFailedUnban;
                 const statusText =
                   r.status === "UNBANNED"
                     ? "已解禁"
@@ -204,16 +207,16 @@ export function MonitoringPenaltiesClient() {
                     <td className="py-4 px-3 text-[13px] text-gray-700 leading-6">{formatDateTimeShanghai(r.disabledAt)}</td>
                     <td className="py-4 px-3 text-[13px] text-gray-700 leading-6">{formatDateTimeShanghai(r.unlockAt)}</td>
                     <td className="py-4 px-3 leading-6">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span>{statusText}</span>
-                        {isPending ? (
+                        {canManualUnban ? (
                           <button
                             type="button"
                             className="border border-[#e3001b] text-[#e3001b] bg-white rounded-md px-2 py-1 text-xs hover:bg-[#fff3f4] disabled:opacity-50"
                             onClick={() => manualUnban(r.id)}
                             disabled={unbanningId === r.id}
                           >
-                            {unbanningId === r.id ? "解禁中..." : "解禁"}
+                            {unbanningId === r.id ? "解禁中..." : isPending ? "解禁" : "重试解禁"}
                           </button>
                         ) : null}
                       </div>

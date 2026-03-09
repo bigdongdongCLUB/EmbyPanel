@@ -56,8 +56,9 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   if (index < 0) return NextResponse.json({ error: "record_not_found" }, { status: 404 });
 
   const record = records[index] ?? {};
-  if (String(record.status ?? "") !== "PENDING") {
-    return NextResponse.json({ error: "record_not_pending", status: record.status ?? null }, { status: 409 });
+  const recordStatus = String(record.status ?? "");
+  if (!["PENDING", "FAILED_UNBAN"].includes(recordStatus)) {
+    return NextResponse.json({ error: "record_not_retriable", status: record.status ?? null }, { status: 409 });
   }
 
   const embyServerId = String(record.embyServerId ?? "").trim();
@@ -96,6 +97,7 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
       status: "UNBANNED_MANUAL",
       unbannedAt: nowIso,
       unbanSource: "MANUAL",
+      lastError: undefined,
       ...(clearLimit?.ok
         ? { unbanWarn: undefined }
         : { unbanWarn: `clear_stream_limit_failed: ${String((clearLimit as any)?.body || `HTTP ${(clearLimit as any)?.status || "?"}`)}` }),
