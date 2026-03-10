@@ -444,7 +444,7 @@ export function VodClient() {
   async function loadMyRequests(page = 1) {
     setMyReqLoading(true);
     try {
-      const r = await fetch(`/api/portal/vod/request?page=${page}&pageSize=10`, { cache: "no-store" });
+      const r = await fetch(`/api/portal/vod/request?page=${page}&pageSize=5`, { cache: "no-store" });
       const j = await r.json();
       setMyRequests(j?.rows ?? []);
       setMyReqPage(j?.pagination?.page ?? page);
@@ -721,10 +721,10 @@ export function VodClient() {
                         total={myReqTotal}
                         page={myReqPage}
                         totalPages={myReqTotalPages}
-                        pageSize={10}
+                        pageSize={5}
                         onPageChange={loadMyRequests}
                         onPageSizeChange={() => {}}
-                        pageSizeOptions={[10]}
+                        pageSizeOptions={[5]}
                         showPageSize={false}
                         compactSinglePage
                         simpleGoto
