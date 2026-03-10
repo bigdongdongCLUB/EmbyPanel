@@ -178,7 +178,7 @@ export function PortalClient() {
                       <div className="w-full h-full flex items-center justify-center text-xs text-gray-500 p-2 text-center">{it.title}</div>
                     )}
                     <div className="absolute top-2 left-2">
-                      <span className="text-[11px] font-medium px-1.5 py-0.5 rounded text-white bg-[#e3001b]">
+                      <span className={`text-[11px] font-medium px-1.5 py-0.5 rounded text-white ${it.type === "MOVIE" ? "bg-[#913edb]" : "bg-[#e3001b]"}`}>
                         {it.type === "MOVIE" ? "电影" : "电视剧"}
                       </span>
                     </div>
