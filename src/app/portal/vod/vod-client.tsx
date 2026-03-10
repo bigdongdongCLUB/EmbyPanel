@@ -68,8 +68,8 @@ function PosterCard({ item, inLibrary, onClick }: { item: MediaItem; inLibrary: 
           <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs p-2 text-center">{item.title}</div>
         )}
         <div className="absolute top-1.5 left-1.5">
-          <span className="text-[11px] font-bold px-1.5 py-0.5 rounded text-white bg-[#e3001b] shadow">
-            {item.mediaType === "movie" ? "电影" : "剧集"}
+          <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded text-white shadow ${item.mediaType === "movie" ? "bg-[#913edb]" : "bg-[#e3001b]"}`}>
+            {item.mediaType === "movie" ? "电影" : "电视剧"}
           </span>
         </div>
         {item.rating && item.rating > 0 ? (
