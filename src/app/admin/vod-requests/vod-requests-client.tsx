@@ -232,7 +232,7 @@ export function VodRequestsAdminClient() {
                       <div className="font-medium text-gray-800 truncate">{r.title}</div>
                       <div className="text-xs text-gray-500 truncate">{r.titleOriginal || "-"}</div>
                       <div className="text-xs text-gray-500 mt-1">
-                        <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] mr-1 ${r.mediaType === "MOVIE" ? "bg-[#fff7f8] text-[#e3001b]" : "bg-purple-50 text-purple-700"}`}>{r.mediaType === "MOVIE" ? "电影" : "电视剧"}</span>
+                        <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] text-white mr-1 ${r.mediaType === "MOVIE" ? "bg-[#913edb]" : "bg-[#e3001b]"}`}>{r.mediaType === "MOVIE" ? "电影" : "电视剧"}</span>
                         {r.mediaType === "TV" && r.season ? `S${String(r.season).padStart(2, "0")} · ` : ""}{r.year || "-"}
                       </div>
                     </div>
