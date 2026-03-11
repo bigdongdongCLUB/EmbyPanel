@@ -75,7 +75,7 @@ export function PortalClient() {
       {error ? <div className="text-sm text-red-600">{error}</div> : null}
       {loading ? <div className="text-sm text-gray-500">加载中…</div> : null}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+      <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-5">
         <div className="rounded-2xl border border-transparent bg-[#f8f9fa] p-6">
           <div className="text-sm text-gray-500">账户余额</div>
           <div className="text-2xl font-bold text-[#222] mt-2">{(data?.dashboard.balanceYuan ?? 0).toFixed(2)} <span className="text-sm font-normal">元</span></div>
