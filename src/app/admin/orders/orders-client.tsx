@@ -97,7 +97,7 @@ export function OrdersAdminClient() {
         </select>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="border border-[#eaeaea] bg-white rounded-2xl p-4 shadow-sm">
           <div className="text-sm text-gray-500">订单总览</div>
           <div className="text-2xl font-semibold mt-1 text-gray-900">{summary.totalOrders}</div>
