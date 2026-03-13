@@ -157,12 +157,7 @@ export function PortalPurchaseClient() {
           return (
             <div
               key={p.id}
-              className={
-                "relative rounded-xl p-7 flex flex-col transition-all " +
-                (highlight
-                  ? "bg-white border-2 border-[#e3001b] shadow-[0_8px_24px_rgba(227,0,27,0.08)]"
-                  : "bg-[#f4f5f7] border-2 border-transparent hover:border-gray-300 hover:bg-[#f0f1f3]")
-              }
+              className="relative rounded-xl p-7 flex flex-col transition-all bg-white border-2 border-[#e3001b] shadow-[0_8px_24px_rgba(227,0,27,0.08)] hover:shadow-[0_12px_32px_rgba(227,0,27,0.14)] hover:-translate-y-0.5"
             >
               {highlight ? <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#e3001b] text-white text-xs px-3 py-1 rounded-full">可试用</div> : null}
 
