@@ -9,6 +9,23 @@ import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
 import { embyFetchUsers, normalizeBaseUrl } from "@/lib/emby";
 import { embyDeleteUser } from "@/lib/emby-provision";
 
+const PENALTY_RECORDS_KEY = "anomaly_penalty_records";
+
+function ipPrefix3(ip?: string) {
+  const m = String(ip || "").match(/^(\d+)\.(\d+)\.(\d+)\./);
+  if (!m) return "";
+  return `${m[1]}.${m[2]}.${m[3]}`;
+}
+
+function detectAnomalyTypeFromIps(ips: string[]) {
+  const prefixes = Array.from(new Set((ips || []).map(ipPrefix3).filter(Boolean)));
+  return prefixes.length >= 2 ? "CROSS_REGION_MULTI_DEVICE" : "SIMULTANEOUS_MULTI_DEVICE";
+}
+
+function anomalyTypeLabel(type?: string | null) {
+  return type === "CROSS_REGION_MULTI_DEVICE" ? "异地多设备" : type === "SIMULTANEOUS_MULTI_DEVICE" ? "同时多设备" : null;
+}
+
 async function fetchItemCounts(baseUrl: string, apiKey: string) {
   try {
     const u = new URL(normalizeBaseUrl(baseUrl) + "/Items/Counts");
@@ -91,6 +108,22 @@ export async function GET() {
     ...user.embyLinks.map((l) => l.embyServerId),
   ]);
 
+  const [penaltyRecordsRow, recentAnomalies] = await Promise.all([
+    prisma.appSetting.findUnique({ where: { key: PENALTY_RECORDS_KEY } }),
+    prisma.anomaly.findMany({
+      where: {
+        userId: user.id,
+        embyServerId: { in: Array.from(serverIds) },
+        type: "MULTI_DEVICE_CONCURRENCY",
+      },
+      orderBy: { detectedAt: "desc" },
+      take: 100,
+      select: { embyServerId: true, detectedAt: true, evidenceJson: true },
+    }),
+  ]);
+
+  const penaltyRecords = (Array.isArray(penaltyRecordsRow?.valueJson) ? (penaltyRecordsRow!.valueJson as any[]) : []) as any[];
+
   let servers: any[] = [];
   try {
     servers = await prisma.embyServer.findMany({
@@ -108,6 +141,21 @@ export async function GET() {
 
   const linkMap = new Map(user.embyLinks.map((l) => [l.embyServerId, { embyUserId: l.embyUserId, disabled: !!l.disabled }] as const));
 
+  const pendingPenaltyByServer = new Map<string, any>();
+  for (const r of penaltyRecords) {
+    if (r?.userId !== user.id || r?.status !== "PENDING" || !r?.embyServerId) continue;
+    const prev = pendingPenaltyByServer.get(r.embyServerId);
+    if (!prev || String(r?.disabledAt || "") > String(prev?.disabledAt || "")) {
+      pendingPenaltyByServer.set(r.embyServerId, r);
+    }
+  }
+
+  const recentAnomalyByServer = new Map<string, any>();
+  for (const a of recentAnomalies) {
+    if (!a?.embyServerId) continue;
+    if (!recentAnomalyByServer.has(a.embyServerId)) recentAnomalyByServer.set(a.embyServerId, a);
+  }
+
   const list = await Promise.all(
     servers.map(async (s) => {
       const apiKey = getEmbyApiKeyForServer(s as any);
@@ -117,6 +165,13 @@ export async function GET() {
       ]);
 
       const link = linkMap.get(s.id) ?? null;
+      const pendingPenalty = pendingPenaltyByServer.get(s.id) ?? null;
+      const recentAnomaly = recentAnomalyByServer.get(s.id) ?? null;
+      const recentEvidence: any = recentAnomaly?.evidenceJson ?? {};
+      const fallbackType = recentEvidence?.anomalyType || detectAnomalyTypeFromIps(Array.isArray(recentEvidence?.ips) ? recentEvidence.ips : []);
+      const banTypeLabel = !!link?.disabled
+        ? (pendingPenalty?.anomalyTypeLabel || anomalyTypeLabel(pendingPenalty?.anomalyType) || anomalyTypeLabel(fallbackType))
+        : null;
       const onlineNow = !!String(version || "").trim() || s.lastHealthOk === true;
       return {
         id: s.id,
@@ -124,6 +179,7 @@ export async function GET() {
         enabled: s.enabled,
         online: onlineNow,
         banned: !!link?.disabled,
+        banTypeLabel,
         version,
         baseUrl: s.externalUrl || s.baseUrl,
         backupUrl: (s as any).backupUrl || null,

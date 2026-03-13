@@ -15,6 +15,21 @@ const PENALTY_STACK_WINDOW_DAYS = 7;
 const PENALTY_STACK_MULTIPLIER_MAX = 4;
 const PENALTY_DETECTION_WINDOW_MINUTES = 30;
 
+function ipPrefix3(ip?: string) {
+  const m = String(ip || "").match(/^(\d+)\.(\d+)\.(\d+)\./);
+  if (!m) return "";
+  return `${m[1]}.${m[2]}.${m[3]}`;
+}
+
+function detectAnomalyTypeFromIps(ips: string[]) {
+  const prefixes = Array.from(new Set((ips || []).map(ipPrefix3).filter(Boolean)));
+  return prefixes.length >= 2 ? "CROSS_REGION_MULTI_DEVICE" : "SIMULTANEOUS_MULTI_DEVICE";
+}
+
+function anomalyTypeLabel(type?: string) {
+  return type === "CROSS_REGION_MULTI_DEVICE" ? "异地多设备" : "同时多设备";
+}
+
 function normalizeIp(ipRaw: string): string {
   const ip = (ipRaw ?? "").trim();
   if (ip.includes(".") && ip.includes(":")) {
@@ -213,6 +228,7 @@ export async function POST(req: Request) {
         }));
 
         const ips = Array.from(new Set(sessionRows.map((x) => x.ip).filter(Boolean)));
+        const anomalyType = detectAnomalyTypeFromIps(ips);
         const titles = Array.from(new Set(sessionRows.map((x) => x.nowPlaying).filter(Boolean)));
         const devices = Array.from(new Set(sessionRows.map((x) => x.device).filter(Boolean)));
         const description = titles.length >= 2 ? `同时在 ${sessions.length} 个设备上播放不同内容` : `同一时间检测到 ${sessions.length} 个设备播放`;
@@ -234,6 +250,8 @@ export async function POST(req: Request) {
               serverName: server.name,
               embyUserId,
               userName: link.username,
+              anomalyType,
+              anomalyTypeLabel: anomalyTypeLabel(anomalyType),
               sessionCount: sessions.length,
               ips,
               titles,
@@ -325,6 +343,8 @@ export async function POST(req: Request) {
               stackWindowDays: PENALTY_STACK_WINDOW_DAYS,
               stoppedSessions,
               loggedOutSessions,
+              anomalyType,
+              anomalyTypeLabel: anomalyTypeLabel(anomalyType),
               revokedTokens: revokeResult.revokedCount ?? 0,
               stopErrors: stopErrors.length ? stopErrors.slice(0, 5) : undefined,
               logoutErrors: logoutErrors.length ? logoutErrors.slice(0, 5) : undefined,
@@ -347,6 +367,8 @@ export async function POST(req: Request) {
               penaltyMultiplier,
               penaltyDurationMinutes: penaltyMinutes,
               stackWindowDays: PENALTY_STACK_WINDOW_DAYS,
+              anomalyType,
+              anomalyTypeLabel: anomalyTypeLabel(anomalyType),
               stoppedSessions,
               stopErrors: stopErrors.length ? stopErrors.slice(0, 5) : undefined,
               error: disableError || "disable_failed",
