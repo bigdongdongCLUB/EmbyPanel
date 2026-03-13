@@ -562,8 +562,10 @@ export function VodClient() {
         {TABS.map((tab) => (
           <button
             key={tab.key}
-            className={`flex items-center gap-1.5 px-4 py-3 text-[15px] whitespace-nowrap border-b-2 -mb-px transition-colors ${
-              activeTab === tab.key && !searchQuery ? "border-[#e3001b] text-[#e3001b] font-bold" : "border-transparent text-[#888] hover:text-[#222]"
+            className={`flex items-center gap-1.5 px-4 py-3 text-[15px] whitespace-nowrap border-b-2 -mb-px rounded-t-lg transition-all ${
+              activeTab === tab.key && !searchQuery
+                ? "border-[#f3d4d8] bg-[#fff7f8] text-[#e3001b] font-bold shadow-[0_4px_12px_rgba(227,0,27,0.10)]"
+                : "border-transparent text-[#888] hover:text-[#222] hover:bg-[#fafafa]"
             }`}
             onClick={() => { setActiveTab(tab.key); clearSearch(); setCurrentPage(1); }}
           >
