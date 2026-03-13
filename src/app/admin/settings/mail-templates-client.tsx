@@ -85,13 +85,18 @@ export function MailTemplatesClient() {
           <div className="text-lg font-semibold">邮件模板管理</div>
         </div>
 
-        <div className="flex gap-5 border-b overflow-auto whitespace-nowrap text-sm">
+        <div className="flex gap-3 border-b overflow-auto whitespace-nowrap text-sm pb-1">
           {ORDER.map((k) => {
             const active = k === activeKey;
             return (
               <button
                 key={k}
-                className={"pb-2 border-b-2 " + (active ? "border-[#e3001b] text-[#e3001b]" : "border-transparent text-gray-700")}
+                className={
+                  "px-3 py-2 border-b-2 rounded-t-lg transition-all " +
+                  (active
+                    ? "border-[#f3d4d8] bg-[#fff7f8] text-[#e3001b] font-bold shadow-[0_4px_12px_rgba(227,0,27,0.10)]"
+                    : "border-transparent text-gray-700 hover:bg-[#fafafa] hover:text-[#222]")
+                }
                 onClick={() => setActiveKey(k)}
               >
                 {LABELS[k]}
