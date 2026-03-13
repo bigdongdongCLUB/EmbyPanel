@@ -44,13 +44,13 @@ function isCrossRegionByIp(ips: string[]) {
 function TypeBadge({ crossRegion }: { crossRegion: boolean }) {
   if (crossRegion) {
     return (
-      <span className="inline-flex items-center px-2 py-1 rounded-[4px] border text-[12px] leading-4 bg-red-50 text-red-700 border-red-200">
+      <span className="inline-flex items-center px-2 py-1 rounded-[4px] border text-[12px] leading-4 whitespace-nowrap bg-red-50 text-red-700 border-red-200">
         异地多设备
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center px-2 py-1 rounded-[4px] border text-[12px] leading-4 bg-amber-50 text-amber-700 border-amber-200">
+    <span className="inline-flex items-center px-2 py-1 rounded-[4px] border text-[12px] leading-4 whitespace-nowrap bg-amber-50 text-amber-700 border-amber-200">
       同时多设备
     </span>
   );
