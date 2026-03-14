@@ -15,6 +15,12 @@ import { autoCancelExpiredPendingOrders, isOrderPendingExpired } from "@/lib/ord
 const INVITE_REBATE_KEY = "invite_rebate";
 const INVITE_REL_KEY = "invite_relations";
 const INVITE_FIRST_PAID_KEY = "invite_rebate_first_paid";
+const PENALTY_STATE_KEY = "anomaly_penalty_state";
+const PENALTY_RECORDS_KEY = "anomaly_penalty_records";
+
+function stateKey(serverId: string, userId: string) {
+  return `${serverId}:${userId}`;
+}
 
 async function applyInviteCommission(tx: any, buyerUserId: string, amountCents: number) {
   if (!amountCents || amountCents <= 0) return;
@@ -203,6 +209,7 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
       ]);
 
       const templateByServerId = new Map(serverConfigs.map((c) => [c.embyServerId, c.templateEmbyUserId] as const));
+      const reenabledServerIds: string[] = [];
 
       for (const s of servers) {
         const apiKey = getEmbyApiKeyForServer(s);
@@ -227,9 +234,56 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
 
         await prisma.embyUserLink.upsert({
           where: { userId_embyServerId: { userId: u.id, embyServerId: s.id } },
-          update: { embyUserId },
-          create: { userId: u.id, embyServerId: s.id, embyUserId },
+          update: { embyUserId, disabled: false },
+          create: { userId: u.id, embyServerId: s.id, embyUserId, disabled: false },
         });
+        reenabledServerIds.push(s.id);
+      }
+
+      if (reenabledServerIds.length) {
+        const [penaltyStateRow, penaltyRecordsRow] = await Promise.all([
+          prisma.appSetting.findUnique({ where: { key: PENALTY_STATE_KEY } }),
+          prisma.appSetting.findUnique({ where: { key: PENALTY_RECORDS_KEY } }),
+        ]);
+
+        const penaltyState = ((penaltyStateRow?.valueJson as any) ?? {}) as Record<string, any>;
+        const penaltyRecords = (Array.isArray(penaltyRecordsRow?.valueJson) ? (penaltyRecordsRow!.valueJson as any[]) : []) as any[];
+        const nowIso = new Date().toISOString();
+        const serverSet = new Set(reenabledServerIds);
+        let penaltyChanged = false;
+
+        for (const rec of penaltyRecords) {
+          if (!rec || rec.status !== "PENDING") continue;
+          if (String(rec.userId || "") !== u.id) continue;
+          if (!serverSet.has(String(rec.embyServerId || ""))) continue;
+          rec.status = "UNBANNED_MANUAL";
+          rec.unbannedAt = nowIso;
+          rec.unbanSource = "ORDER_PAY";
+          penaltyChanged = true;
+        }
+
+        for (const serverId of reenabledServerIds) {
+          const k = stateKey(serverId, u.id);
+          if (penaltyState[k]) {
+            penaltyState[k] = { ...penaltyState[k], penaltyActive: false, lastUnbanAt: nowIso };
+            penaltyChanged = true;
+          }
+        }
+
+        if (penaltyChanged) {
+          await Promise.all([
+            prisma.appSetting.upsert({
+              where: { key: PENALTY_STATE_KEY },
+              create: { key: PENALTY_STATE_KEY, valueJson: penaltyState },
+              update: { valueJson: penaltyState },
+            }),
+            prisma.appSetting.upsert({
+              where: { key: PENALTY_RECORDS_KEY },
+              create: { key: PENALTY_RECORDS_KEY, valueJson: penaltyRecords },
+              update: { valueJson: penaltyRecords },
+            }),
+          ]);
+        }
       }
 
       await prisma.subscriptionServer.deleteMany({ where: { subscriptionId: paidOrder.activeSubId } });
