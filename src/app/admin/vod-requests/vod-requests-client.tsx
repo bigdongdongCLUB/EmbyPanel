@@ -152,14 +152,25 @@ export function VodRequestsAdminClient() {
   }
 
   async function deleteRow(id: string) {
+    console.log('[deleteRow] called with id:', id);
     const ok = window.confirm("确认删除该点播记录吗？删除后用户侧也会同步消失。");
-    if (!ok) return;
+    console.log('[deleteRow] confirm result:', ok);
+    if (!ok) {
+      console.log('[deleteRow] user cancelled');
+      return;
+    }
     try {
+      console.log('[deleteRow] sending DELETE request to:', `/api/admin/vod-requests/${id}`);
       const res = await fetch(`/api/admin/vod-requests/${id}`, { method: "DELETE" });
+      console.log('[deleteRow] response status:', res.status);
       const json = await res.json().catch(() => null);
+      console.log('[deleteRow] response json:', json);
       if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+      console.log('[deleteRow] success, refreshing...');
       await refresh(page, pageSize);
+      console.log('[deleteRow] refresh complete');
     } catch (e: any) {
+      console.error('[deleteRow] error:', e);
       alert(`删除失败：${e?.message || "unknown_error"}`);
     }
   }

@@ -13,18 +13,29 @@ const PatchSchema = z.object({
 });
 
 export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+  console.log('[DELETE /api/admin/vod-requests/[id]] called');
   const auth = await requireAdmin();
+  console.log('[DELETE /api/admin/vod-requests/[id]] auth result:', auth.ok ? 'ok' : auth.error);
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   const { id } = await ctx.params;
+  console.log('[DELETE /api/admin/vod-requests/[id]] id:', id);
   if (!id) return NextResponse.json({ error: "missing_id" }, { status: 400 });
 
+  console.log('[DELETE /api/admin/vod-requests/[id]] attempting to delete id:', id);
   const deleted = await prisma.vodRequest.delete({
     where: { id },
     select: { id: true },
-  }).catch(() => null);
+  }).catch((err) => {
+    console.error('[DELETE /api/admin/vod-requests/[id]] delete error:', err);
+    return null;
+  });
 
-  if (!deleted) return NextResponse.json({ error: "not_found" }, { status: 404 });
+  if (!deleted) {
+    console.log('[DELETE /api/admin/vod-requests/[id]] not found');
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
+  console.log('[DELETE /api/admin/vod-requests/[id]] deleted successfully:', deleted.id);
   return NextResponse.json({ ok: true, id: deleted.id });
 }
 
