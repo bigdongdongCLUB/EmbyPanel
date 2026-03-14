@@ -18,6 +18,8 @@ export async function GET(req: Request) {
   const q = (url.searchParams.get("q") ?? "").trim();
   const planId = (url.searchParams.get("planId") ?? "").trim();
   const subStatus = (url.searchParams.get("subStatus") ?? "").trim(); // valid|expired|none
+  const sortBy = (url.searchParams.get("sortBy") ?? "createdAt").trim(); // createdAt|endAt
+  const sortOrder = (url.searchParams.get("sortOrder") ?? "desc").trim() === "asc" ? "asc" : "desc";
 
   const now = new Date();
 
@@ -159,6 +161,19 @@ export async function GET(req: Request) {
       if (subStatus === "none") return row.subscriptionStatus === null;
       return true;
     });
+
+  mapped.sort((a, b) => {
+    const av = sortBy === "endAt" ? (a.endAt ? new Date(a.endAt).getTime() : null) : (a.createdAt ? new Date(a.createdAt).getTime() : null);
+    const bv = sortBy === "endAt" ? (b.endAt ? new Date(b.endAt).getTime() : null) : (b.createdAt ? new Date(b.createdAt).getTime() : null);
+
+    const an = av === null || !Number.isFinite(av) ? null : av;
+    const bn = bv === null || !Number.isFinite(bv) ? null : bv;
+
+    if (an === null && bn === null) return 0;
+    if (an === null) return 1;
+    if (bn === null) return -1;
+    return sortOrder === "asc" ? an - bn : bn - an;
+  });
 
   return NextResponse.json({ ok: true, users: mapped });
 }

@@ -133,6 +133,8 @@ export function UsersClient() {
   const [rows, setRows] = useState<UserRow[]>([]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [sortBy, setSortBy] = useState<"createdAt" | "endAt">("createdAt");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   const [edit, setEdit] = useState<EditState>({ open: false });
 
@@ -197,6 +199,7 @@ export function UsersClient() {
   const [importSelectedEmbyUsers, setImportSelectedEmbyUsers] = useState<Record<string, boolean>>({});
   const [openServerDetailUserId, setOpenServerDetailUserId] = useState<string | null>(null);
   const usersTableWrapRef = useRef<HTMLDivElement | null>(null);
+  const sortInitRef = useRef(false);
 
   const [newUsername, setNewUsername] = useState("");
   const [newEmail, setNewEmail] = useState("");
@@ -216,6 +219,15 @@ export function UsersClient() {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const safePage = Math.min(Math.max(1, page), totalPages);
   const pageRows = useMemo(() => rows.slice((safePage - 1) * pageSize, (safePage - 1) * pageSize + pageSize), [rows, safePage, pageSize]);
+  const toggleSort = (field: "createdAt" | "endAt") => {
+    setPage(1);
+    if (sortBy === field) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(field);
+      setSortOrder("desc");
+    }
+  };
 
   useEffect(() => {
     if (page !== safePage) setPage(safePage);
@@ -280,6 +292,15 @@ export function UsersClient() {
     refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!sortInitRef.current) {
+      sortInitRef.current = true;
+      return;
+    }
+    refresh(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortBy, sortOrder]);
 
   useEffect(() => {
     // load plan options for filter
@@ -592,8 +613,18 @@ export function UsersClient() {
               <th className="py-2 px-3">订阅状态</th>
               <th className="py-2 px-3">订阅计划</th>
               <th className="py-2 px-3">服务器分配</th>
-              <th className="py-2 px-3">到期时间</th>
-              <th className="py-2 px-3">创建时间</th>
+              <th className="py-2 px-3">
+                <button type="button" className="inline-flex items-center gap-1 text-inherit font-medium" onClick={() => toggleSort("endAt")}>
+                  到期时间
+                  <span className={sortBy === "endAt" ? "text-[#e3001b]" : "text-gray-400"}>{sortBy === "endAt" ? (sortOrder === "asc" ? "↑" : "↓") : "↕"}</span>
+                </button>
+              </th>
+              <th className="py-2 px-3">
+                <button type="button" className="inline-flex items-center gap-1 text-inherit font-medium" onClick={() => toggleSort("createdAt")}>
+                  创建时间
+                  <span className={sortBy === "createdAt" ? "text-[#e3001b]" : "text-gray-400"}>{sortBy === "createdAt" ? (sortOrder === "asc" ? "↑" : "↓") : "↕"}</span>
+                </button>
+              </th>
               <th className="py-2 px-3">操作</th>
             </tr>
           </thead>
