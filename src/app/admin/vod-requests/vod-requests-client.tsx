@@ -153,7 +153,8 @@ export function VodRequestsAdminClient() {
 
   async function deleteRow(id: string) {
     console.log('[deleteRow] called with id:', id);
-    const ok = window.confirm("确认删除该点播记录吗？删除后用户侧也会同步消失。");
+    // 使用自定义确认而不是 window.confirm，避免浏览器行为问题
+    const ok = await (window as any).showConfirm("确认删除该点播记录吗？\n\n删除后用户侧也会同步消失。\n\n此操作不可恢复！");
     console.log('[deleteRow] confirm result:', ok);
     if (!ok) {
       console.log('[deleteRow] user cancelled');
