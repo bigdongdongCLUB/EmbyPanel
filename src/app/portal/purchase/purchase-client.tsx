@@ -289,7 +289,7 @@ export function PortalPurchaseClient() {
                       <div className="px-6 py-4 border-b border-gray-200 text-2xl font-semibold text-[#222]">💳 支付方式</div>
                       <div className="p-5">
                         <div className="border-2 border-[#e3001b] rounded-xl p-4 flex items-center justify-between bg-[#fff7f8]">
-                          <div className="text-xl font-semibold">余额支付</div>
+                          <div className="text-xl font-semibold">账户余额</div>
                           <div className="text-3xl font-semibold text-[#e3001b]">¥{order.balanceYuan.toFixed(2)}</div>
                         </div>
                       </div>

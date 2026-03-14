@@ -70,7 +70,7 @@ export function PortalOrderDetailClient({ orderId }: { orderId: string }) {
             <div className="px-5 py-4 border-b text-3xl font-semibold">💳 支付方式</div>
             <div className="p-5">
               <div className="border-2 border-[#e3001b] bg-[#fff7f8] rounded-xl p-4 flex items-center justify-between">
-                <div className="text-2xl font-semibold">余额支付</div>
+                <div className="text-2xl font-semibold">账户余额</div>
                 <div className="text-3xl font-semibold text-red-500">¥{data.balanceYuan.toFixed(2)}</div>
               </div>
             </div>
