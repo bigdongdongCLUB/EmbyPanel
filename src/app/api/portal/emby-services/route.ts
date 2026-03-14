@@ -169,7 +169,10 @@ export async function GET() {
       const recentAnomaly = recentAnomalyByServer.get(s.id) ?? null;
       const recentEvidence: any = recentAnomaly?.evidenceJson ?? {};
       const fallbackType = recentEvidence?.anomalyType || detectAnomalyTypeFromIps(Array.isArray(recentEvidence?.ips) ? recentEvidence.ips : []);
-      const banTypeLabel = !!link?.disabled
+      // 仅当当前存在“异常监控处罚”的待解封记录时，才显示具体异常类型。
+      // 订阅到期封禁、管理员手动改到期导致的禁用等其他情况，只显示“封禁中”。
+      const hasActiveAnomalyPenalty = !!pendingPenalty;
+      const banTypeLabel = !!link?.disabled && hasActiveAnomalyPenalty
         ? (pendingPenalty?.anomalyTypeLabel || anomalyTypeLabel(pendingPenalty?.anomalyType) || anomalyTypeLabel(fallbackType))
         : null;
       const onlineNow = !!String(version || "").trim() || s.lastHealthOk === true;
