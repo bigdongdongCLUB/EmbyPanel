@@ -268,6 +268,8 @@ export function UsersClient() {
       if (q.trim()) url.searchParams.set("q", q.trim());
       if (filterPlanId) url.searchParams.set("planId", filterPlanId);
       if (filterSubStatus) url.searchParams.set("subStatus", filterSubStatus);
+      url.searchParams.set("sortBy", sortBy);
+      url.searchParams.set("sortOrder", sortOrder);
 
       const res = await fetch(url.toString(), { cache: "no-store" });
       const json = await res.json().catch(() => null);
