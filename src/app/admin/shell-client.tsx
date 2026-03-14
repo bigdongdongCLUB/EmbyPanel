@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { signOut } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
+import { AdminLogModal } from "./log-modal";
 
 export function AdminShellClient({ username }: { username: string }) {
   const initials = (username || "AD").slice(0, 2).toUpperCase();
   const [open, setOpen] = useState(false);
+  const [logOpen, setLogOpen] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -27,7 +29,15 @@ export function AdminShellClient({ username }: { username: string }) {
   }, [open]);
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative flex items-center gap-3">
+      <button
+        className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-sm font-medium"
+        onClick={() => setLogOpen(true)}
+        title="系统日志"
+      >
+        日志
+      </button>
+
       <button className="cursor-pointer select-none flex items-center gap-2 rounded-full px-2 py-1 hover:bg-gray-100" onClick={() => setOpen((v) => !v)}>
         <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-cyan-400 text-white text-sm font-semibold">
           {initials}
@@ -51,6 +61,8 @@ export function AdminShellClient({ username }: { username: string }) {
           </button>
         </div>
       ) : null}
+
+      {logOpen ? <AdminLogModal onClose={() => setLogOpen(false)} /> : null}
     </div>
   );
 }
