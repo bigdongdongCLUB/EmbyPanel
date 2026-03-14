@@ -211,10 +211,10 @@ export function MonitoringAnomaliesClient() {
                         </div>
                       </td>
                       <td className="py-4 px-3 leading-6">
-                        <div className="flex flex-wrap gap-1">
+                        <div className={a.ips?.length > 1 ? "flex flex-col gap-1" : "flex flex-wrap gap-1"}>
                           {a.ips?.length
                             ? a.ips.map((ip) => (
-                                <span key={ip} className="inline-flex items-center px-2 py-1 rounded-[4px] border border-[#eaeaea] text-[13px] leading-4 font-mono text-[#666] bg-[#f4f5f7]">
+                                <span key={ip} className="inline-flex items-center w-fit px-2 py-1 rounded-[4px] border border-[#eaeaea] text-[13px] leading-4 font-mono text-[#666] bg-[#f4f5f7]">
                                   {ip}
                                 </span>
                               ))
