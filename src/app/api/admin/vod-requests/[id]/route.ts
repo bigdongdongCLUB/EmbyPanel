@@ -12,6 +12,22 @@ const PatchSchema = z.object({
   adminNote: z.string().max(20).optional(),
 });
 
+export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+  const auth = await requireAdmin();
+  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
+  const { id } = await ctx.params;
+  if (!id) return NextResponse.json({ error: "missing_id" }, { status: 400 });
+
+  const deleted = await prisma.vodRequest.delete({
+    where: { id },
+    select: { id: true },
+  }).catch(() => null);
+
+  if (!deleted) return NextResponse.json({ error: "not_found" }, { status: 404 });
+  return NextResponse.json({ ok: true, id: deleted.id });
+}
+
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const auth = await requireAdmin();
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });

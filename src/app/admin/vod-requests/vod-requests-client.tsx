@@ -151,6 +151,19 @@ export function VodRequestsAdminClient() {
     await refresh(page, pageSize);
   }
 
+  async function deleteRow(id: string) {
+    const ok = window.confirm("确认删除该点播记录吗？删除后用户侧也会同步消失。");
+    if (!ok) return;
+    try {
+      const res = await fetch(`/api/admin/vod-requests/${id}`, { method: "DELETE" });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+      await refresh(page, pageSize);
+    } catch (e: any) {
+      alert(`删除失败：${e?.message || "unknown_error"}`);
+    }
+  }
+
   function saveReplyDebounced(id: string, value: string) {
     if (saveTimerRef.current[id]) clearTimeout(saveTimerRef.current[id]);
     saveTimerRef.current[id] = setTimeout(async () => {
@@ -286,8 +299,18 @@ export function VodRequestsAdminClient() {
                       value={actionMap[r.id] ?? ""}
                       disabled={loading}
                       onChange={(e) => {
-                        const v = e.target.value as "" | "PENDING" | "NO_RESOURCE" | "PROCESSING" | "CANNOT_UPDATE" | "COMPLETED";
+                        const v = e.target.value as "" | "PENDING" | "NO_RESOURCE" | "PROCESSING" | "CANNOT_UPDATE" | "COMPLETED" | "DELETE";
                         if (!v) return;
+                        if (v === "DELETE") {
+                          (async () => {
+                            try {
+                              await deleteRow(r.id);
+                            } finally {
+                              setActionMap((m) => ({ ...m, [r.id]: "" }));
+                            }
+                          })();
+                          return;
+                        }
                         (async () => {
                           try {
                             await applyQuickAction(r, v as any);
@@ -303,6 +326,7 @@ export function VodRequestsAdminClient() {
                       <option value="PROCESSING">进行中</option>
                       <option value="CANNOT_UPDATE">无法更新</option>
                       <option value="COMPLETED">已完成</option>
+                      <option value="DELETE" className="text-red-600">删除</option>
                     </select>
                     <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${statusCls(deriveBizStatus(r))}`}>{statusText(deriveBizStatus(r))}</span>
                   </div>
