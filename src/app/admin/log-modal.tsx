@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ToggleSwitch } from "./settings/toggle-switch";
 
 type LogLevel = "ERROR" | "WARN" | "INFO" | "DEBUG";
@@ -132,8 +133,10 @@ export function AdminLogModal({ onClose }: { onClose: () => void }) {
     setLogs((prev) => [...prev]);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-[2px]" onClick={onClose}>
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4 backdrop-blur-[2px]" onClick={onClose}>
       <div
         className="flex max-h-[85vh] w-full max-w-5xl flex-col overflow-hidden rounded-[24px] border border-[#eaeaea] bg-white shadow-[0_20px_60px_rgba(15,23,42,0.14)]"
         onClick={(e) => e.stopPropagation()}
@@ -231,6 +234,7 @@ export function AdminLogModal({ onClose }: { onClose: () => void }) {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
