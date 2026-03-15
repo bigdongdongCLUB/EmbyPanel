@@ -178,12 +178,12 @@ export function AdminLogModal({ onClose }: { onClose: () => void }) {
             </select>
           </div>
 
-          <div className="flex items-center gap-2 rounded-2xl border border-[#eaeaea] bg-white px-3 py-2">
+          <div className="flex items-center gap-2 px-1 py-2">
             <label className="text-sm text-[#666]">自动刷新:</label>
             <ToggleSwitch checked={autoRefresh} onChange={setAutoRefresh} textOn="自动刷新已开启" textOff="自动刷新已关闭" />
           </div>
 
-          <div className="flex items-center gap-2 rounded-2xl border border-[#eaeaea] bg-white px-3 py-2">
+          <div className="flex items-center gap-2 px-1 py-2">
             <label className="text-sm text-[#666]">自动滚动:</label>
             <ToggleSwitch checked={autoScroll} onChange={setAutoScroll} textOn="自动滚动已开启" textOff="自动滚动已关闭" />
           </div>
@@ -209,19 +209,24 @@ export function AdminLogModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="bg-white px-6 py-5">
-          <div ref={containerRef} className="h-[58vh] overflow-auto rounded-2xl border border-[#1f2937] bg-[#111827] p-4 font-mono text-xs shadow-inner">
-            {filteredLogs.length === 0 ? (
-              <div className="py-10 text-center text-gray-500">暂无日志</div>
-            ) : (
-              filteredLogs.map((log) => (
-                <div key={log.id} className={`rounded-lg px-2.5 py-1.5 transition hover:bg-gray-800/50 ${LEVEL_BG[log.level]}`}>
-                  <span className="text-gray-500">[{new Date(log.timestamp).toLocaleString("zh-CN", { hour12: false })}]</span>{" "}
-                  <span className={`font-semibold ${LEVEL_COLORS[log.level]}`}>[{log.level}]</span>{" "}
-                  {log.source ? <span className="text-gray-400">{log.source}</span> : null}{" "}
-                  <span className="text-gray-200">{log.message}</span>
-                </div>
-              ))
-            )}
+          <div className="rounded-2xl border border-[#1f2937] bg-[#111827] p-0 shadow-inner">
+            <div
+              ref={containerRef}
+              className="h-[58vh] overflow-y-auto overflow-x-hidden rounded-2xl p-4 pr-5 font-mono text-xs [scrollbar-gutter:stable]"
+            >
+              {filteredLogs.length === 0 ? (
+                <div className="py-10 text-center text-gray-500">暂无日志</div>
+              ) : (
+                filteredLogs.map((log) => (
+                  <div key={log.id} className={`rounded-lg px-2.5 py-1.5 transition hover:bg-gray-800/50 ${LEVEL_BG[log.level]}`}>
+                    <span className="text-gray-500">[{new Date(log.timestamp).toLocaleString("zh-CN", { hour12: false })}]</span>{" "}
+                    <span className={`font-semibold ${LEVEL_COLORS[log.level]}`}>[{log.level}]</span>{" "}
+                    {log.source ? <span className="text-gray-400">{log.source}</span> : null}{" "}
+                    <span className="text-gray-200">{log.message}</span>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
 
