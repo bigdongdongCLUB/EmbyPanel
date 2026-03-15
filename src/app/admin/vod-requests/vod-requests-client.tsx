@@ -22,6 +22,7 @@ type Row = {
 
 type Resp = {
   ok: boolean;
+  error?: string;
   summary: {
     total: number;
     pending: number;
@@ -58,7 +59,7 @@ function statusText(v: BizStatus) {
 }
 
 function statusCls(v: BizStatus) {
-  if (v === "PENDING") return "border-[#f3d4d8] bg-[#fff7f8] text-[#e3001b]";
+  if (v === "PENDING") return "border-[#d4e6f2] bg-[#f0f8ff] text-[#1e73be]";
   if (v === "NO_RESOURCE") return "border-red-200 bg-red-50 text-red-600";
   if (v === "PROCESSING") return "border-amber-200 bg-amber-50 text-amber-700";
   if (v === "CANNOT_UPDATE") return "border-purple-200 bg-purple-50 text-purple-700";
@@ -80,10 +81,7 @@ export function VodRequestsAdminClient() {
   const [replyMap, setReplyMap] = useState<Record<string, string>>({});
   const [actionMap, setActionMap] = useState<Record<string, string>>({});
   const [noteTooltipId, setNoteTooltipId] = useState<string | null>(null);
-  const saveTimerRef = useRef<Record<string, any>>({});
-
-  const canPrev = page > 1;
-  const canNext = page < totalPages;
+  const saveTimerRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   async function refresh(nextPage = page, nextPageSize = pageSize) {
     setLoading(true);
@@ -94,23 +92,23 @@ export function VodRequestsAdminClient() {
       if (bizStatus) qs.set("bizStatus", bizStatus);
       if (mediaType) qs.set("mediaType", mediaType);
       const res = await fetch(`/api/admin/vod-requests?${qs.toString()}`, { cache: "no-store" });
-      const json: Resp = await res.json().catch(() => null as any);
-      if (!res.ok) throw new Error((json as any)?.error || `HTTP ${res.status}`);
-      setRows(Array.isArray(json.rows) ? json.rows : []);
-      setSummary(json.summary || { total: 0, pending: 0, noResource: 0, processing: 0, cannotUpdate: 0, completed: 0, recentTvCount: 0, recentMovieCount: 0, recentTopUser: "-", recentTopUserCount: 0 });
-      setPage(json.pagination?.page || 1);
-      setPageSize(json.pagination?.pageSize || nextPageSize);
-      setTotal(json.pagination?.total || 0);
-      setTotalPages(json.pagination?.totalPages || 1);
+      const json = (await res.json().catch(() => null)) as Resp | null;
+      if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+      setRows(Array.isArray(json?.rows) ? json.rows : []);
+      setSummary(json?.summary || { total: 0, pending: 0, noResource: 0, processing: 0, cannotUpdate: 0, completed: 0, recentTvCount: 0, recentMovieCount: 0, recentTopUser: "-", recentTopUserCount: 0 });
+      setPage(json?.pagination?.page || 1);
+      setPageSize(json?.pagination?.pageSize || nextPageSize);
+      setTotal(json?.pagination?.total || 0);
+      setTotalPages(json?.pagination?.totalPages || 1);
       setReplyMap((prev) => {
         const out = { ...prev };
-        for (const r of json.rows || []) {
+        for (const r of json?.rows || []) {
           out[r.id] = r.adminNote || "";
         }
         return out;
       });
-    } catch (e: any) {
-      setError(e?.message || "load_failed");
+    } catch (e) {
+      setError((e as Error)?.message || "load_failed");
     } finally {
       setLoading(false);
     }
@@ -136,7 +134,7 @@ export function VodRequestsAdminClient() {
       body: JSON.stringify(body),
     });
     const json = await res.json().catch(() => null);
-    if (!res.ok) throw new Error((json as any)?.error || `HTTP ${res.status}`);
+    if (!res.ok) throw new Error((json as Resp)?.error || `HTTP ${res.status}`);
   }
 
   async function applyQuickAction(row: Row, action: "PENDING" | "NO_RESOURCE" | "PROCESSING" | "CANNOT_UPDATE" | "COMPLETED") {
@@ -146,7 +144,7 @@ export function VodRequestsAdminClient() {
     // 状态切换不自动写入管理员回复；仅保留手动输入内容
     const manualReply = (replyMap[row.id] || "").trim().slice(0, 20);
 
-    await patchRow(row.id, { status: nextStatus, bizStatus: action as any, adminNote: manualReply || undefined });
+    await patchRow(row.id, { status: nextStatus, bizStatus: action as BizStatus, adminNote: manualReply || undefined });
     setReplyMap((m) => ({ ...m, [row.id]: manualReply }));
     await refresh(page, pageSize);
   }
@@ -154,7 +152,7 @@ export function VodRequestsAdminClient() {
   async function deleteRow(id: string) {
     console.log('[deleteRow] called with id:', id);
     // 使用自定义确认而不是 window.confirm，避免浏览器行为问题
-    const ok = await (window as any).showConfirm("确认删除该点播记录吗？\n\n删除后用户侧也会同步消失。\n\n此操作不可恢复！");
+    const ok = await (window as unknown as { showConfirm: (msg: string) => Promise<boolean> }).showConfirm("确认删除该点播记录吗？\n\n删除后用户侧也会同步消失。\n\n此操作不可恢复！");
     console.log('[deleteRow] confirm result:', ok);
     if (!ok) {
       console.log('[deleteRow] user cancelled');
@@ -170,9 +168,9 @@ export function VodRequestsAdminClient() {
       console.log('[deleteRow] success, refreshing...');
       await refresh(page, pageSize);
       console.log('[deleteRow] refresh complete');
-    } catch (e: any) {
+    } catch (e) {
       console.error('[deleteRow] error:', e);
-      alert(`删除失败：${e?.message || "unknown_error"}`);
+      alert(`删除失败：${(e as Error)?.message || "unknown_error"}`);
     }
   }
 
@@ -325,7 +323,7 @@ export function VodRequestsAdminClient() {
                         }
                         (async () => {
                           try {
-                            await applyQuickAction(r, v as any);
+                            await applyQuickAction(r, v as BizStatus);
                           } finally {
                             setActionMap((m) => ({ ...m, [r.id]: "" }));
                           }
