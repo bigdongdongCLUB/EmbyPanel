@@ -143,8 +143,8 @@ function DetailModal({
     try {
       await onSubmit({ season: isTv && selectedSeason !== "" ? Number(selectedSeason) : undefined, note });
       onClose();
-    } catch (e: any) {
-      setSubmitError(e?.message ?? "提交失败");
+    } catch (e) {
+      setSubmitError((e as Error)?.message ?? "提交失败");
     } finally {
       setSubmitting(false);
     }
@@ -337,7 +337,7 @@ export function VodClient() {
   const [selectedDetail, setSelectedDetail] = useState<DetailData | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [showMyRequests, setShowMyRequests] = useState(false);
-  const [myRequests, setMyRequests] = useState<any[]>([]);
+  const [myRequests, setMyRequests] = useState<Array<{ id: string; title: string; year: string; mediaType: string; season?: number; bizStatus: string; posterPath: string | null; note?: string; adminNote?: string }>>([]);
   const [myReqPage, setMyReqPage] = useState(1);
   const [myReqTotalPages, setMyReqTotalPages] = useState(1);
   const [myReqTotal, setMyReqTotal] = useState(0);
@@ -467,7 +467,7 @@ export function VodClient() {
   }
 
   async function clearCompletedRequests() {
-    const ok = await (window as any).showConfirm("确认清空所有已完成点播记录？");
+    const ok = await (window as unknown as { showConfirm: (msg: string) => Promise<boolean> }).showConfirm("确认清空所有已完成点播记录？");
     if (!ok) return;
     const r = await fetch("/api/portal/vod/request", { method: "DELETE" });
     const j = await r.json().catch(() => null);
@@ -476,7 +476,7 @@ export function VodClient() {
   }
 
   async function deleteMyRequest(requestId: string) {
-    const ok = await (window as any).showConfirm("确认删除这条点播记录？删除后管理员侧也会同步移除。");
+    const ok = await (window as unknown as { showConfirm: (msg: string) => Promise<boolean> }).showConfirm("确认删除这条点播记录？删除后管理员侧也会同步移除。");
     if (!ok) return;
     const r = await fetch(`/api/portal/vod/request?id=${encodeURIComponent(requestId)}`, { method: "DELETE" });
     const j = await r.json().catch(() => null);
@@ -681,10 +681,16 @@ export function VodClient() {
                         <div className="text-[18px] font-bold text-[#222] truncate">{r.title}</div>
                         <div className="text-sm text-[#888]">{r.mediaType === "TV" && r.season ? `第${r.season}季 · ` : ""}{r.year || "-"}</div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className={`inline-flex items-center px-3 py-1 rounded-[6px] text-[13px] font-bold ${
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full border text-xs font-medium ${
                             r.bizStatus === "COMPLETED"
-                              ? "bg-[#f0f0f0] text-[#888]"
-                              : "bg-[#fff0f1] text-[#e3001b]"
+                              ? "border-green-200 bg-green-50 text-green-700"
+                              : r.bizStatus === "PENDING"
+                              ? "border-[#d4e6f2] bg-[#f0f8ff] text-[#1e73be]"
+                              : r.bizStatus === "NO_RESOURCE"
+                              ? "border-red-200 bg-red-50 text-red-600"
+                              : r.bizStatus === "CANNOT_UPDATE"
+                              ? "border-purple-200 bg-purple-50 text-purple-700"
+                              : "border-amber-200 bg-amber-50 text-amber-700"
                           }`}>
                             {r.bizStatus === "COMPLETED" ? "已完成" : r.bizStatus === "PENDING" ? "待处理" : r.bizStatus === "NO_RESOURCE" ? "无资源" : r.bizStatus === "CANNOT_UPDATE" ? "无法更新" : "进行中"}
                           </span>
@@ -706,8 +712,8 @@ export function VodClient() {
                           onClick={async () => {
                             try {
                               await deleteMyRequest(r.id);
-                            } catch (e: any) {
-                              alert(e?.message || "删除失败");
+                            } catch (e) {
+                              alert((e as Error)?.message || "删除失败");
                             }
                           }}
                         >
