@@ -31,11 +31,12 @@ export function AdminShellClient({ username }: { username: string }) {
   return (
     <div ref={ref} className="relative flex items-center gap-3">
       <button
-        className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-sm font-medium"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-sm font-medium text-[#666] transition hover:border-gray-300 hover:bg-gray-50 hover:text-[#222]"
         onClick={() => setLogOpen(true)}
         title="系统日志"
+        aria-label="系统日志"
       >
-        日志
+        <img src="/icons/log.svg" alt="" aria-hidden="true" className="h-[18px] w-[18px]" />
       </button>
 
       <button className="cursor-pointer select-none flex items-center gap-2 rounded-full px-2 py-1 hover:bg-gray-100" onClick={() => setOpen((v) => !v)}>
