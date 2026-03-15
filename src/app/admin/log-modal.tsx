@@ -1,17 +1,29 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ToggleSwitch } from "./settings/toggle-switch";
 
 type LogLevel = "ERROR" | "WARN" | "INFO" | "DEBUG";
 
 interface LogEntry {
-  id: number;
+  id: string;
   timestamp: string;
   level: LogLevel;
   message: string;
   source?: string;
+}
+
+interface LogsResponse {
+  ok?: boolean;
+  error?: string;
+  logs?: Array<{
+    id: string;
+    timestamp: string;
+    level: LogLevel;
+    message: string;
+    source?: string;
+  }>;
 }
 
 const LEVEL_COLORS: Record<LogLevel, string> = {
@@ -32,44 +44,48 @@ const PANEL_FIELD_CLASS =
   "h-10 rounded-xl border border-[#eaeaea] bg-white px-3 text-sm text-[#222] outline-none transition focus:border-[#e3001b]";
 
 const PANEL_BUTTON_CLASS =
-  "inline-flex h-10 items-center gap-1.5 rounded-xl border border-[#eaeaea] bg-white px-3 text-sm text-[#222] transition hover:bg-[#f4f5f7] hover:border-[#d9d9d9]";
+  "inline-flex h-10 items-center gap-1.5 rounded-xl border border-[#eaeaea] bg-white px-3 text-sm text-[#222] transition hover:bg-[#f4f5f7] hover:border-[#d9d9d9] disabled:cursor-not-allowed disabled:opacity-60";
 
-function createMockLogs(): LogEntry[] {
-  const mockLogs: LogEntry[] = [];
-  const now = Date.now();
-  const levels: LogLevel[] = ["ERROR", "WARN", "INFO", "DEBUG"];
-  const messages = [
-    "[EmbyAPI] 连接测试成功",
-    "[EmbyAPI] 连接测试失败",
-    "[auth] 用户登录成功",
-    "[auth] Session 创建成功",
-    "[vod] 点播请求已提交",
-    "[vod] 点播记录已删除",
-    "[payment] 订单支付成功",
-    "[payment] 订单已取消",
-  ];
-
-  for (let i = 0; i < 100; i++) {
-    const level = levels[Math.floor(Math.random() * levels.length)];
-    const message = messages[Math.floor(Math.random() * messages.length)];
-    mockLogs.push({
-      id: i,
-      timestamp: new Date(now - (100 - i) * 60000).toISOString(),
-      level,
-      message,
-      source: Math.random() > 0.5 ? "[EmbyApi]" : "[auth]",
-    });
-  }
-
-  return mockLogs;
-}
+const LOG_LIMIT = 200;
+const AUTO_REFRESH_MS = 5000;
 
 export function AdminLogModal({ onClose }: { onClose: () => void }) {
-  const [logs, setLogs] = useState<LogEntry[]>(() => createMockLogs());
+  const [logs, setLogs] = useState<LogEntry[]>([]);
   const [levelFilter, setLevelFilter] = useState<LogLevel | "ALL">("ALL");
   const [autoScroll, setAutoScroll] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+
+  const loadLogs = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch(`/api/admin/logs?limit=${LOG_LIMIT}`, {
+        cache: "no-store",
+      });
+      const json = (await res.json().catch(() => null)) as LogsResponse | null;
+
+      if (!res.ok) {
+        throw new Error(json?.error || `HTTP ${res.status}`);
+      }
+
+      const nextLogs = Array.isArray(json?.logs) ? json.logs : [];
+      setLogs(nextLogs);
+      setLastUpdated(new Date().toISOString());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "load_logs_failed");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadLogs();
+  }, [loadLogs]);
 
   useEffect(() => {
     if (autoScroll && containerRef.current) {
@@ -81,30 +97,11 @@ export function AdminLogModal({ onClose }: { onClose: () => void }) {
     if (!autoRefresh) return;
 
     const interval = setInterval(() => {
-      const levels: LogLevel[] = ["ERROR", "WARN", "INFO", "DEBUG"];
-      const messages = [
-        "[EmbyAPI] 连接测试成功",
-        "[EmbyAPI] 连接测试失败",
-        "[auth] 用户登录成功",
-        "[vod] 点播请求已提交",
-      ];
-      const level = levels[Math.floor(Math.random() * levels.length)];
-      const message = messages[Math.floor(Math.random() * messages.length)];
-
-      setLogs((prev) => [
-        ...prev,
-        {
-          id: prev.length,
-          timestamp: new Date().toISOString(),
-          level,
-          message,
-          source: "[system]",
-        },
-      ]);
-    }, 3000);
+      void loadLogs();
+    }, AUTO_REFRESH_MS);
 
     return () => clearInterval(interval);
-  }, [autoRefresh]);
+  }, [autoRefresh, loadLogs]);
 
   useEffect(() => {
     function onEsc(e: KeyboardEvent) {
@@ -129,10 +126,6 @@ export function AdminLogModal({ onClose }: { onClose: () => void }) {
     URL.revokeObjectURL(url);
   };
 
-  const refreshLogs = () => {
-    setLogs((prev) => [...prev]);
-  };
-
   if (typeof document === "undefined") return null;
 
   return createPortal(
@@ -144,7 +137,7 @@ export function AdminLogModal({ onClose }: { onClose: () => void }) {
         <div className="flex items-center justify-between border-b border-[#eaeaea] px-6 py-5">
           <div>
             <h2 className="text-lg font-semibold text-[#222]">系统日志</h2>
-            <p className="mt-1 text-sm text-[#888]">查看实时日志、筛选级别并导出当前结果。</p>
+            <p className="mt-1 text-sm text-[#888]">查看真实日志、筛选级别并导出当前结果。</p>
           </div>
           <button
             type="button"
@@ -188,8 +181,11 @@ export function AdminLogModal({ onClose }: { onClose: () => void }) {
             <ToggleSwitch checked={autoScroll} onChange={setAutoScroll} textOn="自动滚动已开启" textOff="自动滚动已关闭" />
           </div>
 
+          {loading ? <div className="text-sm text-[#888]">加载中…</div> : null}
+          {error ? <div className="max-w-[360px] truncate text-sm text-red-600">{error}</div> : null}
+
           <div className="ml-auto flex items-center gap-2">
-            <button type="button" className={PANEL_BUTTON_CLASS} onClick={refreshLogs} title="刷新">
+            <button type="button" className={PANEL_BUTTON_CLASS} onClick={() => void loadLogs()} title="刷新" disabled={loading}>
               <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 text-[#666]" aria-hidden="true">
                 <path d="M16.667 10A6.667 6.667 0 1 1 14.714 5.286" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
                 <path d="M15 2.5v3.333h-3.333" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
@@ -197,7 +193,7 @@ export function AdminLogModal({ onClose }: { onClose: () => void }) {
               <span>刷新</span>
             </button>
 
-            <button type="button" className={PANEL_BUTTON_CLASS} onClick={downloadLogs} title="下载">
+            <button type="button" className={PANEL_BUTTON_CLASS} onClick={downloadLogs} title="下载" disabled={loading && filteredLogs.length === 0}>
               <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 text-[#666]" aria-hidden="true">
                 <path d="M10 3.333v8.334" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
                 <path d="M6.667 8.333L10 11.667l3.333-3.334" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
@@ -214,7 +210,7 @@ export function AdminLogModal({ onClose }: { onClose: () => void }) {
             className="h-[58vh] overflow-y-auto overflow-x-hidden pr-3 [scrollbar-gutter:stable]"
           >
             <div className="min-h-full border border-[#1f2937] bg-[#111827] p-4 font-mono text-xs shadow-inner">
-              {filteredLogs.length === 0 ? (
+              {!loading && filteredLogs.length === 0 ? (
                 <div className="py-10 text-center text-gray-500">暂无日志</div>
               ) : (
                 filteredLogs.map((log) => (
@@ -235,7 +231,7 @@ export function AdminLogModal({ onClose }: { onClose: () => void }) {
             总行数：{logs.length} | 显示行数：{filteredLogs.length}
           </div>
           <div>
-            文件大小：{(JSON.stringify(filteredLogs).length / 1024).toFixed(2)} KB | 最后更新：{new Date().toLocaleString("zh-CN", { hour12: false })}
+            文件大小：{(JSON.stringify(filteredLogs).length / 1024).toFixed(2)} KB | 最后更新：{lastUpdated ? new Date(lastUpdated).toLocaleString("zh-CN", { hour12: false }) : "-"}
           </div>
         </div>
       </div>
