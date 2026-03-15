@@ -46,7 +46,7 @@ const PANEL_FIELD_CLASS =
 const PANEL_BUTTON_CLASS =
   "inline-flex h-10 items-center gap-1.5 rounded-xl border border-[#eaeaea] bg-white px-3 text-sm text-[#222] transition hover:bg-[#f4f5f7] hover:border-[#d9d9d9] disabled:cursor-not-allowed disabled:opacity-60";
 
-const LOG_LIMIT = 200;
+const LOG_LIMIT = 1000;
 const AUTO_REFRESH_MS = 5000;
 
 export function AdminLogModal({ onClose }: { onClose: () => void }) {

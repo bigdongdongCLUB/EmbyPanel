@@ -19,7 +19,7 @@ export async function GET(req: Request) {
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   const url = new URL(req.url);
-  const limit = Math.min(Math.max(Number(url.searchParams.get("limit") || 200), 20), 500);
+  const limit = Math.min(Math.max(Number(url.searchParams.get("limit") || 200), 20), 1000);
 
   const [jobRuns, anomalies] = await Promise.all([
     prisma.jobRun.findMany({
@@ -50,7 +50,7 @@ export async function GET(req: Request) {
   ]);
 
   const logs = [
-    ...jobRuns.map((j, i) => ({
+    ...jobRuns.map((j) => ({
       id: `job-${j.id}`,
       timestamp: j.finishedAt ?? j.startedAt,
       level: parseJobLevel(j.ok, j.message),
@@ -58,8 +58,8 @@ export async function GET(req: Request) {
       message: j.message || (j.ok === false ? "任务失败" : "任务完成"),
     })),
     ...anomalies.map((a) => {
-      const evidence = (a.evidenceJson as any) ?? {};
-      const label = evidence?.anomalyTypeLabel || "异常并发播放";
+      const evidence = (a.evidenceJson ?? {}) as { anomalyTypeLabel?: string };
+      const label = evidence.anomalyTypeLabel || "异常并发播放";
       return {
         id: `anomaly-${a.id}`,
         timestamp: a.detectedAt,
