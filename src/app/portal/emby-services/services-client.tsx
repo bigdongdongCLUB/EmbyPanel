@@ -52,8 +52,8 @@ export function PortalEmbyServicesClient() {
       const json = await res.json().catch(() => null);
       if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
       setData(json);
-    } catch (e: any) {
-      setError(e?.message || "load_failed");
+    } catch (e) {
+      setError((e as Error)?.message || "load_failed");
     } finally {
       setLoading(false);
     }
@@ -76,12 +76,12 @@ export function PortalEmbyServicesClient() {
               className="absolute top-4 right-4 inline-flex items-center justify-center w-8 h-8 rounded-full border border-[#f2d4d9] bg-[#fff7f8] hover:border-[#e3001b] hover:bg-[#fff0f1] disabled:opacity-60"
               disabled={deletingSubscription}
               onClick={async () => {
-                const ok = await (window as any).showConfirm("该操作会删除用户对应emby服务器上所有资料，且操作不可以逆");
+                const ok = await (window as unknown as { showConfirm: (msg: string) => Promise<boolean> }).showConfirm("该操作会删除用户对应emby服务器上所有资料，且操作不可以逆");
                 if (!ok) return;
                 setDeletingSubscription(true);
                 try {
                   const res = await fetch("/api/portal/emby-services", { method: "DELETE" });
-                  const json = await res.json().catch(() => null);
+                  const json = (await res.json().catch(() => null)) as { message?: string; error?: string; warn?: boolean } | null;
                   if (!res.ok) {
                     alert(json?.message || json?.error || `HTTP ${res.status}`);
                     return;
@@ -187,9 +187,6 @@ export function PortalEmbyServicesClient() {
               </div>
 
               <div className="flex flex-col gap-3">
-                <a href={visitUrl || s.baseUrl} target="_blank" rel="noreferrer" className="w-full text-center bg-[#e3001b] hover:bg-[#c20017] text-white rounded-lg px-4 py-3 text-base font-bold">
-                  访问服务器
-                </a>
                 <button
                   className="w-full text-center bg-white border border-[#e3001b] text-[#e3001b] rounded-lg px-4 py-3 text-base font-bold hover:bg-[#fff0f1] disabled:opacity-60"
                   disabled={!!syncingServerId}
