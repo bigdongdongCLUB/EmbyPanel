@@ -160,7 +160,7 @@ export function AdminLogModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="flex flex-wrap items-center gap-3 border-b border-[#eaeaea] bg-[#f8f9fa] px-6 py-4">
-          <div className="flex items-center gap-2 rounded-2xl border border-[#eaeaea] bg-white px-3 py-2">
+          <div className="flex items-center gap-2 px-1 py-2">
             <label className="text-sm text-[#666]" htmlFor="log-level-filter">
               日志级别:
             </label>
