@@ -209,11 +209,11 @@ export function AdminLogModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="bg-white px-6 py-5">
-          <div className="rounded-2xl border border-[#1f2937] bg-[#111827] p-0 shadow-inner">
-            <div
-              ref={containerRef}
-              className="h-[58vh] overflow-y-auto overflow-x-hidden rounded-2xl p-4 pr-5 font-mono text-xs [scrollbar-gutter:stable]"
-            >
+          <div
+            ref={containerRef}
+            className="h-[58vh] overflow-y-auto overflow-x-hidden pr-3 [scrollbar-gutter:stable]"
+          >
+            <div className="min-h-full rounded-2xl border border-[#1f2937] bg-[#111827] p-4 font-mono text-xs shadow-inner">
               {filteredLogs.length === 0 ? (
                 <div className="py-10 text-center text-gray-500">暂无日志</div>
               ) : (
