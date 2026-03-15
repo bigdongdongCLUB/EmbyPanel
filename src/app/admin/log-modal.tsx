@@ -112,6 +112,7 @@ export function AdminLogModal({ onClose }: { onClose: () => void }) {
   }, [onClose]);
 
   const filteredLogs = levelFilter === "ALL" ? logs : logs.filter((log) => log.level === levelFilter);
+  const displayLogs = [...filteredLogs].sort((a, b) => +new Date(a.timestamp) - +new Date(b.timestamp));
 
   const downloadLogs = () => {
     const content = filteredLogs
@@ -210,10 +211,10 @@ export function AdminLogModal({ onClose }: { onClose: () => void }) {
             className="h-[58vh] overflow-y-auto overflow-x-hidden pr-3 [scrollbar-gutter:stable]"
           >
             <div className="min-h-full border border-[#1f2937] bg-[#111827] p-4 font-mono text-xs shadow-inner">
-              {!loading && filteredLogs.length === 0 ? (
+              {!loading && displayLogs.length === 0 ? (
                 <div className="py-10 text-center text-gray-500">暂无日志</div>
               ) : (
-                filteredLogs.map((log) => (
+                displayLogs.map((log) => (
                   <div key={log.id} className={`rounded-lg px-2.5 py-1.5 transition hover:bg-gray-800/50 ${LEVEL_BG[log.level]}`}>
                     <span className="text-gray-500">[{new Date(log.timestamp).toLocaleString("zh-CN", { hour12: false })}]</span>{" "}
                     <span className={`font-semibold ${LEVEL_COLORS[log.level]}`}>[{log.level}]</span>{" "}
