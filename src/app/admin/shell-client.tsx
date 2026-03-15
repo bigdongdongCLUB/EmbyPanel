@@ -31,7 +31,7 @@ export function AdminShellClient({ username }: { username: string }) {
   return (
     <div ref={ref} className="relative flex items-center gap-3">
       <button
-        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-sm font-medium text-[#666] transition hover:border-gray-300 hover:bg-gray-50 hover:text-[#222]"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-transparent text-[#666] transition hover:text-[#222]"
         onClick={() => setLogOpen(true)}
         title="系统日志"
         aria-label="系统日志"
