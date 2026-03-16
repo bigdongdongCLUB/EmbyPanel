@@ -77,8 +77,8 @@ export function MonitoringAnomaliesClient() {
   async function loadServers() {
     const res = await fetch("/api/admin/emby-servers", { cache: "no-store" });
     const json = await res.json().catch(() => null);
-    if (!res.ok) throw new Error(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
-    const list = (json.servers ?? []).filter((s: any) => s.enabled);
+    if (!res.ok) throw new Error(((json as { error?: string })?.error) ? ((json as { error?: string })?.error) : `HTTP ${res.status}`);
+    const list = (json.servers ?? []).filter((s: { enabled: boolean }) => s.enabled);
     setServers(list);
   }
 
@@ -93,11 +93,15 @@ export function MonitoringAnomaliesClient() {
       url.searchParams.set("page", String(page));
       url.searchParams.set("pageSize", String(pageSize));
       const res = await fetch(url.toString(), { cache: "no-store" });
-      const json = (await res.json().catch(() => null)) as any;
-      if (!res.ok) throw new Error(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
-      setData(json);
-    } catch (e: any) {
-      setError(e?.message ?? "load_failed");
+      const json = (await res.json().catch(() => null)) as Data | { error?: string } | null;
+      if (!res.ok) throw new Error(((json as { error?: string })?.error) ? ((json as { error?: string })?.error) : `HTTP ${res.status}`);
+      if (json && 'anomalies' in json) {
+        setData(json);
+      } else {
+        setData(null);
+      }
+    } catch (e) {
+      setError((e as Error)?.message ?? "load_failed");
     } finally {
       setLoading(false);
     }
@@ -109,10 +113,10 @@ export function MonitoringAnomaliesClient() {
     try {
       const res = await fetch("/api/admin/jobs/anomaly-scan", { method: "POST" });
       const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
+      if (!res.ok) throw new Error(((json as { error?: string })?.error) ? ((json as { error?: string })?.error) : `HTTP ${res.status}`);
       await refresh();
-    } catch (e: any) {
-      setError(e?.message ?? "scan_failed");
+    } catch (e) {
+      setError((e as Error)?.message ?? "scan_failed");
     } finally {
       setRunningScan(false);
     }
@@ -120,7 +124,7 @@ export function MonitoringAnomaliesClient() {
 
 
   useEffect(() => {
-    loadServers().catch((e) => setError(e?.message ?? "load_servers_failed"));
+    loadServers().catch((e) => setError((e as Error)?.message ?? "load_servers_failed"));
   }, []);
 
   useEffect(() => {
@@ -205,9 +209,7 @@ export function MonitoringAnomaliesClient() {
                           {a.sessions
                             .map((s) => s.device || "-")
                             .filter(Boolean)
-                            .slice(0, 2)
                             .join(" / ")}
-                          {a.sessions.length > 2 ? ` 等 ${a.sessions.length} 台` : ""}
                         </div>
                       </td>
                       <td className="py-4 px-3 leading-6">
@@ -225,7 +227,7 @@ export function MonitoringAnomaliesClient() {
                         <div>{a.description || "-"}</div>
                         <div className="mt-1 space-y-1">
                           {a.sessions.length ? (
-                            a.sessions.slice(0, 2).map((s, idx) => (
+                            a.sessions.map((s, idx) => (
                               <div key={idx} className="text-[12px] leading-5 text-gray-600">
                                 <div>
                                   📱 {s.device || "未知设备"}
@@ -237,7 +239,6 @@ export function MonitoringAnomaliesClient() {
                           ) : a.excerpt ? (
                             <div className="text-[12px] text-gray-500">{a.excerpt}</div>
                           ) : null}
-                          {a.sessions.length > 2 ? <div className="text-[12px] text-gray-500">… 另有 {a.sessions.length - 2} 台设备</div> : null}
                         </div>
                       </td>
                       <td className="py-2 px-3 text-xs text-gray-700">{formatDateTimeShanghai(a.detectedAt)}</td>
