@@ -8,8 +8,14 @@ import { prisma } from "@/lib/db";
 
 const CODE_MAP_KEY = "invite_code_map";
 const REL_KEY = "invite_relations";
+const RECORD_KEY = "invite_rebate_records";
 
 type Rel = { inviterUserId: string; inviteCode: string; createdAt: string };
+type RebateRecord = {
+  invitedUserId: string;
+  rebateAmountCents: number;
+  createdAt: string;
+};
 
 function payCycleText(v?: string | null) {
   const m: Record<string, string> = {
@@ -53,14 +59,16 @@ export async function GET() {
   const me = await prisma.user.findUnique({ where: { username }, select: { id: true, username: true } });
   if (!me) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
-  const [codeRow, relRow, rebateRow] = await Promise.all([
+  const [codeRow, relRow, rebateRow, recordRow] = await Promise.all([
     prisma.appSetting.findUnique({ where: { key: CODE_MAP_KEY } }),
     prisma.appSetting.findUnique({ where: { key: REL_KEY } }),
     prisma.appSetting.findUnique({ where: { key: "invite_rebate" } }),
+    prisma.appSetting.findUnique({ where: { key: RECORD_KEY } }),
   ]);
 
   const codeMap = ((codeRow?.valueJson as any) ?? {}) as Record<string, string>;
   const relMap = ((relRow?.valueJson as any) ?? {}) as Record<string, Rel>;
+  const rebateRecords = (Array.isArray(recordRow?.valueJson) ? (recordRow!.valueJson as any[]) : []) as RebateRecord[];
 
   const inviteCode = (codeMap[me.id] || me.username).toUpperCase();
 
@@ -133,15 +141,26 @@ export async function GET() {
     latestSubByUser.set(s.userId, s);
   }
 
+  const firstRecordByUser = new Map<string, RebateRecord>();
+  const latestRecordByUser = new Map<string, RebateRecord>();
+  for (const r of rebateRecords) {
+    if (!r?.invitedUserId) continue;
+    if (!firstRecordByUser.has(r.invitedUserId)) firstRecordByUser.set(r.invitedUserId, r);
+    latestRecordByUser.set(r.invitedUserId, r);
+  }
+
   const rows = invitedUsers
     .map((u) => {
       const firstOrder = firstPaidByUser.get(u.id);
       const latestOrder = latestPaidByUser.get(u.id);
       const firstSub = firstSubByUser.get(u.id);
       const latestSub = latestSubByUser.get(u.id);
+      const firstRecord = firstRecordByUser.get(u.id);
+      const latestRecord = latestRecordByUser.get(u.id);
 
       const orderRef = rebateMode === "FIRST_ONLY" ? firstOrder : latestOrder;
       const subRef = rebateMode === "FIRST_ONLY" ? firstSub : latestSub;
+      const recordRef = rebateMode === "FIRST_ONLY" ? firstRecord : latestRecord;
 
       const planName = orderRef?.plan?.name ?? subRef?.plan?.name ?? "-";
       const payCycle = orderRef?.payCycle ?? subRef?.payCycle ?? null;
@@ -158,8 +177,12 @@ export async function GET() {
       })();
       const eligibleByTime = enabledAtMs ? !!(invitedAtMs && invitedAtMs >= enabledAtMs) : true;
 
-      // 返利系统关闭时，返利金额为 0；否则正常计算
-      const rebateAmountYuan = rebateEnabled && eligibleByTime ? ((amountCents / 100) * (Number.isFinite(rate1) ? rate1 : 0)) / 100 : 0;
+      // 用户端优先展示真实返利记录中的金额；无历史记录时再按旧规则兜底计算
+      const rebateAmountYuan = recordRef
+        ? Number(recordRef.rebateAmountCents || 0) / 100
+        : rebateEnabled && eligibleByTime
+          ? ((amountCents / 100) * (Number.isFinite(rate1) ? rate1 : 0)) / 100
+          : 0;
 
       return {
         invitedUsername: u.username,
