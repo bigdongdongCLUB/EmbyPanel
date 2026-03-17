@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { PaginationBar } from "@/components/pagination-bar";
 
 type Row = {
   invitedUsername: string;
@@ -25,6 +26,8 @@ export function InvitesClient() {
   const [inviteCode, setInviteCode] = useState("");
   const [rows, setRows] = useState<Row[]>([]);
   const [rebatePolicy, setRebatePolicy] = useState<RebatePolicy | null>(null);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   async function refresh() {
     setLoading(true);
@@ -35,6 +38,7 @@ export function InvitesClient() {
       setInviteCode(json.inviteCode || "");
       setRows(json.rows || []);
       setRebatePolicy(json.rebatePolicy || null);
+      setPage(1);
     } catch (e: any) {
       alert(e?.message || "load_failed");
     } finally {
@@ -45,6 +49,16 @@ export function InvitesClient() {
   useEffect(() => {
     refresh();
   }, []);
+
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const visibleRows = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return rows.slice(start, start + pageSize);
+  }, [page, pageSize, rows]);
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
   return (
     <div className="max-w-[1000px] mx-auto space-y-6">
@@ -158,34 +172,51 @@ export function InvitesClient() {
         </div>
       )}
 
-      <div className="bg-white rounded-2xl border border-[#eaeaea] overflow-auto">
-        <table className="min-w-[760px] w-full text-sm text-left">
-          <thead className="bg-[#f8f9fa] text-[#666] border-b border-[#eaeaea]">
-            <tr>
-              <th className="px-6 py-4 font-medium">邀请用户</th>
-              <th className="px-6 py-4 font-medium">注册时间</th>
-              <th className="px-6 py-4 font-medium">订阅计划</th>
-              <th className="px-6 py-4 font-medium">付费周期</th>
-              <th className="px-6 py-4 font-medium">返利金额</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r, i) => (
-              <tr key={i} className="border-b border-[#eaeaea] last:border-b-0">
-                <td className="px-6 py-5 text-[#666]">{r.invitedUsername}</td>
-                <td className="px-6 py-5 text-[#666]">{r.registerDate}</td>
-                <td className="px-6 py-5 text-[#666]">{r.planName}</td>
-                <td className="px-6 py-5 text-[#666]">{r.payCycle}</td>
-                <td className="px-6 py-5 text-[#666]">¥{r.rebateAmount}</td>
-              </tr>
-            ))}
-            {!rows.length ? (
+      <div className="bg-white rounded-2xl border border-[#eaeaea] overflow-hidden">
+        <div className="overflow-auto">
+          <table className="min-w-[760px] w-full text-sm text-left">
+            <thead className="bg-[#f8f9fa] text-[#666] border-b border-[#eaeaea]">
               <tr>
-                <td className="px-6 py-16 text-center text-[#aaa]" colSpan={5}>暂无邀请购买记录</td>
+                <th className="px-6 py-4 font-medium">邀请用户</th>
+                <th className="px-6 py-4 font-medium">注册时间</th>
+                <th className="px-6 py-4 font-medium">订阅计划</th>
+                <th className="px-6 py-4 font-medium">付费周期</th>
+                <th className="px-6 py-4 font-medium">返利金额</th>
               </tr>
-            ) : null}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {visibleRows.map((r, i) => (
+                <tr key={`${r.invitedUsername}-${r.registerDate}-${i}`} className="border-b border-[#eaeaea] last:border-b-0">
+                  <td className="px-6 py-5 text-[#666]">{r.invitedUsername}</td>
+                  <td className="px-6 py-5 text-[#666]">{r.registerDate}</td>
+                  <td className="px-6 py-5 text-[#666]">{r.planName}</td>
+                  <td className="px-6 py-5 text-[#666]">{r.payCycle}</td>
+                  <td className="px-6 py-5 text-[#666]">¥{r.rebateAmount}</td>
+                </tr>
+              ))}
+              {!rows.length ? (
+                <tr>
+                  <td className="px-6 py-16 text-center text-[#aaa]" colSpan={5}>暂无邀请购买记录</td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+
+        {rows.length > 0 ? (
+          <PaginationBar
+            total={rows.length}
+            page={page}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={() => {}}
+            pageSizeOptions={[10]}
+            showPageSize={false}
+            compactSinglePage
+            simpleGoto
+          />
+        ) : null}
       </div>
     </div>
   );
