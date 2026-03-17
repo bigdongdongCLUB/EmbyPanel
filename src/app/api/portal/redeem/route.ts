@@ -25,17 +25,17 @@ async function applyInviteCommission(tx: any, buyerUserId: string, amountCents: 
   ]);
 
   const rebate = (rebateRow?.valueJson as any) ?? {};
-  if (!rebate?.enabled) return;
+  const rebateEnabled = !!rebate?.enabled;
 
   const relMap = ((relRow?.valueJson as any) ?? {}) as Record<string, { inviterUserId: string }>;
   const inviterUserId = relMap[buyerUserId]?.inviterUserId;
   if (!inviterUserId || inviterUserId === buyerUserId) return;
 
   const rate1 = Number(rebate?.rate1 ?? 0);
-  if (!Number.isFinite(rate1) || rate1 <= 0) return;
+  const normalizedRate = Number.isFinite(rate1) && rate1 > 0 ? rate1 : 0;
 
   const mode = rebate?.mode === "FIRST_ONLY" ? "FIRST_ONLY" : "LOOP";
-  if (mode === "FIRST_ONLY") {
+  if (rebateEnabled && mode === "FIRST_ONLY") {
     const firstPaidRow = await tx.appSetting.findUnique({ where: { key: INVITE_FIRST_PAID_KEY } });
     const paidMap = ((firstPaidRow?.valueJson as any) ?? {}) as Record<string, boolean>;
     if (paidMap[buyerUserId]) return;
@@ -48,10 +48,11 @@ async function applyInviteCommission(tx: any, buyerUserId: string, amountCents: 
     });
   }
 
-  const commissionCents = Math.floor((amountCents * rate1) / 100);
-  if (commissionCents <= 0) return;
+  const commissionCents = rebateEnabled && normalizedRate > 0 ? Math.floor((amountCents * normalizedRate) / 100) : 0;
 
-  await tx.user.update({ where: { id: inviterUserId }, data: { balanceCents: { increment: commissionCents } } });
+  if (commissionCents > 0) {
+    await tx.user.update({ where: { id: inviterUserId }, data: { balanceCents: { increment: commissionCents } } });
+  }
 
   const recKey = "invite_rebate_records";
   const recRow = await tx.appSetting.findUnique({ where: { key: recKey } });
@@ -61,7 +62,7 @@ async function applyInviteCommission(tx: any, buyerUserId: string, amountCents: 
     inviterUserId,
     invitedUserId: buyerUserId,
     level: 1,
-    rate: rate1,
+    rate: normalizedRate,
     orderAmountCents: amountCents,
     rebateAmountCents: commissionCents,
     createdAt: new Date().toISOString(),
