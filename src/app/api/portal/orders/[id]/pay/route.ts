@@ -55,6 +55,7 @@ async function applyInviteCommission(tx: any, buyerUserId: string, amountCents: 
   }
 
   const commissionCents = rebateEnabled && normalizedRate > 0 ? Math.floor((amountCents * normalizedRate) / 100) : 0;
+  const recordRate = rebateEnabled ? normalizedRate : 0;
 
   if (commissionCents > 0) {
     await tx.user.update({ where: { id: inviterUserId }, data: { balanceCents: { increment: commissionCents } } });
@@ -68,7 +69,7 @@ async function applyInviteCommission(tx: any, buyerUserId: string, amountCents: 
     inviterUserId,
     invitedUserId: buyerUserId,
     level: 1,
-    rate: normalizedRate,
+    rate: recordRate,
     orderAmountCents: amountCents,
     rebateAmountCents: commissionCents,
     createdAt: new Date().toISOString(),
