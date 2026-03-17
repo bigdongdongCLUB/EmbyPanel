@@ -7,7 +7,6 @@ import { prisma } from "@/lib/db";
 
 const REL_KEY = "invite_relations";
 const RECORD_KEY = "invite_rebate_records";
-const REBATE_CONFIG_KEY = "invite_rebate";
 
 type Rel = { inviterUserId: string; inviteCode: string; createdAt: string };
 type RecordRow = {
@@ -33,16 +32,13 @@ export async function GET() {
   const auth = await requireAdmin();
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
-  const [relRow, recordRow, rebateRow] = await Promise.all([
+  const [relRow, recordRow] = await Promise.all([
     prisma.appSetting.findUnique({ where: { key: REL_KEY } }),
     prisma.appSetting.findUnique({ where: { key: RECORD_KEY } }),
-    prisma.appSetting.findUnique({ where: { key: REBATE_CONFIG_KEY } }),
   ]);
 
   const relMap = ((relRow?.valueJson as any) ?? {}) as Record<string, Rel>;
   const records = (Array.isArray(recordRow?.valueJson) ? (recordRow!.valueJson as any[]) : []) as RecordRow[];
-  const rebateConfig = (rebateRow?.valueJson as any) ?? {};
-  const rebateEnabled = !!rebateConfig.enabled;
 
   const now = Date.now();
   const from30 = now - 30 * 24 * 3600 * 1000;
@@ -61,14 +57,12 @@ export async function GET() {
     return Number.isFinite(t) && t >= from30;
   });
 
-  // 返利系统关闭时，所有返利金额视为 0
-  const totalRebate30Cents = rebateEnabled
-    ? records30.reduce((s, r) => s + Number(r.rebateAmountCents || 0), 0)
-    : 0;
+  // 管理面板始终展示记录里已发生的返利金额，不受当前返利开关影响
+  const totalRebate30Cents = records30.reduce((s, r) => s + Number(r.rebateAmountCents || 0), 0);
 
   const inviterAgg = new Map<string, number>();
   for (const r of records30) {
-    const amount = rebateEnabled ? Number(r.rebateAmountCents || 0) : 0;
+    const amount = Number(r.rebateAmountCents || 0);
     inviterAgg.set(r.inviterUserId, (inviterAgg.get(r.inviterUserId) || 0) + amount);
   }
   let topInviterUserId: string | null = null;
@@ -109,7 +103,7 @@ export async function GET() {
       level: r.level,
       rate: r.rate,
       orderAmountYuan: (Number(r.orderAmountCents || 0) / 100).toFixed(2),
-      rebateAmountYuan: rebateEnabled ? (Number(r.rebateAmountCents || 0) / 100).toFixed(2) : "0.00",
+      rebateAmountYuan: (Number(r.rebateAmountCents || 0) / 100).toFixed(2),
       createdAt: ymd(r.createdAt),
     }));
 
