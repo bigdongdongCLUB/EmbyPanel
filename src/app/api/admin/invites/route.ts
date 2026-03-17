@@ -7,7 +7,6 @@ import { prisma } from "@/lib/db";
 
 const REL_KEY = "invite_relations";
 const RECORD_KEY = "invite_rebate_records";
-const REBATE_CONFIG_KEY = "invite_rebate";
 
 type Rel = { inviterUserId: string; inviteCode: string; createdAt: string };
 type RecordRow = {
@@ -33,16 +32,13 @@ export async function GET() {
   const auth = await requireAdmin();
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
-  const [relRow, recordRow, rebateRow] = await Promise.all([
+  const [relRow, recordRow] = await Promise.all([
     prisma.appSetting.findUnique({ where: { key: REL_KEY } }),
     prisma.appSetting.findUnique({ where: { key: RECORD_KEY } }),
-    prisma.appSetting.findUnique({ where: { key: REBATE_CONFIG_KEY } }),
   ]);
 
   const relMap = ((relRow?.valueJson as any) ?? {}) as Record<string, Rel>;
   const records = (Array.isArray(recordRow?.valueJson) ? (recordRow!.valueJson as any[]) : []) as RecordRow[];
-  const rebateConfig = (rebateRow?.valueJson as any) ?? {};
-  const rebateEnabled = !!rebateConfig.enabled;
 
   const now = Date.now();
   const from30 = now - 30 * 24 * 3600 * 1000;
@@ -105,7 +101,7 @@ export async function GET() {
       inviter: nameById.get(r.inviterUserId) || r.inviterUserId,
       invited: nameById.get(r.invitedUserId) || r.invitedUserId,
       level: r.level,
-      rate: rebateEnabled ? r.rate : 0,
+      rate: r.rate,
       orderAmountYuan: (Number(r.orderAmountCents || 0) / 100).toFixed(2),
       rebateAmountYuan: (Number(r.rebateAmountCents || 0) / 100).toFixed(2),
       createdAt: ymd(r.createdAt),
