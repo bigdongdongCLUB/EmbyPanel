@@ -150,6 +150,8 @@ export async function GET() {
   }
 
   const rows = invitedUsers
+    .slice()
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .map((u) => {
       const firstOrder = firstPaidByUser.get(u.id);
       const latestOrder = latestPaidByUser.get(u.id);
@@ -192,8 +194,7 @@ export async function GET() {
         paidAt: fmtYmd(orderRef?.paidAt ?? orderRef?.createdAt ?? subRef?.createdAt ?? null),
         rebateAmount: rebateAmountYuan.toFixed(2),
       };
-    })
-    .sort((a, b) => b.registerDate.localeCompare(a.registerDate));
+    });
 
   return NextResponse.json({
     ok: true,
