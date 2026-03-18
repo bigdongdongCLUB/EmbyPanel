@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { PaginationBar } from "@/components/pagination-bar";
 
 type Summary = {
   invitedUsers30d: number;
@@ -24,6 +25,8 @@ export function InvitesAdminClient() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [rows, setRows] = useState<Row[]>([]);
   const [q, setQ] = useState("");
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   async function refresh() {
     setLoading(true);
@@ -33,6 +36,7 @@ export function InvitesAdminClient() {
       if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
       setSummary(json.summary);
       setRows(json.rows || []);
+      setPage(1);
     } catch (e: any) {
       alert(e?.message || "load_failed");
     } finally {
@@ -49,6 +53,20 @@ export function InvitesAdminClient() {
     if (!qq) return rows;
     return rows.filter((r) => String(r.inviter || "").toLowerCase().includes(qq) || String(r.invited || "").toLowerCase().includes(qq));
   }, [rows, q]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
+  const visibleRows = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredRows.slice(start, start + pageSize);
+  }, [filteredRows, page, pageSize]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [q]);
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
   return (
     <div className="space-y-6">
@@ -71,7 +89,7 @@ export function InvitesAdminClient() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-[#eaeaea] bg-white overflow-auto shadow-sm">
+      <div className="rounded-2xl border border-[#eaeaea] bg-white overflow-hidden shadow-sm">
         <div className="px-4 py-3 border-b border-[#eaeaea] bg-[#f8f9fa] font-medium">返利记录</div>
         <div className="p-2 border-b border-[#eaeaea] bg-white">
           <input
@@ -81,37 +99,54 @@ export function InvitesAdminClient() {
             onChange={(e) => setQ(e.target.value)}
           />
         </div>
-        <table className="min-w-[980px] w-full text-sm">
-          <thead className="border-b border-[#eaeaea] bg-[#f8f9fa] text-left text-[#666]">
-            <tr>
-              <th className="px-3 py-2">邀请人</th>
-              <th className="px-3 py-2">被邀请人</th>
-              <th className="px-3 py-2">层级</th>
-              <th className="px-3 py-2">返利比例</th>
-              <th className="px-3 py-2">订单金额</th>
-              <th className="px-3 py-2">返利金额</th>
-              <th className="px-3 py-2">创建时间</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredRows.map((r) => (
-              <tr key={r.id} className="border-b border-[#eaeaea] last:border-b-0 hover:bg-gray-50/60">
-                <td className="px-3 py-2">{r.inviter}</td>
-                <td className="px-3 py-2">{r.invited}</td>
-                <td className="px-3 py-2">{r.level}</td>
-                <td className="px-3 py-2">{r.rate}%</td>
-                <td className="px-3 py-2">¥{r.orderAmountYuan}</td>
-                <td className="px-3 py-2 text-green-700">¥{r.rebateAmountYuan}</td>
-                <td className="px-3 py-2">{r.createdAt}</td>
-              </tr>
-            ))}
-            {!filteredRows.length ? (
+        <div className="overflow-auto">
+          <table className="min-w-[980px] w-full text-sm">
+            <thead className="border-b border-[#eaeaea] bg-[#f8f9fa] text-left text-[#666]">
               <tr>
-                <td className="px-3 py-6 text-gray-500" colSpan={7}>{rows.length ? "无匹配记录" : "暂无返利记录"}</td>
+                <th className="px-3 py-2">邀请人</th>
+                <th className="px-3 py-2">被邀请人</th>
+                <th className="px-3 py-2">层级</th>
+                <th className="px-3 py-2">返利比例</th>
+                <th className="px-3 py-2">订单金额</th>
+                <th className="px-3 py-2">返利金额</th>
+                <th className="px-3 py-2">创建时间</th>
               </tr>
-            ) : null}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {visibleRows.map((r) => (
+                <tr key={r.id} className="border-b border-[#eaeaea] last:border-b-0 hover:bg-gray-50/60">
+                  <td className="px-3 py-2">{r.inviter}</td>
+                  <td className="px-3 py-2">{r.invited}</td>
+                  <td className="px-3 py-2">{r.level}</td>
+                  <td className="px-3 py-2">{r.rate}%</td>
+                  <td className="px-3 py-2">¥{r.orderAmountYuan}</td>
+                  <td className="px-3 py-2 text-green-700">¥{r.rebateAmountYuan}</td>
+                  <td className="px-3 py-2">{r.createdAt}</td>
+                </tr>
+              ))}
+              {!filteredRows.length ? (
+                <tr>
+                  <td className="px-3 py-6 text-gray-500" colSpan={7}>{rows.length ? "无匹配记录" : "暂无返利记录"}</td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+
+        {filteredRows.length > 0 ? (
+          <PaginationBar
+            total={filteredRows.length}
+            page={page}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={() => {}}
+            pageSizeOptions={[10]}
+            showPageSize={false}
+            compactSinglePage
+            simpleGoto
+          />
+        ) : null}
       </div>
     </div>
   );
