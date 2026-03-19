@@ -627,7 +627,7 @@ export function UsersClient() {
                   <span className={sortBy === "createdAt" ? "text-[#e3001b]" : "text-gray-400"}>{sortBy === "createdAt" ? (sortOrder === "asc" ? "↑" : "↓") : "↕"}</span>
                 </button>
               </th>
-              <th className="py-2 px-3">操作</th>
+              <th className="sticky right-0 z-20 py-2 px-3 bg-[#f8f9fa] border-l border-[#eaeaea] shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.28)]">操作</th>
             </tr>
           </thead>
           <tbody>
@@ -715,9 +715,9 @@ export function UsersClient() {
                 </td>
                 <td className="py-2 px-3 font-mono text-xs">{formatDateYmdShanghai(r.endAt)}</td>
                 <td className="py-2 px-3 font-mono text-xs">{formatDateYmdShanghai(r.createdAt)}</td>
-                <td className="py-2 px-3">
+                <td className="sticky right-0 z-10 py-2 px-3 bg-white border-l border-[#eaeaea] shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.22)]">
                   <button
-                    className="border rounded px-2 py-1"
+                    className="border rounded px-2 py-1 bg-white"
                     onClick={async () => {
                       setEdit({
                         open: true,
