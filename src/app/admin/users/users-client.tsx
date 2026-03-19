@@ -513,12 +513,12 @@ export function UsersClient() {
           </button>
         </div>
         <div className="flex gap-2 items-center">
-          <button className="bg-[#e3001b] hover:bg-[#c20017] text-white rounded-lg px-3 py-2" onClick={() => setCreateOpen(true)}>
+          <button className="inline-flex items-center whitespace-nowrap bg-[#e3001b] hover:bg-[#c20017] text-white rounded-lg px-3 py-2" onClick={() => setCreateOpen(true)}>
             + 创建用户
           </button>
 
           <div ref={moreRef} className="relative">
-            <button className="cursor-pointer select-none border border-[#eaeaea] bg-white rounded-lg px-3 py-2 hover:bg-[#f4f5f7]" onClick={() => setMoreOpen((v) => !v)}>
+            <button className="inline-flex items-center whitespace-nowrap cursor-pointer select-none border border-[#eaeaea] bg-white rounded-lg px-3 py-2 hover:bg-[#f4f5f7]" onClick={() => setMoreOpen((v) => !v)}>
               更多 ▾
             </button>
             {moreOpen ? (
