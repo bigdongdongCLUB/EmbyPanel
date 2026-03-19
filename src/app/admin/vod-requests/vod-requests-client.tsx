@@ -66,6 +66,11 @@ function statusCls(v: BizStatus) {
   return "border-green-200 bg-green-50 text-green-700";
 }
 
+function tmdbUrl(r: Row) {
+  if (!r.tmdbId) return null;
+  return `https://www.themoviedb.org/${r.mediaType === "MOVIE" ? "movie" : "tv"}/${r.tmdbId}`;
+}
+
 export function VodRequestsAdminClient() {
   const [q, setQ] = useState("");
   const [bizStatus, setBizStatus] = useState("");
@@ -250,9 +255,35 @@ export function VodRequestsAdminClient() {
               <tr key={r.id} className="border-b border-[#eaeaea] align-middle">
                 <td className="px-3 py-3 align-middle">
                   <div className="flex items-center gap-2 min-w-[260px]">
-                    {r.posterPath ? <img src={r.posterPath} alt={r.title} className="w-10 h-14 rounded object-cover" /> : <div className="w-10 h-14 rounded bg-gray-100" />}
+                    {tmdbUrl(r) ? (
+                      <a
+                        href={tmdbUrl(r) || undefined}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block shrink-0 rounded transition hover:opacity-90"
+                        title="在 TMDB 中查看"
+                      >
+                        {r.posterPath ? <img src={r.posterPath} alt={r.title} className="w-10 h-14 rounded object-cover" /> : <div className="w-10 h-14 rounded bg-gray-100" />}
+                      </a>
+                    ) : r.posterPath ? (
+                      <img src={r.posterPath} alt={r.title} className="w-10 h-14 rounded object-cover" />
+                    ) : (
+                      <div className="w-10 h-14 rounded bg-gray-100" />
+                    )}
                     <div className="min-w-0">
-                      <div className="font-medium text-gray-800 truncate">{r.title}</div>
+                      {tmdbUrl(r) ? (
+                        <a
+                          href={tmdbUrl(r) || undefined}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="block truncate font-medium text-gray-800 transition hover:text-[#e3001b] hover:underline"
+                          title="在 TMDB 中查看"
+                        >
+                          {r.title}
+                        </a>
+                      ) : (
+                        <div className="font-medium text-gray-800 truncate">{r.title}</div>
+                      )}
                       <div className="text-xs text-gray-500 truncate">{r.titleOriginal || "-"}</div>
                       <div className="text-xs text-gray-500 mt-1">
                         <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] text-white mr-1 ${r.mediaType === "MOVIE" ? "bg-[#913edb]" : "bg-[#e3001b]"}`}>{r.mediaType === "MOVIE" ? "电影" : "电视剧"}</span>
