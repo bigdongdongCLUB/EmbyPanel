@@ -311,9 +311,6 @@ export function VodRequestsAdminClient() {
                           <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] text-white mr-1 ${r.mediaType === "MOVIE" ? "bg-[#913edb]" : "bg-[#e3001b]"}`}>{r.mediaType === "MOVIE" ? "电影" : "电视剧"}</span>
                           {r.mediaType === "TV" && r.season ? `S${String(r.season).padStart(2, "0")} · ` : ""}{r.year || "-"}
                         </div>
-                        {r.otherRequests.length > 0 ? (
-                          <div className="mt-1 text-[11px] text-gray-400">共 {r.requestCount} 人点播，当前显示最新一条</div>
-                        ) : null}
                       </div>
                     </div>
                   </td>
