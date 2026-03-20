@@ -3,6 +3,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PaginationBar } from "@/components/pagination-bar";
 
+type BizStatus = "PENDING" | "NO_RESOURCE" | "PROCESSING" | "CANNOT_UPDATE" | "COMPLETED";
+
+type RelatedRequest = {
+  id: string;
+  status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
+  bizStatus: BizStatus;
+  note: string | null;
+  adminNote: string | null;
+  createdAt: string;
+  user: { id: string; username: string; email: string | null };
+};
+
 type Row = {
   id: string;
   tmdbId: number;
@@ -13,11 +25,13 @@ type Row = {
   year: string | null;
   season: number | null;
   status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
-  bizStatus: "PENDING" | "NO_RESOURCE" | "PROCESSING" | "CANNOT_UPDATE" | "COMPLETED";
+  bizStatus: BizStatus;
   note: string | null;
   adminNote: string | null;
   createdAt: string;
   user: { id: string; username: string; email: string | null };
+  requestCount: number;
+  otherRequests: RelatedRequest[];
 };
 
 type Resp = {
@@ -44,9 +58,7 @@ function fmt(v?: string | null) {
   return new Date(v).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false }).replace(/\//g, "-");
 }
 
-type BizStatus = "PENDING" | "NO_RESOURCE" | "PROCESSING" | "CANNOT_UPDATE" | "COMPLETED";
-
-function deriveBizStatus(r: Row): BizStatus {
+function deriveBizStatus(r: { bizStatus: BizStatus }) {
   return r.bizStatus;
 }
 
@@ -71,6 +83,10 @@ function tmdbUrl(r: Row) {
   return `https://www.themoviedb.org/${r.mediaType === "MOVIE" ? "movie" : "tv"}/${r.tmdbId}`;
 }
 
+function userLabel(user: { username: string; email: string | null }) {
+  return user.username || user.email || "-";
+}
+
 export function VodRequestsAdminClient() {
   const [q, setQ] = useState("");
   const [bizStatus, setBizStatus] = useState("");
@@ -86,6 +102,7 @@ export function VodRequestsAdminClient() {
   const [replyMap, setReplyMap] = useState<Record<string, string>>({});
   const [actionMap, setActionMap] = useState<Record<string, string>>({});
   const [noteTooltipId, setNoteTooltipId] = useState<string | null>(null);
+  const [openMoreId, setOpenMoreId] = useState<string | null>(null);
   const saveTimerRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   async function refresh(nextPage = page, nextPageSize = pageSize) {
@@ -112,6 +129,7 @@ export function VodRequestsAdminClient() {
         }
         return out;
       });
+      setOpenMoreId(null);
     } catch (e) {
       setError((e as Error)?.message || "load_failed");
     } finally {
@@ -142,39 +160,26 @@ export function VodRequestsAdminClient() {
     if (!res.ok) throw new Error((json as Resp)?.error || `HTTP ${res.status}`);
   }
 
-  async function applyQuickAction(row: Row, action: "PENDING" | "NO_RESOURCE" | "PROCESSING" | "CANNOT_UPDATE" | "COMPLETED") {
+  async function applyQuickAction(row: Row, action: BizStatus) {
     if (!action) return;
     const nextStatus: Row["status"] = action === "COMPLETED" ? "APPROVED" : action === "PENDING" || action === "PROCESSING" ? "PENDING" : "REJECTED";
 
-    // 状态切换不自动写入管理员回复；仅保留手动输入内容
     const manualReply = (replyMap[row.id] || "").trim().slice(0, 20);
 
-    await patchRow(row.id, { status: nextStatus, bizStatus: action as BizStatus, adminNote: manualReply || undefined });
+    await patchRow(row.id, { status: nextStatus, bizStatus: action, adminNote: manualReply || undefined });
     setReplyMap((m) => ({ ...m, [row.id]: manualReply }));
     await refresh(page, pageSize);
   }
 
   async function deleteRow(id: string) {
-    console.log('[deleteRow] called with id:', id);
-    // 使用自定义确认而不是 window.confirm，避免浏览器行为问题
     const ok = await (window as unknown as { showConfirm: (msg: string) => Promise<boolean> }).showConfirm("确认删除该点播记录吗？\n\n删除后用户侧也会同步消失。\n\n此操作不可恢复！");
-    console.log('[deleteRow] confirm result:', ok);
-    if (!ok) {
-      console.log('[deleteRow] user cancelled');
-      return;
-    }
+    if (!ok) return;
     try {
-      console.log('[deleteRow] sending DELETE request to:', `/api/admin/vod-requests/${id}`);
       const res = await fetch(`/api/admin/vod-requests/${id}`, { method: "DELETE" });
-      console.log('[deleteRow] response status:', res.status);
       const json = await res.json().catch(() => null);
-      console.log('[deleteRow] response json:', json);
       if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
-      console.log('[deleteRow] success, refreshing...');
       await refresh(page, pageSize);
-      console.log('[deleteRow] refresh complete');
     } catch (e) {
-      console.error('[deleteRow] error:', e);
       alert(`删除失败：${(e as Error)?.message || "unknown_error"}`);
     }
   }
@@ -270,42 +275,78 @@ export function VodRequestsAdminClient() {
                     ) : (
                       <div className="w-10 h-14 rounded bg-gray-100" />
                     )}
-                    <div className="min-w-0">
-                      {tmdbUrl(r) ? (
-                        <a
-                          href={tmdbUrl(r) || undefined}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="block truncate font-medium text-gray-800 transition hover:text-[#e3001b] hover:underline"
-                          title="在 TMDB 中查看"
-                        >
-                          {r.title}
-                        </a>
-                      ) : (
-                        <div className="font-medium text-gray-800 truncate">{r.title}</div>
-                      )}
+                    <div className="min-w-0 relative">
+                      <div className="flex items-center gap-1">
+                        {tmdbUrl(r) ? (
+                          <a
+                            href={tmdbUrl(r) || undefined}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block min-w-0 truncate font-medium text-gray-800 transition hover:text-[#e3001b] hover:underline"
+                            title="在 TMDB 中查看"
+                          >
+                            {r.title}
+                          </a>
+                        ) : (
+                          <div className="min-w-0 truncate font-medium text-gray-800">{r.title}</div>
+                        )}
+                        {r.otherRequests.length > 0 ? (
+                          <button
+                            type="button"
+                            className="shrink-0 rounded p-1 hover:bg-[#f4f5f7] transition"
+                            onClick={() => setOpenMoreId(openMoreId === r.id ? null : r.id)}
+                            title={`展开其余 ${r.otherRequests.length} 位点播用户`}
+                            aria-label={`展开其余 ${r.otherRequests.length} 位点播用户`}
+                          >
+                            <img src="/icons/more.svg" alt="更多点播用户" className={`w-4 h-4 transition ${openMoreId === r.id ? "rotate-180" : ""}`} />
+                          </button>
+                        ) : null}
+                      </div>
                       <div className="text-xs text-gray-500 truncate">{r.titleOriginal || "-"}</div>
                       <div className="text-xs text-gray-500 mt-1">
                         <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] text-white mr-1 ${r.mediaType === "MOVIE" ? "bg-[#913edb]" : "bg-[#e3001b]"}`}>{r.mediaType === "MOVIE" ? "电影" : "电视剧"}</span>
                         {r.mediaType === "TV" && r.season ? `S${String(r.season).padStart(2, "0")} · ` : ""}{r.year || "-"}
                       </div>
+                      {r.otherRequests.length > 0 ? (
+                        <div className="mt-1 text-[11px] text-gray-400">共 {r.requestCount} 人点播，当前显示最新一条</div>
+                      ) : null}
+                      {r.otherRequests.length > 0 && openMoreId === r.id ? (
+                        <div className="absolute left-0 top-full z-30 mt-2 w-[360px] max-w-[calc(100vw-4rem)] rounded-2xl border border-[#eaeaea] bg-white p-3 shadow-xl">
+                          <div className="mb-2 text-xs font-medium text-gray-700">其余 {r.otherRequests.length} 位点播用户</div>
+                          <div className="max-h-[320px] space-y-2 overflow-auto pr-1">
+                            {r.otherRequests.map((item) => (
+                              <div key={item.id} className="rounded-xl border border-[#f1f1f1] bg-[#fafafa] p-3">
+                                <div className="flex items-center justify-between gap-3">
+                                  <div className="font-medium text-gray-800 truncate">{userLabel(item.user)}</div>
+                                  <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${statusCls(deriveBizStatus(item))}`}>{statusText(deriveBizStatus(item))}</span>
+                                </div>
+                                <div className="mt-2 space-y-1 text-xs text-gray-600">
+                                  <div><span className="text-gray-400">用户备注：</span>{item.note || "-"}</div>
+                                  <div><span className="text-gray-400">管理员回复：</span>{item.adminNote || "-"}</div>
+                                  <div><span className="text-gray-400">请求时间：</span>{fmt(item.createdAt)}</div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 </td>
-                <td className="px-3 py-3 whitespace-nowrap align-middle">{r.user.username || r.user.email || "-"}</td>
+                <td className="px-3 py-3 whitespace-nowrap align-middle">{userLabel(r.user)}</td>
                 <td className="px-3 py-3 align-middle">
                   {r.note ? (
                     <div className="relative inline-block">
                       <button
                         type="button"
                         className="p-0.5 hover:bg-[#f4f5f7] rounded flex items-center justify-center"
-                        style={{ minWidth: '20px', minHeight: '20px' }}
+                        style={{ minWidth: "20px", minHeight: "20px" }}
                         onMouseEnter={() => setNoteTooltipId(r.id)}
                         onMouseLeave={() => setNoteTooltipId(null)}
                         onClick={() => setNoteTooltipId(noteTooltipId === r.id ? null : r.id)}
                         aria-label="查看备注"
                       >
-                        <img src="/icons/exclamation.svg" alt="备注" className="w-4 h-4 flex-shrink-0" style={{ width: '16px', height: '16px' }} />
+                        <img src="/icons/exclamation.svg" alt="备注" className="w-4 h-4 flex-shrink-0" style={{ width: "16px", height: "16px" }} />
                       </button>
                       {noteTooltipId === r.id && (
                         <div className="absolute left-0 bottom-full mb-1 z-[100] w-64 rounded-xl border border-[#f3d4d8] bg-white text-gray-800 text-xs leading-relaxed px-3 py-2 shadow-lg">
@@ -340,7 +381,7 @@ export function VodRequestsAdminClient() {
                       value={actionMap[r.id] ?? ""}
                       disabled={loading}
                       onChange={(e) => {
-                        const v = e.target.value as "" | "PENDING" | "NO_RESOURCE" | "PROCESSING" | "CANNOT_UPDATE" | "COMPLETED" | "DELETE";
+                        const v = e.target.value as "" | BizStatus | "DELETE";
                         if (!v) return;
                         if (v === "DELETE") {
                           (async () => {
