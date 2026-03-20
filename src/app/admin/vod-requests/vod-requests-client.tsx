@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { PaginationBar } from "@/components/pagination-bar";
 
 type BizStatus = "PENDING" | "NO_RESOURCE" | "PROCESSING" | "CANNOT_UPDATE" | "COMPLETED";
@@ -126,6 +126,9 @@ export function VodRequestsAdminClient() {
         const out = { ...prev };
         for (const r of json?.rows || []) {
           out[r.id] = r.adminNote || "";
+          for (const item of r.otherRequests || []) {
+            out[item.id] = item.adminNote || "";
+          }
         }
         return out;
       });
@@ -160,7 +163,7 @@ export function VodRequestsAdminClient() {
     if (!res.ok) throw new Error((json as Resp)?.error || `HTTP ${res.status}`);
   }
 
-  async function applyQuickAction(row: Row, action: BizStatus) {
+  async function applyQuickAction(row: Pick<Row, "id" | "status"> | Pick<RelatedRequest, "id" | "status">, action: BizStatus) {
     if (!action) return;
     const nextStatus: Row["status"] = action === "COMPLETED" ? "APPROVED" : action === "PENDING" || action === "PROCESSING" ? "PENDING" : "REJECTED";
 
@@ -257,163 +260,234 @@ export function VodRequestsAdminClient() {
           </thead>
           <tbody>
             {visibleRows.map((r) => (
-              <tr key={r.id} className="border-b border-[#eaeaea] align-middle">
-                <td className="px-3 py-3 align-middle">
-                  <div className="flex items-center gap-2 min-w-[260px]">
-                    {tmdbUrl(r) ? (
-                      <a
-                        href={tmdbUrl(r) || undefined}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="block shrink-0 rounded transition hover:opacity-90"
-                        title="在 TMDB 中查看"
-                      >
-                        {r.posterPath ? <img src={r.posterPath} alt={r.title} className="w-10 h-14 rounded object-cover" /> : <div className="w-10 h-14 rounded bg-gray-100" />}
-                      </a>
-                    ) : r.posterPath ? (
-                      <img src={r.posterPath} alt={r.title} className="w-10 h-14 rounded object-cover" />
-                    ) : (
-                      <div className="w-10 h-14 rounded bg-gray-100" />
-                    )}
-                    <div className="min-w-0 relative">
-                      <div className="flex items-center gap-1">
-                        {tmdbUrl(r) ? (
-                          <a
-                            href={tmdbUrl(r) || undefined}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="block min-w-0 truncate font-medium text-gray-800 transition hover:text-[#e3001b] hover:underline"
-                            title="在 TMDB 中查看"
-                          >
-                            {r.title}
-                          </a>
-                        ) : (
-                          <div className="min-w-0 truncate font-medium text-gray-800">{r.title}</div>
-                        )}
+              <Fragment key={r.id}>
+                <tr key={r.id} className="border-b border-[#eaeaea] align-middle">
+                  <td className="px-3 py-3 align-middle">
+                    <div className="flex items-center gap-2 min-w-[260px]">
+                      {tmdbUrl(r) ? (
+                        <a
+                          href={tmdbUrl(r) || undefined}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="block shrink-0 rounded transition hover:opacity-90"
+                          title="在 TMDB 中查看"
+                        >
+                          {r.posterPath ? <img src={r.posterPath} alt={r.title} className="w-10 h-14 rounded object-cover" /> : <div className="w-10 h-14 rounded bg-gray-100" />}
+                        </a>
+                      ) : r.posterPath ? (
+                        <img src={r.posterPath} alt={r.title} className="w-10 h-14 rounded object-cover" />
+                      ) : (
+                        <div className="w-10 h-14 rounded bg-gray-100" />
+                      )}
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1">
+                          {tmdbUrl(r) ? (
+                            <a
+                              href={tmdbUrl(r) || undefined}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="block min-w-0 truncate font-medium text-gray-800 transition hover:text-[#e3001b] hover:underline"
+                              title="在 TMDB 中查看"
+                            >
+                              {r.title}
+                            </a>
+                          ) : (
+                            <div className="min-w-0 truncate font-medium text-gray-800">{r.title}</div>
+                          )}
+                          {r.otherRequests.length > 0 ? (
+                            <button
+                              type="button"
+                              className="shrink-0 rounded p-1 hover:bg-[#f4f5f7] transition"
+                              onClick={() => setOpenMoreId(openMoreId === r.id ? null : r.id)}
+                              title={`展开其余 ${r.otherRequests.length} 位点播用户`}
+                              aria-label={`展开其余 ${r.otherRequests.length} 位点播用户`}
+                            >
+                              <img src="/icons/more.svg" alt="更多点播用户" className={`w-4 h-4 transition ${openMoreId === r.id ? "rotate-180" : ""}`} />
+                            </button>
+                          ) : null}
+                        </div>
+                        <div className="text-xs text-gray-500 truncate">{r.titleOriginal || "-"}</div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] text-white mr-1 ${r.mediaType === "MOVIE" ? "bg-[#913edb]" : "bg-[#e3001b]"}`}>{r.mediaType === "MOVIE" ? "电影" : "电视剧"}</span>
+                          {r.mediaType === "TV" && r.season ? `S${String(r.season).padStart(2, "0")} · ` : ""}{r.year || "-"}
+                        </div>
                         {r.otherRequests.length > 0 ? (
-                          <button
-                            type="button"
-                            className="shrink-0 rounded p-1 hover:bg-[#f4f5f7] transition"
-                            onClick={() => setOpenMoreId(openMoreId === r.id ? null : r.id)}
-                            title={`展开其余 ${r.otherRequests.length} 位点播用户`}
-                            aria-label={`展开其余 ${r.otherRequests.length} 位点播用户`}
-                          >
-                            <img src="/icons/more.svg" alt="更多点播用户" className={`w-4 h-4 transition ${openMoreId === r.id ? "rotate-180" : ""}`} />
-                          </button>
+                          <div className="mt-1 text-[11px] text-gray-400">共 {r.requestCount} 人点播，当前显示最新一条</div>
                         ) : null}
                       </div>
-                      <div className="text-xs text-gray-500 truncate">{r.titleOriginal || "-"}</div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] text-white mr-1 ${r.mediaType === "MOVIE" ? "bg-[#913edb]" : "bg-[#e3001b]"}`}>{r.mediaType === "MOVIE" ? "电影" : "电视剧"}</span>
-                        {r.mediaType === "TV" && r.season ? `S${String(r.season).padStart(2, "0")} · ` : ""}{r.year || "-"}
-                      </div>
-                      {r.otherRequests.length > 0 ? (
-                        <div className="mt-1 text-[11px] text-gray-400">共 {r.requestCount} 人点播，当前显示最新一条</div>
-                      ) : null}
-                      {r.otherRequests.length > 0 && openMoreId === r.id ? (
-                        <div className="absolute left-0 top-full z-30 mt-2 w-[360px] max-w-[calc(100vw-4rem)] rounded-2xl border border-[#eaeaea] bg-white p-3 shadow-xl">
-                          <div className="mb-2 text-xs font-medium text-gray-700">其余 {r.otherRequests.length} 位点播用户</div>
-                          <div className="max-h-[320px] space-y-2 overflow-auto pr-1">
-                            {r.otherRequests.map((item) => (
-                              <div key={item.id} className="rounded-xl border border-[#f1f1f1] bg-[#fafafa] p-3">
-                                <div className="flex items-center justify-between gap-3">
-                                  <div className="font-medium text-gray-800 truncate">{userLabel(item.user)}</div>
-                                  <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${statusCls(deriveBizStatus(item))}`}>{statusText(deriveBizStatus(item))}</span>
-                                </div>
-                                <div className="mt-2 space-y-1 text-xs text-gray-600">
-                                  <div><span className="text-gray-400">用户备注：</span>{item.note || "-"}</div>
-                                  <div><span className="text-gray-400">管理员回复：</span>{item.adminNote || "-"}</div>
-                                  <div><span className="text-gray-400">请求时间：</span>{fmt(item.createdAt)}</div>
-                                </div>
-                              </div>
-                            ))}
+                    </div>
+                  </td>
+                  <td className="px-3 py-3 whitespace-nowrap align-middle">{userLabel(r.user)}</td>
+                  <td className="px-3 py-3 align-middle">
+                    {r.note ? (
+                      <div className="relative inline-block">
+                        <button
+                          type="button"
+                          className="p-0.5 hover:bg-[#f4f5f7] rounded flex items-center justify-center"
+                          style={{ minWidth: "20px", minHeight: "20px" }}
+                          onMouseEnter={() => setNoteTooltipId(r.id)}
+                          onMouseLeave={() => setNoteTooltipId(null)}
+                          onClick={() => setNoteTooltipId(noteTooltipId === r.id ? null : r.id)}
+                          aria-label="查看备注"
+                        >
+                          <img src="/icons/exclamation.svg" alt="备注" className="w-4 h-4 flex-shrink-0" style={{ width: "16px", height: "16px" }} />
+                        </button>
+                        {noteTooltipId === r.id && (
+                          <div className="absolute left-0 bottom-full mb-1 z-[100] w-64 rounded-xl border border-[#f3d4d8] bg-white text-gray-800 text-xs leading-relaxed px-3 py-2 shadow-lg">
+                            <div className="font-medium text-gray-700 mb-1">用户备注</div>
+                            <div className="break-words">{r.note}</div>
                           </div>
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
-                </td>
-                <td className="px-3 py-3 whitespace-nowrap align-middle">{userLabel(r.user)}</td>
-                <td className="px-3 py-3 align-middle">
-                  {r.note ? (
-                    <div className="relative inline-block">
-                      <button
-                        type="button"
-                        className="p-0.5 hover:bg-[#f4f5f7] rounded flex items-center justify-center"
-                        style={{ minWidth: "20px", minHeight: "20px" }}
-                        onMouseEnter={() => setNoteTooltipId(r.id)}
-                        onMouseLeave={() => setNoteTooltipId(null)}
-                        onClick={() => setNoteTooltipId(noteTooltipId === r.id ? null : r.id)}
-                        aria-label="查看备注"
-                      >
-                        <img src="/icons/exclamation.svg" alt="备注" className="w-4 h-4 flex-shrink-0" style={{ width: "16px", height: "16px" }} />
-                      </button>
-                      {noteTooltipId === r.id && (
-                        <div className="absolute left-0 bottom-full mb-1 z-[100] w-64 rounded-xl border border-[#f3d4d8] bg-white text-gray-800 text-xs leading-relaxed px-3 py-2 shadow-lg">
-                          <div className="font-medium text-gray-700 mb-1">用户备注</div>
-                          <div className="break-words">{r.note}</div>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <span className="text-gray-400">-</span>
-                  )}
-                </td>
-                <td className="px-3 py-3 min-w-[220px] align-middle">
-                  <input
-                    className="w-full h-8 border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-2 text-xs focus:border-[#e3001b] outline-none"
-                    maxLength={20}
-                    value={replyMap[r.id] ?? ""}
-                    onChange={(e) => {
-                      const v = e.target.value.replace(/[\r\n]/g, "").slice(0, 20);
-                      setReplyMap((m) => ({ ...m, [r.id]: v }));
-                      saveReplyDebounced(r.id, v);
-                    }}
-                    placeholder="给用户的回复（最多20字）"
-                  />
-                  <div className="text-[10px] text-gray-400 text-right mt-1">{(replyMap[r.id] || "").length}/20</div>
-                </td>
-                <td className="px-3 py-3 text-xs whitespace-nowrap align-middle">{fmt(r.createdAt)}</td>
-                <td className="px-3 py-3 whitespace-nowrap align-middle">
-                  <div className="flex items-center gap-2">
-                    <select
-                      className="h-8 border border-[#eaeaea] bg-white rounded-lg px-2 text-xs focus:border-[#e3001b] outline-none"
-                      value={actionMap[r.id] ?? ""}
-                      disabled={loading}
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-3 min-w-[220px] align-middle">
+                    <input
+                      className="w-full h-8 border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-2 text-xs focus:border-[#e3001b] outline-none"
+                      maxLength={20}
+                      value={replyMap[r.id] ?? ""}
                       onChange={(e) => {
-                        const v = e.target.value as "" | BizStatus | "DELETE";
-                        if (!v) return;
-                        if (v === "DELETE") {
+                        const v = e.target.value.replace(/[\r\n]/g, "").slice(0, 20);
+                        setReplyMap((m) => ({ ...m, [r.id]: v }));
+                        saveReplyDebounced(r.id, v);
+                      }}
+                      placeholder="给用户的回复（最多20字）"
+                    />
+                    <div className="text-[10px] text-gray-400 text-right mt-1">{(replyMap[r.id] || "").length}/20</div>
+                  </td>
+                  <td className="px-3 py-3 text-xs whitespace-nowrap align-middle">{fmt(r.createdAt)}</td>
+                  <td className="px-3 py-3 whitespace-nowrap align-middle">
+                    <div className="flex items-center gap-2">
+                      <select
+                        className="h-8 border border-[#eaeaea] bg-white rounded-lg px-2 text-xs focus:border-[#e3001b] outline-none"
+                        value={actionMap[r.id] ?? ""}
+                        disabled={loading}
+                        onChange={(e) => {
+                          const v = e.target.value as "" | BizStatus | "DELETE";
+                          if (!v) return;
+                          if (v === "DELETE") {
+                            (async () => {
+                              try {
+                                await deleteRow(r.id);
+                              } finally {
+                                setActionMap((m) => ({ ...m, [r.id]: "" }));
+                              }
+                            })();
+                            return;
+                          }
                           (async () => {
                             try {
-                              await deleteRow(r.id);
+                              await applyQuickAction(r, v as BizStatus);
                             } finally {
                               setActionMap((m) => ({ ...m, [r.id]: "" }));
                             }
                           })();
-                          return;
-                        }
-                        (async () => {
-                          try {
-                            await applyQuickAction(r, v as BizStatus);
-                          } finally {
-                            setActionMap((m) => ({ ...m, [r.id]: "" }));
-                          }
-                        })();
-                      }}
-                    >
-                      <option value="">操作</option>
-                      <option value="PENDING">待处理</option>
-                      <option value="NO_RESOURCE">无资源</option>
-                      <option value="PROCESSING">进行中</option>
-                      <option value="CANNOT_UPDATE">无法更新</option>
-                      <option value="COMPLETED">已完成</option>
-                      <option value="DELETE" className="text-red-600">删除</option>
-                    </select>
-                    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${statusCls(deriveBizStatus(r))}`}>{statusText(deriveBizStatus(r))}</span>
-                  </div>
-                </td>
-              </tr>
+                        }}
+                      >
+                        <option value="">操作</option>
+                        <option value="PENDING">待处理</option>
+                        <option value="NO_RESOURCE">无资源</option>
+                        <option value="PROCESSING">进行中</option>
+                        <option value="CANNOT_UPDATE">无法更新</option>
+                        <option value="COMPLETED">已完成</option>
+                        <option value="DELETE" className="text-red-600">删除</option>
+                      </select>
+                      <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${statusCls(deriveBizStatus(r))}`}>{statusText(deriveBizStatus(r))}</span>
+                    </div>
+                  </td>
+                </tr>
+                {openMoreId === r.id
+                  ? r.otherRequests.map((item) => (
+                      <tr key={item.id} className="border-b border-[#eaeaea] align-middle bg-[#fcfcfd]">
+                        <td className="px-3 py-3 align-middle">
+                          <div className="pl-12 text-xs text-gray-400">↳ 同媒体其他点播用户</div>
+                        </td>
+                        <td className="px-3 py-3 whitespace-nowrap align-middle">{userLabel(item.user)}</td>
+                        <td className="px-3 py-3 align-middle">
+                          {item.note ? (
+                            <div className="relative inline-block">
+                              <button
+                                type="button"
+                                className="p-0.5 hover:bg-[#f4f5f7] rounded flex items-center justify-center"
+                                style={{ minWidth: "20px", minHeight: "20px" }}
+                                onMouseEnter={() => setNoteTooltipId(item.id)}
+                                onMouseLeave={() => setNoteTooltipId(null)}
+                                onClick={() => setNoteTooltipId(noteTooltipId === item.id ? null : item.id)}
+                                aria-label="查看备注"
+                              >
+                                <img src="/icons/exclamation.svg" alt="备注" className="w-4 h-4 flex-shrink-0" style={{ width: "16px", height: "16px" }} />
+                              </button>
+                              {noteTooltipId === item.id && (
+                                <div className="absolute left-0 bottom-full mb-1 z-[100] w-64 rounded-xl border border-[#f3d4d8] bg-white text-gray-800 text-xs leading-relaxed px-3 py-2 shadow-lg">
+                                  <div className="font-medium text-gray-700 mb-1">用户备注</div>
+                                  <div className="break-words">{item.note}</div>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-3 min-w-[220px] align-middle">
+                          <input
+                            className="w-full h-8 border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-2 text-xs focus:border-[#e3001b] outline-none"
+                            maxLength={20}
+                            value={replyMap[item.id] ?? ""}
+                            onChange={(e) => {
+                              const v = e.target.value.replace(/[\r\n]/g, "").slice(0, 20);
+                              setReplyMap((m) => ({ ...m, [item.id]: v }));
+                              saveReplyDebounced(item.id, v);
+                            }}
+                            placeholder="给用户的回复（最多20字）"
+                          />
+                          <div className="text-[10px] text-gray-400 text-right mt-1">{(replyMap[item.id] || "").length}/20</div>
+                        </td>
+                        <td className="px-3 py-3 text-xs whitespace-nowrap align-middle">{fmt(item.createdAt)}</td>
+                        <td className="px-3 py-3 whitespace-nowrap align-middle">
+                          <div className="flex items-center gap-2">
+                            <select
+                              className="h-8 border border-[#eaeaea] bg-white rounded-lg px-2 text-xs focus:border-[#e3001b] outline-none"
+                              value={actionMap[item.id] ?? ""}
+                              disabled={loading}
+                              onChange={(e) => {
+                                const v = e.target.value as "" | BizStatus | "DELETE";
+                                if (!v) return;
+                                if (v === "DELETE") {
+                                  (async () => {
+                                    try {
+                                      await deleteRow(item.id);
+                                    } finally {
+                                      setActionMap((m) => ({ ...m, [item.id]: "" }));
+                                    }
+                                  })();
+                                  return;
+                                }
+                                (async () => {
+                                  try {
+                                    await applyQuickAction(item, v as BizStatus);
+                                  } finally {
+                                    setActionMap((m) => ({ ...m, [item.id]: "" }));
+                                  }
+                                })();
+                              }}
+                            >
+                              <option value="">操作</option>
+                              <option value="PENDING">待处理</option>
+                              <option value="NO_RESOURCE">无资源</option>
+                              <option value="PROCESSING">进行中</option>
+                              <option value="CANNOT_UPDATE">无法更新</option>
+                              <option value="COMPLETED">已完成</option>
+                              <option value="DELETE" className="text-red-600">删除</option>
+                            </select>
+                            <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${statusCls(deriveBizStatus(item))}`}>{statusText(deriveBizStatus(item))}</span>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  : null}
+              </Fragment>
             ))}
             {!loading && visibleRows.length === 0 ? (
               <tr>
