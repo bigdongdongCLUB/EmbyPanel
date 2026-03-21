@@ -401,7 +401,7 @@ export function UsersClient() {
       if (!pRes.ok) throw new Error(pJson?.error ? JSON.stringify(pJson) : `HTTP ${pRes.status}`);
 
       setImportServers((sJson.servers ?? []).filter((x: any) => x.enabled));
-      setImportPlans((pJson.plans ?? []).filter((x: any) => x.enabled).map((x: any) => ({ id: x.id, name: x.name })));
+      setImportPlans((pJson.plans ?? []).map((x: any) => ({ id: x.id, name: x.name })));
 
       const today = new Date().toISOString().slice(0, 10);
       if (!importStartAt) setImportStartAt(today);
