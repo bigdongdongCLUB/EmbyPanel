@@ -294,6 +294,11 @@ export function VodRequestsAdminClient() {
                           ) : (
                             <div className="min-w-0 truncate font-medium text-gray-800">{r.title}</div>
                           )}
+                        </div>
+                        <div className="text-xs text-gray-500 truncate">{r.titleOriginal || "-"}</div>
+                        <div className="flex items-center gap-1 mt-1">
+                          <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] text-white ${r.mediaType === "MOVIE" ? "bg-[#913edb]" : "bg-[#e3001b]"}`}>{r.mediaType === "MOVIE" ? "电影" : "电视剧"}</span>
+                          <span className="text-xs text-gray-500">{r.mediaType === "TV" && r.season ? `S${String(r.season).padStart(2, "0")} · ` : ""}{r.year || "-"}</span>
                           {r.otherRequests.length > 0 ? (
                             <button
                               type="button"
@@ -305,11 +310,6 @@ export function VodRequestsAdminClient() {
                               <img src="/icons/more.svg" alt="更多点播用户" className={`w-4 h-4 transition ${openMoreId === r.id ? "rotate-180" : ""}`} />
                             </button>
                           ) : null}
-                        </div>
-                        <div className="text-xs text-gray-500 truncate">{r.titleOriginal || "-"}</div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] text-white mr-1 ${r.mediaType === "MOVIE" ? "bg-[#913edb]" : "bg-[#e3001b]"}`}>{r.mediaType === "MOVIE" ? "电影" : "电视剧"}</span>
-                          {r.mediaType === "TV" && r.season ? `S${String(r.season).padStart(2, "0")} · ` : ""}{r.year || "-"}
                         </div>
                       </div>
                     </div>
