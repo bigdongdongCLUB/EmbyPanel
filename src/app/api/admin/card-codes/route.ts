@@ -65,7 +65,7 @@ export async function GET(req: Request) {
         : {}),
     };
 
-    const plans = await prisma.plan.findMany({ where: { enabled: true }, orderBy: { createdAt: "desc" }, select: { id: true, name: true } });
+    const plans = await prisma.plan.findMany({ orderBy: { createdAt: "desc" }, select: { id: true, name: true } });
 
     const cardCodeModel: any = (prisma as any).cardCode;
     if (!cardCodeModel) {
