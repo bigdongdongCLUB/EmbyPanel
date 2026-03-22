@@ -512,7 +512,7 @@ export function UsersClient() {
             查询
           </button>
           {q ? (
-            <button className="border border-[#eaeaea] bg-white hover:bg-[#f4f5f7] text-gray-600 rounded-lg px-4 py-2" onClick={() => { setQ(""); }}>
+            <button className="border border-[#eaeaea] bg-white hover:bg-[#f4f5f7] text-gray-600 rounded-lg px-4 py-2" onClick={() => { setQ(""); refresh(); }}>
               清除
             </button>
           ) : null}
