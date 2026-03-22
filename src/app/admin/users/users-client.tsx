@@ -260,12 +260,13 @@ export function UsersClient() {
     };
   }, [csvJobOpen, csvJobId]);
 
-  async function refresh(resetPage = true) {
+  async function refresh(resetPage = true, searchQ?: string) {
     setLoading(true);
     setError(null);
     try {
       const url = new URL(window.location.origin + "/api/admin/users");
-      if (q.trim()) url.searchParams.set("q", q.trim());
+      const effectiveQ = searchQ !== undefined ? searchQ : q;
+      if (effectiveQ.trim()) url.searchParams.set("q", effectiveQ.trim());
       if (filterPlanId) url.searchParams.set("planId", filterPlanId);
       if (filterSubStatus) url.searchParams.set("subStatus", filterSubStatus);
       url.searchParams.set("sortBy", sortBy);
@@ -512,7 +513,7 @@ export function UsersClient() {
             查询
           </button>
           {q ? (
-            <button className="border border-[#eaeaea] bg-white hover:bg-[#f4f5f7] text-gray-600 rounded-lg px-4 py-2" onClick={() => { setQ(""); refresh(); }}>
+            <button className="border border-[#eaeaea] bg-white hover:bg-[#f4f5f7] text-gray-600 rounded-lg px-4 py-2" onClick={() => { setQ(""); refresh(true, ""); }}>
               清除
             </button>
           ) : null}
