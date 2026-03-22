@@ -511,6 +511,11 @@ export function UsersClient() {
           <button className="bg-[#e3001b] hover:bg-[#c20017] text-white rounded-lg px-4 py-2" onClick={() => refresh()}>
             查询
           </button>
+          {q ? (
+            <button className="border border-[#eaeaea] bg-white hover:bg-[#f4f5f7] text-gray-600 rounded-lg px-4 py-2" onClick={() => { setQ(""); }}>
+              清除
+            </button>
+          ) : null}
         </div>
         <div className="flex gap-2 items-center">
           <button className="inline-flex items-center whitespace-nowrap bg-[#e3001b] hover:bg-[#c20017] text-white rounded-lg px-3 py-2" onClick={() => setCreateOpen(true)}>
