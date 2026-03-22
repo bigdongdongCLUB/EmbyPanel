@@ -69,7 +69,6 @@ export async function GET(req: Request) {
     prisma.vodRequest.count({ where: { createdAt: { gte: since30 }, mediaType: "MOVIE" } }),
     prisma.vodRequest.groupBy({ by: ["userId"], where: { createdAt: { gte: since30 } }, _count: { _all: true }, orderBy: { _count: { userId: "desc" } }, take: 1 }),
     prisma.vodRequest.findMany({
-      where: ["MOVIE", "TV"].includes(mediaType) ? { mediaType: mediaType as "MOVIE" | "TV" } : undefined,
       include: { user: { select: { id: true, username: true, email: true } } },
       orderBy: { createdAt: "desc" },
     }),
@@ -127,7 +126,14 @@ export async function GET(req: Request) {
   });
 
   if (["PENDING", "NO_RESOURCE", "PROCESSING", "CANNOT_UPDATE", "COMPLETED"].includes(bizStatus)) {
-    groupedRows = groupedRows.filter((row) => row.bizStatus === bizStatus);
+    groupedRows = groupedRows.filter((row) => {
+      if (row.bizStatus === bizStatus) return true;
+      return row.otherRequests.some((item) => item.bizStatus === bizStatus);
+    });
+  }
+
+  if (["MOVIE", "TV"].includes(mediaType)) {
+    groupedRows = groupedRows.filter((row) => row.mediaType === mediaType);
   }
 
   if (q) {
