@@ -47,7 +47,7 @@ export function AdminShellClient({ username }: { username: string }) {
       </button>
 
       {open ? (
-        <div className="absolute right-0 mt-2 w-44 bg-white border rounded-xl shadow-lg p-1 z-30">
+        <div className="absolute right-0 top-full mt-1 w-44 bg-white border rounded-xl shadow-lg p-1 z-30">
           <Link href="/portal" className="block px-3 py-2 rounded hover:bg-gray-50 text-sm font-normal leading-5" onClick={() => setOpen(false)}>
             用户中心
           </Link>
