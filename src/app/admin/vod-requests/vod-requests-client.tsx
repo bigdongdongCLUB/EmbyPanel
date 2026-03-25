@@ -132,7 +132,7 @@ export function VodRequestsAdminClient() {
         }
         return out;
       });
-      setOpenMoreId(null);
+      setOpenMoreId((prev) => ((json?.rows || []).some((r) => r.id === prev) ? prev : null));
     } catch (e) {
       setError((e as Error)?.message || "load_failed");
     } finally {
