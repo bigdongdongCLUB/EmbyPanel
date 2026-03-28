@@ -259,19 +259,20 @@ export function MonitoringAnomaliesClient() {
           </table>
         </div>
 
-        {data ? (
-          <div className="mt-0">
-            <PaginationBar
-              total={data.total}
-              page={data.page}
-              totalPages={data.totalPages}
-              pageSize={pageSize}
-              onPageChange={setPage}
-              onPageSizeChange={(n) => { setPage(1); setPageSize(n); }}
-            />
-          </div>
-        ) : null}
       </div>
+
+      {data ? (
+        <div className="mt-3">
+          <PaginationBar
+            total={data.total}
+            page={data.page}
+            totalPages={data.totalPages}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={(n) => { setPage(1); setPageSize(n); }}
+          />
+        </div>
+      ) : null}
 
     </div>
   );

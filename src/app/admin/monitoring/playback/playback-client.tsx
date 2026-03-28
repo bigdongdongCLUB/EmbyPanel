@@ -218,6 +218,9 @@ export function AdminPlaybackStatsClient() {
                 </tbody>
               </table>
             </div>
+          </div>
+
+          <div className="mt-3">
             <PaginationBar
               total={total}
               page={safePage}

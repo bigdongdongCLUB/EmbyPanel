@@ -212,16 +212,17 @@ export function RealtimeMonitorClient() {
           </table>
         </div>
 
-        <div className="mt-0">
-          <PaginationBar
-            total={total}
-            page={safePage}
-            totalPages={totalPages}
-            pageSize={pageSize}
-            onPageChange={(p) => setPage(Math.min(Math.max(1, p), totalPages))}
-            onPageSizeChange={(n) => { setPageSize(n); setPage(1); }}
-          />
-        </div>
+      </div>
+
+      <div className="mt-3">
+        <PaginationBar
+          total={total}
+          page={safePage}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          onPageChange={(p) => setPage(Math.min(Math.max(1, p), totalPages))}
+          onPageSizeChange={(n) => { setPageSize(n); setPage(1); }}
+        />
       </div>
     </div>
   );

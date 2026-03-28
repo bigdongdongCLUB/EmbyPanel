@@ -133,7 +133,10 @@ export function InvitesAdminClient() {
           </table>
         </div>
 
-        {filteredRows.length > 0 ? (
+      </div>
+
+      {filteredRows.length > 0 ? (
+        <div className="mt-3">
           <PaginationBar
             total={filteredRows.length}
             page={page}
@@ -146,8 +149,8 @@ export function InvitesAdminClient() {
             compactSinglePage
             simpleGoto
           />
-        ) : null}
-      </div>
+        </div>
+      ) : null}
     </div>
   );
 }
