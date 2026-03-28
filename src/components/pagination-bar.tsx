@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 type Props = {
   total: number;
@@ -24,19 +24,9 @@ export function PaginationBar({
   onPageSizeChange,
   pageSizeOptions = [10, 20, 50, 100],
   showPageSize = true,
-  compactSinglePage = true,
   simpleGoto = true,
 }: Props) {
   const [goto, setGoto] = useState("");
-
-  const pages = useMemo(() => {
-    if (compactSinglePage) return [page];
-    if (totalPages <= 3) return Array.from({ length: totalPages }, (_, i) => i + 1);
-    let start = Math.max(1, page - 1);
-    let end = Math.min(totalPages, start + 2);
-    start = Math.max(1, end - 2);
-    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
-  }, [compactSinglePage, page, totalPages]);
 
   function jumpToPage() {
     const p = Number(goto);
@@ -52,18 +42,9 @@ export function PaginationBar({
           <button className="h-7 w-7 rounded text-gray-600 disabled:opacity-40" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
             {"<"}
           </button>
-          {pages.map((p) => (
-            <button
-              key={p}
-              className={
-                "h-7 min-w-7 px-1.5 rounded " +
-                (p === page ? "border border-[#e3001b] text-[#e3001b]" : "text-gray-800 hover:bg-gray-50")
-              }
-              onClick={() => onPageChange(p)}
-            >
-              {p}
-            </button>
-          ))}
+          <span className="h-7 min-w-7 px-1.5 inline-flex items-center justify-center text-gray-800 select-none">
+            {page}/{totalPages}
+          </span>
           <button className="h-7 w-7 rounded text-gray-600 disabled:opacity-40" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>
             {">"}
           </button>
