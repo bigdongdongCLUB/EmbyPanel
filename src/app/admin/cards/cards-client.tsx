@@ -243,9 +243,9 @@ export function CardCodesClient() {
                 <td className="px-3 py-2 font-mono">{r.code}</td>
                 <td className="px-3 py-2">
                   {r.type === "BALANCE" ? (
-                    <span className="inline-flex items-center rounded-full border border-green-200 bg-green-50 text-green-700 px-2.5 py-0.5 text-xs font-medium">余额卡密</span>
+                    <span className="inline-flex items-center whitespace-nowrap rounded-full border border-green-200 bg-green-50 text-green-700 px-2.5 py-0.5 text-xs font-medium">余额卡密</span>
                   ) : (
-                    <span className="inline-flex items-center rounded-full border border-violet-200 bg-violet-50 text-violet-700 px-2.5 py-0.5 text-xs font-medium">订阅卡密</span>
+                    <span className="inline-flex items-center whitespace-nowrap rounded-full border border-violet-200 bg-violet-50 text-violet-700 px-2.5 py-0.5 text-xs font-medium">订阅卡密</span>
                   )}
                 </td>
                 <td className="px-3 py-2 text-xs">
@@ -253,11 +253,11 @@ export function CardCodesClient() {
                 </td>
                                 <td className="px-3 py-2">
                                   {r.status === "UNUSED" ? (
-                                    <span className="inline-flex items-center rounded-full border border-green-200 bg-green-50 text-green-700 px-2.5 py-0.5 text-xs font-medium">未使用</span>
+                                    <span className="inline-flex items-center whitespace-nowrap rounded-full border border-green-200 bg-green-50 text-green-700 px-2.5 py-0.5 text-xs font-medium">未使用</span>
                                   ) : r.status === "USED" ? (
-                                    <span className="inline-flex items-center rounded-full border border-red-200 bg-red-50 text-red-600 px-2.5 py-0.5 text-xs font-medium">已使用</span>
+                                    <span className="inline-flex items-center whitespace-nowrap rounded-full border border-red-200 bg-red-50 text-red-600 px-2.5 py-0.5 text-xs font-medium">已使用</span>
                                   ) : (
-                                    <span className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 text-gray-500 px-2.5 py-0.5 text-xs font-medium">已禁用</span>
+                                    <span className="inline-flex items-center whitespace-nowrap rounded-full border border-gray-200 bg-gray-50 text-gray-500 px-2.5 py-0.5 text-xs font-medium">已禁用</span>
                                   )}
                                 </td>
                 <td className="px-3 py-2">

@@ -51,10 +51,15 @@ export async function POST(req: Request) {
     let usersScanned = 0;
     let linksDisabled = 0;
     let trialUsersDeleted = 0;
+    let vodRequestsCleared = 0;
     let apiWarnings = 0;
 
     for (const u of users) {
       usersScanned += 1;
+
+      // 订阅到期后清空该用户“我的点播”全部记录
+      const cleared = await prisma.vodRequest.deleteMany({ where: { userId: u.id } });
+      vodRequestsCleared += cleared.count;
 
       const latestActive = await prisma.subscription.findFirst({
         where: { userId: u.id, status: "ACTIVE" },
@@ -98,8 +103,8 @@ export async function POST(req: Request) {
     }
 
     const finishedAt = new Date();
-    await prisma.jobRun.update({ where: { id: job.id }, data: { finishedAt, ok: true, message: JSON.stringify({ usersScanned, linksDisabled, trialUsersDeleted, apiWarnings }) } });
-    return NextResponse.json({ ok: true, usersScanned, linksDisabled, trialUsersDeleted, apiWarnings, jobRunId: job.id });
+    await prisma.jobRun.update({ where: { id: job.id }, data: { finishedAt, ok: true, message: JSON.stringify({ usersScanned, linksDisabled, trialUsersDeleted, vodRequestsCleared, apiWarnings }) } });
+    return NextResponse.json({ ok: true, usersScanned, linksDisabled, trialUsersDeleted, vodRequestsCleared, apiWarnings, jobRunId: job.id });
   } catch (e: any) {
     const finishedAt = new Date();
     await prisma.jobRun.update({ where: { id: job.id }, data: { finishedAt, ok: false, message: String(e?.message ?? e) } });
