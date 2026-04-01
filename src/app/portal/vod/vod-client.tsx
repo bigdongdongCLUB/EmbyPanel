@@ -51,6 +51,25 @@ type Quota = {
 type Tab = "now_playing_movie" | "now_playing_tv" | "popular_movie" | "popular_tv";
 const MAX_DISCOVER_PAGES = 10;
 
+function mediaItemKey(item: Pick<MediaItem, "id" | "mediaType">) {
+  return `${item.mediaType}:${item.id}`;
+}
+
+function isAllInLibraryByDetail(detailData: DetailData | null | undefined) {
+  if (!detailData) return false;
+  const { detail, serverResults } = detailData;
+  const isTv = detail.mediaType === "tv";
+  const seasons = detail.seasons ?? [];
+  if (isTv) {
+    return (
+      seasons.length > 0 &&
+      serverResults.length > 0 &&
+      seasons.every((s) => serverResults.some((sr) => sr.seasons[s.seasonNumber]))
+    );
+  }
+  return serverResults.some((sr) => sr.hasMovie);
+}
+
 const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: "now_playing_movie", label: "最新电影", icon: "🎬" },
   { key: "now_playing_tv", label: "最新电视剧", icon: "📺" },
@@ -126,11 +145,7 @@ function DetailModal({
   const { detail: d, serverResults } = detail;
   const isTv = d.mediaType === "tv";
   const seasons = d.seasons ?? [];
-
-  const allSeasonsExist =
-    isTv && seasons.length > 0 && serverResults.length > 0 && seasons.every((s) => serverResults.some((sr) => sr.seasons[s.seasonNumber]));
-  const movieExists = !isTv && serverResults.some((sr) => sr.hasMovie);
-  const allExist = isTv ? allSeasonsExist : movieExists;
+  const allExist = isAllInLibraryByDetail(detail);
 
   const overview = d.overview.length > 100 ? d.overview.slice(0, 100) + "…" : d.overview;
   const canSubmit = vodEnabled && vodCanRequest && (!isTv || selectedSeason !== "") && !submitting;
@@ -326,7 +341,7 @@ function DetailModal({
 export function VodClient() {
   const [activeTab, setActiveTab] = useState<Tab>("now_playing_movie");
   const [items, setItems] = useState<MediaItem[]>([]);
-  const [inLibrarySet, setInLibrarySet] = useState<Set<number>>(new Set());
+  const [inLibrarySet, setInLibrarySet] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchInput, setSearchInput] = useState("");
@@ -348,21 +363,24 @@ export function VodClient() {
   const [vodDisabledReason, setVodDisabledReason] = useState("目前点播功能暂未开启");
 
   const checkLibrary = useCallback(async (list: MediaItem[]) => {
-    if (!list.length) return;
-    setInLibrarySet(new Set()); // reset while checking
-    try {
-      const r = await fetch("/api/portal/vod/check-library", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          items: list.map((i) => ({ id: i.id, title: i.title, titleOriginal: i.titleOriginal, year: i.year, mediaType: i.mediaType })),
-        }),
-      });
-      const j = await r.json();
-      if (j?.inLibrary) setInLibrarySet(new Set(j.inLibrary as number[]));
-    } catch {
-      // non-critical, ignore
+    if (!list.length) {
+      setInLibrarySet(new Set());
+      return;
     }
+    setInLibrarySet(new Set()); // reset while checking
+    const results = await Promise.allSettled(
+      list.map(async (item) => {
+        const r = await fetch(`/api/portal/vod/detail?tmdb_id=${item.id}&media_type=${item.mediaType}`);
+        const j = await r.json().catch(() => null);
+        if (!r.ok || !j?.ok) return null;
+        return isAllInLibraryByDetail(j as DetailData) ? mediaItemKey(item) : null;
+      })
+    );
+    const next = new Set<string>();
+    for (const result of results) {
+      if (result.status === "fulfilled" && result.value) next.add(result.value);
+    }
+    setInLibrarySet(next);
   }, []);
 
   const loadTab = useCallback(async (tab: Tab, page = 1) => {
@@ -437,7 +455,22 @@ export function VodClient() {
     try {
       const r = await fetch(`/api/portal/vod/detail?tmdb_id=${item.id}&media_type=${item.mediaType}`);
       const j = await r.json();
-      if (j?.ok) setSelectedDetail(j);
+      if (j?.ok) {
+        setSelectedDetail(j);
+        if (isAllInLibraryByDetail(j as DetailData)) {
+          setInLibrarySet((prev) => {
+            const next = new Set(prev);
+            next.add(mediaItemKey(item));
+            return next;
+          });
+        } else {
+          setInLibrarySet((prev) => {
+            const next = new Set(prev);
+            next.delete(mediaItemKey(item));
+            return next;
+          });
+        }
+      }
     } finally { setDetailLoading(false); }
   }
 
@@ -585,7 +618,7 @@ export function VodClient() {
         <>
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
             {items.map((item) => (
-              <PosterCard key={`${item.mediaType}-${item.id}`} item={item} inLibrary={inLibrarySet.has(item.id)} onClick={() => openDetail(item)} />
+              <PosterCard key={`${item.mediaType}-${item.id}`} item={item} inLibrary={inLibrarySet.has(mediaItemKey(item))} onClick={() => openDetail(item)} />
             ))}
             {items.length === 0 && (
               <div className="col-span-6 py-16 text-center text-gray-400 text-sm">暂无内容</div>
