@@ -13,7 +13,7 @@ const Schema = z.object({
   posterPath: z.string().max(500).optional(),
   year: z.string().max(10).optional(),
   season: z.number().int().positive().optional(),
-  note: z.string().max(20).optional(),
+  note: z.string().max(120).optional(),
 });
 
 function shanghaiDayStart(now = new Date()) {

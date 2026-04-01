@@ -296,12 +296,12 @@ function DetailModal({
             <textarea
               className="w-full border border-[#eaeaea] rounded-lg px-3 py-2 text-sm resize-none focus:border-[#e3001b] outline-none"
               rows={3}
-              maxLength={20}
-              placeholder="可填写简短备注（最多20字）"
+              maxLength={120}
+              placeholder="可填写备注（最多120字）"
               value={note}
-              onChange={(e) => setNote(e.target.value.slice(0, 20))}
+              onChange={(e) => setNote(e.target.value.slice(0, 120))}
             />
-            <div className="text-right text-xs text-gray-400">{note.length} / 20</div>
+            <div className="text-right text-xs text-gray-400">{note.length} / 120</div>
           </div>
 
           {!vodEnabled || !vodCanRequest ? <div className="text-sm text-red-600 mb-3">{vodDisabledReason}</div> : null}

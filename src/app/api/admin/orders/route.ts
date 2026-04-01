@@ -41,7 +41,7 @@ export async function GET(req: Request) {
         amountCents: true,
         status: true,
         createdAt: true,
-        user: { select: { username: true, email: true } },
+        user: { select: { username: true } },
         plan: { select: { name: true } },
       },
     }),
@@ -65,7 +65,7 @@ export async function GET(req: Request) {
     },
     rows: rows.map((r) => ({
       id: r.id,
-      user: r.user?.email || r.user?.username || "-",
+      user: r.user?.username || "-",
       planName: r.plan?.name || "-",
       amountYuan: (r.amountCents / 100).toFixed(2),
       status: r.status,
