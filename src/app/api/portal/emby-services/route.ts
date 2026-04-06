@@ -175,6 +175,9 @@ export async function GET() {
       const banTypeLabel = !!link?.disabled && hasActiveAnomalyPenalty
         ? (pendingPenalty?.anomalyTypeLabel || anomalyTypeLabel(pendingPenalty?.anomalyType) || anomalyTypeLabel(fallbackType))
         : null;
+      const penaltyUnlockAt = !!link?.disabled && hasActiveAnomalyPenalty && pendingPenalty?.unlockAt
+        ? String(pendingPenalty.unlockAt)
+        : null;
       const onlineNow = !!String(version || "").trim() || s.lastHealthOk === true;
       return {
         id: s.id,
@@ -183,6 +186,7 @@ export async function GET() {
         online: onlineNow,
         banned: !!link?.disabled,
         banTypeLabel,
+        penaltyUnlockAt,
         version,
         baseUrl: s.externalUrl || s.baseUrl,
         backupUrl: (s as any).backupUrl || null,

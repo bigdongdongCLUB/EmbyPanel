@@ -11,6 +11,7 @@ type Data = {
     online: boolean;
     banned: boolean;
     banTypeLabel?: string | null;
+    penaltyUnlockAt?: string | null;
     version: string;
     baseUrl: string;
     externalUrl?: string | null;
@@ -24,6 +25,11 @@ type Data = {
 function fmtDate(v?: string | null) {
   if (!v) return "--";
   return new Date(v).toLocaleDateString("zh-CN", { timeZone: "Asia/Shanghai" });
+}
+
+function fmtDateTime(v?: string | null) {
+  if (!v) return "--";
+  return new Date(v).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false });
 }
 
 function parseBaseUrl(u: string) {
@@ -146,9 +152,15 @@ export function PortalEmbyServicesClient() {
           const mainEndpoint = parseBaseUrl(visitUrl);
           const backupEndpoint = s.backupUrl ? parseBaseUrl(String(s.backupUrl)) : null;
           const stateText = s.banned ? (s.banTypeLabel ? `${s.banTypeLabel} 封禁中` : "封禁中") : s.online ? "在线" : "离线";
+          const showPenaltyUnlockAt = !!(s.banned && s.banTypeLabel && s.penaltyUnlockAt);
           return (
             <div key={s.id} className="relative bg-white border-2 border-[#e3001b] rounded-2xl p-8 shadow-[0_8px_24px_rgba(227,0,27,0.08)]">
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#e3001b] text-white px-4 py-1 rounded-full text-xs font-bold tracking-wide">状态：{stateText}</div>
+              {showPenaltyUnlockAt ? (
+                <div className="absolute top-6 left-1/2 -translate-x-1/2 text-[12px] text-[#666] whitespace-nowrap">
+                  解禁时间：{fmtDateTime(s.penaltyUnlockAt)}
+                </div>
+              ) : null}
 
               <div className="mb-6">
                 <div className="text-[28px] font-bold text-[#222] leading-tight">{s.name}</div>
