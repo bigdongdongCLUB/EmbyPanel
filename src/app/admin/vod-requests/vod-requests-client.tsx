@@ -102,6 +102,7 @@ export function VodRequestsAdminClient() {
   const [replyMap, setReplyMap] = useState<Record<string, string>>({});
   const [actionMap, setActionMap] = useState<Record<string, string>>({});
   const [noteTooltipId, setNoteTooltipId] = useState<string | null>(null);
+  const [noteDialog, setNoteDialog] = useState<{ open: boolean; text: string }>({ open: false, text: "" });
   const [openMoreId, setOpenMoreId] = useState<string | null>(null);
   const saveTimerRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
@@ -146,9 +147,10 @@ export function VodRequestsAdminClient() {
   }, [q, bizStatus, mediaType]);
 
   useEffect(() => {
+    const timers = saveTimerRef.current;
     return () => {
-      for (const k of Object.keys(saveTimerRef.current)) {
-        clearTimeout(saveTimerRef.current[k]);
+      for (const k of Object.keys(timers)) {
+        clearTimeout(timers[k]);
       }
     };
   }, []);
@@ -324,7 +326,10 @@ export function VodRequestsAdminClient() {
                           style={{ minWidth: "20px", minHeight: "20px" }}
                           onMouseEnter={() => setNoteTooltipId(r.id)}
                           onMouseLeave={() => setNoteTooltipId(null)}
-                          onClick={() => setNoteTooltipId(noteTooltipId === r.id ? null : r.id)}
+                          onClick={() => {
+                            setNoteTooltipId(null);
+                            setNoteDialog({ open: true, text: r.note || "" });
+                          }}
                           aria-label="查看备注"
                         >
                           <img src="/icons/exclamation.svg" alt="备注" className="w-4 h-4 flex-shrink-0" style={{ width: "16px", height: "16px" }} />
@@ -411,7 +416,10 @@ export function VodRequestsAdminClient() {
                                 style={{ minWidth: "20px", minHeight: "20px" }}
                                 onMouseEnter={() => setNoteTooltipId(item.id)}
                                 onMouseLeave={() => setNoteTooltipId(null)}
-                                onClick={() => setNoteTooltipId(noteTooltipId === item.id ? null : item.id)}
+                                onClick={() => {
+                                  setNoteTooltipId(null);
+                                  setNoteDialog({ open: true, text: item.note || "" });
+                                }}
                                 aria-label="查看备注"
                               >
                                 <img src="/icons/exclamation.svg" alt="备注" className="w-4 h-4 flex-shrink-0" style={{ width: "16px", height: "16px" }} />
@@ -494,6 +502,47 @@ export function VodRequestsAdminClient() {
           </tbody>
         </table>
       </div>
+
+      {noteDialog.open ? (
+        <div className="fixed inset-0 z-[260] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/45" onClick={() => setNoteDialog({ open: false, text: "" })} />
+          <div className="relative w-full max-w-[360px] rounded-2xl border border-[#eaeaea] bg-white p-4 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-semibold text-gray-800">用户备注</div>
+              <button
+                type="button"
+                className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-[#f2d4d9] bg-[#fff7f8] hover:border-[#e3001b] hover:bg-[#fff0f1]"
+                onClick={() => setNoteDialog({ open: false, text: "" })}
+                aria-label="关闭备注弹窗"
+              >
+                ×
+              </button>
+            </div>
+            <textarea
+              className="mt-3 h-auto w-full resize-none rounded-lg border border-[#eaeaea] bg-[#f8f9fa] px-3 py-2 text-sm leading-6 text-gray-700 outline-none"
+              value={noteDialog.text}
+              readOnly
+              rows={6}
+            />
+            <div className="mt-3 flex justify-end">
+              <button
+                type="button"
+                className="h-8 rounded-lg border border-[#eaeaea] bg-white px-3 text-xs hover:bg-[#f4f5f7]"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(noteDialog.text || "");
+                    alert("已复制用户备注");
+                  } catch {
+                    alert("复制失败，请手动复制");
+                  }
+                }}
+              >
+                复制备注
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <PaginationBar
         total={total}

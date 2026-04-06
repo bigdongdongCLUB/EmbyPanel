@@ -42,6 +42,7 @@ export function PortalOrderDetailClient({ orderId }: { orderId: string }) {
 
   useEffect(() => {
     refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId]);
 
   const amountYuan = (data?.order.amountCents ?? 0) / 100;

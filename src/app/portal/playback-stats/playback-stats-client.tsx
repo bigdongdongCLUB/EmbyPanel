@@ -65,9 +65,10 @@ export function PortalPlaybackStatsClient() {
 
   useEffect(() => {
     refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const rows = data?.records ?? [];
+  const rows = useMemo(() => data?.records ?? [], [data]);
   const total = rows.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const safePage = Math.min(page, totalPages);

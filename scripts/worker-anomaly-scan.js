@@ -14,7 +14,6 @@ const { Queue, Worker } = require("bullmq");
 const IORedis = require("ioredis");
 
 // Node 22 has global fetch; keep for clarity.
-// eslint-disable-next-line no-undef
 const fetch = global.fetch;
 
 const REDIS_URL = (process.env.REDIS_URL || "").trim();

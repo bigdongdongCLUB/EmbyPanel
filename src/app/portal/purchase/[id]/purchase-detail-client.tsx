@@ -36,6 +36,7 @@ export function PortalPurchaseDetailClient({ planId }: { planId: string }) {
 
   useEffect(() => {
     refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [planId]);
 
   const selectedCycle = useMemo(() => data?.cycles.find((c) => c.key === selected) ?? null, [data, selected]);

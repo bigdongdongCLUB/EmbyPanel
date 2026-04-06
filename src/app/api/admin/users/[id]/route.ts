@@ -7,7 +7,7 @@ import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin";
 import { hashPassword } from "@/lib/password";
 import { encryptSyncPassword, getSyncPassword } from "@/lib/user-secrets";
-import { embyCreateUser, embyDeleteUser, embySetUserDisabled, embySetUserPassword } from "@/lib/emby-provision";
+import { embyCreateUser, embySetUserDisabled, embySetUserPassword } from "@/lib/emby-provision";
 import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
 import { embyFetchUsers } from "@/lib/emby";
 
@@ -144,7 +144,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       await tx.subscription.updateMany({ where: { userId: id, status: { in: ["ACTIVE", "EXPIRED"] } }, data: { status: "CANCELED" } });
 
       if (subscription !== null) {
-        const sub = await tx.subscription.create({
+        await tx.subscription.create({
           data: {
             userId: id,
             planId: subscription.planId ?? null,
@@ -175,7 +175,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         const mod = await import("@/lib/plan-assign");
         const picked = await mod.pickServerForPlan(subscription.planId);
         nextServers = picked.servers;
-      } catch (e) {
+      } catch {
         // best-effort: if pick fails, keep nextServers empty (will result in only cancel/disable)
         nextServers = [];
       }

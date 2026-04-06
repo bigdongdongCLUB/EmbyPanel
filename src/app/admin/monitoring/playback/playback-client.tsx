@@ -91,7 +91,7 @@ export function AdminPlaybackStatsClient() {
     }
   }
 
-  const rows = data?.records ?? [];
+  const rows = useMemo(() => data?.records ?? [], [data]);
   const total = rows.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const safePage = Math.min(page, totalPages);

@@ -1,7 +1,6 @@
 "use client";
 
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { LoginRedirect } from "./login-redirect";
@@ -13,7 +12,6 @@ function EyeIcon({ off }: { off?: boolean }) {
 }
 
 export default function LoginPage() {
-  const router = useRouter();
   const [mode, setMode] = useState<Mode>("login");
 
   const [loginUsername, setLoginUsername] = useState("");

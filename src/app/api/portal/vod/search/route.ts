@@ -13,7 +13,6 @@ export async function GET(req: Request) {
   if (!username) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const dbUser = await prisma.user.findUnique({ where: { username }, select: { id: true } });
   if (!dbUser) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const userId = dbUser.id;
 
   const url = new URL(req.url);
   const q = (url.searchParams.get("q") ?? "").trim();

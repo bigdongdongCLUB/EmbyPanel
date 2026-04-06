@@ -93,18 +93,6 @@ function isValidYmd(v: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(String(v || "").trim());
 }
 
-function parseYmd(v: string): Date | null {
-  if (!isValidYmd(v)) return null;
-  return new Date(v + "T00:00:00.000Z");
-}
-
-function ymdFromUtcDate(d: Date) {
-  const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(d.getUTCDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
 function serverBadgeText(r: UserRow) {
   const total = r.serverCount ?? r.servers?.length ?? 0;
   const online = r.serverOnlineCount ?? (r.servers ?? []).filter((x) => x.status === "ACTIVE").length;
@@ -258,6 +246,7 @@ export function UsersClient() {
     return () => {
       stop = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [csvJobOpen, csvJobId]);
 
   async function refresh(resetPage = true, searchQ?: string) {
@@ -531,7 +520,7 @@ export function UsersClient() {
               <div className="absolute left-0 md:left-auto md:right-0 mt-2 w-56 max-w-[calc(100vw-2rem)] bg-white border rounded shadow p-2 text-sm space-y-1 z-10">
                 <button
                   className="w-full text-left px-2 py-2 hover:bg-gray-50 rounded"
-                  onClick={(e) => {
+                  onClick={() => {
                     setMoreOpen(false);
                     (document.activeElement as any)?.blur?.();
                     openImportModal().catch((err) => alert(err?.message ?? String(err)));
