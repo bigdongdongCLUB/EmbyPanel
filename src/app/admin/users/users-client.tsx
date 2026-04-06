@@ -1,5 +1,6 @@
 "use client";
 
+import { UiImage } from "@/components/ui-image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PaginationBar } from "@/components/pagination-bar";
 
@@ -1007,7 +1008,7 @@ export function UsersClient() {
             <div className="flex items-center justify-between">
               <div className="text-lg font-semibold">删除用户</div>
               <button className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-[#f2d4d9] bg-[#fff7f8] hover:border-[#e3001b] hover:bg-[#fff0f1]" onClick={() => setDeleteConfirmOpen(false)} aria-label="关闭">
-                <img src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
+                <UiImage src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
               </button>
             </div>
 
@@ -1065,7 +1066,7 @@ export function UsersClient() {
             <div className="flex items-center justify-between border-b pb-3">
               <div className="font-semibold text-lg">为 {selectedIds.length} 个选中用户添加订阅时间</div>
               <button className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-[#f2d4d9] bg-[#fff7f8] hover:border-[#e3001b] hover:bg-[#fff0f1]" onClick={() => setBulkAddOpen(false)} aria-label="关闭">
-                <img src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
+                <UiImage src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
               </button>
             </div>
 
@@ -1143,7 +1144,7 @@ export function UsersClient() {
             <div className="flex items-center justify-between">
               <div className="text-lg font-semibold">删除用户</div>
               <button className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-[#f2d4d9] bg-[#fff7f8] hover:border-[#e3001b] hover:bg-[#fff0f1]" onClick={() => setBulkDeleteConfirmOpen(false)} aria-label="关闭">
-                <img src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
+                <UiImage src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
               </button>
             </div>
 
@@ -1211,7 +1212,7 @@ export function UsersClient() {
             <div className="px-8 pt-6 pb-4 border-b border-[#eaeaea] flex items-center justify-between">
               <div className="text-lg font-bold text-[#222]">从 Emby 服务器导入用户</div>
               <button className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-[#f2d4d9] bg-[#fff7f8] hover:border-[#e3001b] hover:bg-[#fff0f1]" onClick={() => setImportOpen(false)} aria-label="关闭">
-                <img src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
+                <UiImage src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
               </button>
             </div>
 
@@ -1405,7 +1406,7 @@ export function UsersClient() {
             <div className="px-8 pt-6 pb-4 flex items-center justify-between">
               <div className="text-[18px] font-bold text-[#222]">从 CSV 模板导入用户</div>
               <button className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-[#f2d4d9] bg-[#fff7f8] hover:border-[#e3001b] hover:bg-[#fff0f1]" onClick={() => setCsvImportOpen(false)} aria-label="关闭">
-                <img src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
+                <UiImage src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
               </button>
             </div>
             <div className="px-8 pb-6 overflow-y-auto flex-1">
@@ -1451,7 +1452,7 @@ export function UsersClient() {
 
               <div className="flex flex-wrap gap-3">
                 <label className="h-10 border border-[#eaeaea] bg-white rounded-[8px] px-4 cursor-pointer inline-flex items-center justify-center gap-1.5 text-[12px] font-medium whitespace-nowrap hover:bg-[#f8f9fa]">
-                  <img src="/icons/csv-select.svg" alt="选择CSV文件" className="h-4 w-4" />
+                  <UiImage src="/icons/csv-select.svg" alt="选择CSV文件" className="h-4 w-4" />
                   <span>选择 CSV 文件</span>
                   <input
                     type="file"
@@ -1484,7 +1485,7 @@ export function UsersClient() {
                     URL.revokeObjectURL(url);
                   }}
                 >
-                  <img src="/icons/csv-download.svg" alt="下载CSV模板" className="h-4 w-4" />
+                  <UiImage src="/icons/csv-download.svg" alt="下载CSV模板" className="h-4 w-4" />
                   <span>下载 CSV 模板</span>
                 </button>
               </div>
@@ -1541,7 +1542,7 @@ export function UsersClient() {
             <div className="flex items-center justify-between">
               <div className="text-lg font-semibold">CSV 导入进度</div>
               <button className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-[#f2d4d9] bg-[#fff7f8] hover:border-[#e3001b] hover:bg-[#fff0f1]" onClick={() => setCsvJobOpen(false)} aria-label="关闭">
-                <img src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
+                <UiImage src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
               </button>
             </div>
             <div className="mt-2 text-sm text-gray-600">刷新页面后任务仍会在后台继续执行；此窗口可查看实时进度。</div>

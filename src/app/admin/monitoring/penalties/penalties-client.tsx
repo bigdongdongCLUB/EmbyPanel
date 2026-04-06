@@ -1,5 +1,6 @@
 "use client";
 
+import { UiImage } from "@/components/ui-image";
 import { useEffect, useMemo, useState } from "react";
 import { ToggleSwitch } from "../../settings/toggle-switch";
 import { PaginationBar } from "@/components/pagination-bar";
@@ -130,7 +131,7 @@ export function MonitoringPenaltiesClient() {
               aria-label="处罚说明"
               title="处罚说明"
             >
-              <img src="/icons/exclamation.svg" alt="处罚说明" className="w-4 h-4" />
+              <UiImage src="/icons/exclamation.svg" alt="处罚说明" className="w-4 h-4" />
             </button>
             <div className="hidden group-hover:block group-focus-within:block absolute left-0 top-[calc(100%+8px)] z-30 w-[360px] rounded-xl border border-[#f1d3d8] bg-white shadow-lg p-3">
               <div className="text-[13px] text-[#2d2d2d] leading-6">

@@ -1,5 +1,6 @@
 "use client";
 
+import { UiImage } from "@/components/ui-image";
 import { useEffect, useState } from "react";
 import { SettingsTabs } from "./tabs";
 
@@ -99,7 +100,7 @@ export function SettingsClient() {
             ) : null}
           </div>
           <div className="text-xs text-gray-500 mt-2">支持 JPG、PNG、GIF、WebP 格式，文件大小不超过 2MB</div>
-          {form.siteLogoDataUrl ? <img src={form.siteLogoDataUrl} alt="logo" className="mt-3 h-14 w-14 rounded-full object-cover border" /> : null}
+          {form.siteLogoDataUrl ? <UiImage src={form.siteLogoDataUrl} alt="logo" className="mt-3 h-14 w-14 rounded-full object-cover border" /> : null}
         </div>
 
         <div className="pt-3">

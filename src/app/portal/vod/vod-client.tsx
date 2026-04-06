@@ -1,5 +1,6 @@
 "use client";
 
+import { UiImage } from "@/components/ui-image";
 import { useCallback, useEffect, useState } from "react";
 import { PaginationBar } from "@/components/pagination-bar";
 
@@ -82,7 +83,7 @@ function PosterCard({ item, inLibrary, onClick }: { item: MediaItem; inLibrary: 
     <div className="cursor-pointer group" onClick={onClick}>
       <div className="relative rounded-lg overflow-hidden aspect-[2/3] bg-gradient-to-br from-[#e4eaf5] to-[#cbd6e9] border-2 border-transparent transition-all duration-300 group-hover:border-[#e3001b] group-hover:shadow-[0_8px_24px_rgba(227,0,27,0.15)] group-hover:-translate-y-1">
         {item.posterPath ? (
-          <img src={item.posterPath} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" loading="lazy" />
+          <UiImage src={item.posterPath} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" loading="lazy" />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs p-2 text-center">{item.title}</div>
         )}
@@ -173,7 +174,7 @@ function DetailModal({
           <div className="flex items-center justify-between mb-4">
             <div className="text-base font-semibold text-gray-800">确认点播请求</div>
             <button onClick={onClose} className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-[#f2d4d9] bg-[#fff7f8] hover:border-[#e3001b] hover:bg-[#fff0f1]" aria-label="关闭">
-              <img src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
+              <UiImage src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
             </button>
           </div>
 
@@ -189,7 +190,7 @@ function DetailModal({
 
           <div className="flex gap-3 mb-4">
             {d.posterPath ? (
-              <img src={d.posterPath} alt={d.title} className="w-20 h-28 rounded-lg object-cover shrink-0" />
+              <UiImage src={d.posterPath} alt={d.title} className="w-20 h-28 rounded-lg object-cover shrink-0" />
             ) : (
               <div className="w-20 h-28 rounded-lg bg-gray-100 shrink-0" />
             )}
@@ -683,7 +684,7 @@ export function VodClient() {
                   清空已完成
                 </button>
                 <button onClick={() => setShowMyRequests(false)} className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-[#f2d4d9] bg-[#fff7f8] hover:border-[#e3001b] hover:bg-[#fff0f1]" aria-label="关闭">
-                  <img src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
+                  <UiImage src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
                 </button>
               </div>
             </div>
@@ -706,7 +707,7 @@ export function VodClient() {
                   {myRequests.map((r) => (
                     <div key={r.id} className="flex gap-4 p-4 border border-[#eaeaea] rounded-[12px] bg-white transition-all hover:border-[#dcdcdc] hover:shadow-[0_4px_12px_rgba(0,0,0,0.04)] hover:-translate-y-0.5">
                       {r.posterPath ? (
-                        <img src={r.posterPath} className="w-[70px] h-[105px] rounded-[8px] object-cover shrink-0" alt={r.title} />
+                        <UiImage src={r.posterPath} className="w-[70px] h-[105px] rounded-[8px] object-cover shrink-0" alt={r.title} />
                       ) : (
                         <div className="w-[70px] h-[105px] rounded-[8px] bg-gradient-to-br from-[#e4eaf5] to-[#cbd6e9] shrink-0" />
                       )}

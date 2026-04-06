@@ -1,5 +1,6 @@
 "use client";
 
+import { UiImage } from "@/components/ui-image";
 import { signIn } from "next-auth/react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -8,7 +9,7 @@ import { LoginRedirect } from "./login-redirect";
 type Mode = "login" | "register";
 
 function EyeIcon({ off }: { off?: boolean }) {
-  return <img src={off ? "/icons/invisible.svg" : "/icons/visible.svg"} alt={off ? "隐藏密码" : "显示密码"} className="h-4 w-4 opacity-70" />;
+  return <UiImage src={off ? "/icons/invisible.svg" : "/icons/visible.svg"} alt={off ? "隐藏密码" : "显示密码"} className="h-4 w-4 opacity-70" />;
 }
 
 export default function LoginPage() {
@@ -240,7 +241,7 @@ export default function LoginPage() {
       >
         <div className="flex flex-col items-center text-center">
           <div className="flex items-center gap-2">
-            <img src={siteLogoDataUrl || "/logo.png"} alt="logo" className="h-10 w-10 rounded-full object-cover" />
+            <UiImage src={siteLogoDataUrl || "/logo.png"} alt="logo" className="h-10 w-10 rounded-full object-cover" />
             <div className="text-2xl font-semibold tracking-tight">{siteName}</div>
           </div>
           <p className="text-[#888] mt-1 text-sm">{siteDescription}</p>
@@ -249,7 +250,7 @@ export default function LoginPage() {
         {mode === "login" ? (
           <form className="mt-4 max-w-3xl mx-auto px-4 space-y-3" onSubmit={doLogin}>
             <div className="border border-gray-200 rounded-xl px-3 py-1.5 flex items-center gap-2">
-              <img src="/icons/user.svg" alt="用户名" className="h-4 w-4 opacity-60" />
+              <UiImage src="/icons/user.svg" alt="用户名" className="h-4 w-4 opacity-60" />
               <input
                 name="username"
                 className="w-full text-sm outline-none"
@@ -262,7 +263,7 @@ export default function LoginPage() {
             </div>
 
             <div className="border border-gray-200 rounded-xl px-3 py-2 flex items-center gap-2">
-              <img src="/icons/lock.svg" alt="密码" className="h-4 w-4 opacity-60" />
+              <UiImage src="/icons/lock.svg" alt="密码" className="h-4 w-4 opacity-60" />
               <input
                 name="password"
                 className="w-full text-sm outline-none"
@@ -305,7 +306,7 @@ export default function LoginPage() {
         ) : (
           <form className="mt-4 max-w-3xl mx-auto px-4 space-y-2" onSubmit={doRegister}>
             <div className={`border border-gray-200 rounded-xl px-3 py-1.5 flex items-center gap-2 ${username && usernameErrors.length ? "border-red-300 bg-red-50" : ""}`}>
-              <img src="/icons/user.svg" alt="用户名" className="h-4 w-4 opacity-60" />
+              <UiImage src="/icons/user.svg" alt="用户名" className="h-4 w-4 opacity-60" />
               <input className="w-full text-sm outline-none bg-transparent" placeholder="用户名（4位以上字母或字母+数字）" value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" />
             </div>
             {username && usernameErrors.length > 0 ? (
@@ -325,12 +326,12 @@ export default function LoginPage() {
             ) : null}
 
             <div className="border border-gray-200 rounded-xl px-3 py-1.5 flex items-center gap-2">
-              <img src="/icons/email.svg" alt="邮箱" className="h-4 w-4 opacity-60" />
+              <UiImage src="/icons/email.svg" alt="邮箱" className="h-4 w-4 opacity-60" />
               <input className="w-full text-sm outline-none" placeholder="邮箱（必填）" value={email} onChange={(e) => setEmail(e.target.value)} required />
             </div>
 
             <div className={`border border-gray-200 rounded-xl px-3 py-1.5 flex items-center gap-2 ${passwordErrors.length ? "border-red-300" : ""}`}>
-              <img src="/icons/lock.svg" alt="密码" className="h-4 w-4 opacity-60" />
+              <UiImage src="/icons/lock.svg" alt="密码" className="h-4 w-4 opacity-60" />
               <input
                 className="w-full text-sm outline-none"
                 placeholder="密码"
@@ -348,7 +349,7 @@ export default function LoginPage() {
             <div className="text-gray-500 text-[11px]">ⓘ {strongPassword ? "10-32个字符，且包含大小写字母、数字和特殊字符" : "8-24个字符, 包含至少一个字母和一个数字"}</div>
 
             <div className={`border border-gray-200 rounded-xl px-3 py-1.5 flex items-center gap-2 ${confirmError ? "border-red-300" : ""}`}>
-              <img src="/icons/lock.svg" alt="密码" className="h-4 w-4 opacity-60" />
+              <UiImage src="/icons/lock.svg" alt="密码" className="h-4 w-4 opacity-60" />
               <input
                 className="w-full text-sm outline-none"
                 placeholder="确认密码"

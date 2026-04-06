@@ -1,5 +1,6 @@
 "use client";
 
+import { UiImage } from "@/components/ui-image";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { PaginationBar } from "@/components/pagination-bar";
 
@@ -274,10 +275,10 @@ export function VodRequestsAdminClient() {
                           className="block shrink-0 rounded transition hover:opacity-90"
                           title="在 TMDB 中查看"
                         >
-                          {r.posterPath ? <img src={r.posterPath} alt={r.title} className="w-10 h-14 rounded object-cover" /> : <div className="w-10 h-14 rounded bg-gray-100" />}
+                          {r.posterPath ? <UiImage src={r.posterPath} alt={r.title} className="w-10 h-14 rounded object-cover" /> : <div className="w-10 h-14 rounded bg-gray-100" />}
                         </a>
                       ) : r.posterPath ? (
-                        <img src={r.posterPath} alt={r.title} className="w-10 h-14 rounded object-cover" />
+                        <UiImage src={r.posterPath} alt={r.title} className="w-10 h-14 rounded object-cover" />
                       ) : (
                         <div className="w-10 h-14 rounded bg-gray-100" />
                       )}
@@ -309,7 +310,7 @@ export function VodRequestsAdminClient() {
                               title={`展开其余 ${r.otherRequests.length} 位点播用户`}
                               aria-label={`展开其余 ${r.otherRequests.length} 位点播用户`}
                             >
-                              <img src="/icons/more.svg" alt="更多点播用户" className={`w-4 h-4 transition ${openMoreId === r.id ? "rotate-180" : ""}`} />
+                              <UiImage src="/icons/more.svg" alt="更多点播用户" className={`w-4 h-4 transition ${openMoreId === r.id ? "rotate-180" : ""}`} />
                             </button>
                           ) : null}
                         </div>
@@ -332,7 +333,7 @@ export function VodRequestsAdminClient() {
                           }}
                           aria-label="查看备注"
                         >
-                          <img src="/icons/exclamation.svg" alt="备注" className="w-4 h-4 flex-shrink-0" style={{ width: "16px", height: "16px" }} />
+                          <UiImage src="/icons/exclamation.svg" alt="备注" className="w-4 h-4 flex-shrink-0" style={{ width: "16px", height: "16px" }} />
                         </button>
                         {noteTooltipId === r.id && (
                           <div className="absolute left-0 bottom-full mb-1 z-[100] w-64 rounded-xl border border-[#f3d4d8] bg-white text-gray-800 text-xs leading-relaxed px-3 py-2 shadow-lg">
@@ -422,7 +423,7 @@ export function VodRequestsAdminClient() {
                                 }}
                                 aria-label="查看备注"
                               >
-                                <img src="/icons/exclamation.svg" alt="备注" className="w-4 h-4 flex-shrink-0" style={{ width: "16px", height: "16px" }} />
+                                <UiImage src="/icons/exclamation.svg" alt="备注" className="w-4 h-4 flex-shrink-0" style={{ width: "16px", height: "16px" }} />
                               </button>
                               {noteTooltipId === item.id && (
                                 <div className="absolute left-0 bottom-full mb-1 z-[100] w-64 rounded-xl border border-[#f3d4d8] bg-white text-gray-800 text-xs leading-relaxed px-3 py-2 shadow-lg">

@@ -1,5 +1,6 @@
 "use client";
 
+import { UiImage } from "@/components/ui-image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -18,7 +19,7 @@ function Item({ href, label, icon, collapsed }: { href: string; label: string; i
         (active ? "bg-[#fff0f1] text-[#e3001b] font-bold" : "text-[#888] hover:bg-[#f4f5f7] hover:text-[#222]")
       }
     >
-      <img src={icon} alt="" className={"h-4 w-4 shrink-0 " + (active ? "opacity-90" : "opacity-80")} />
+      <UiImage src={icon} alt="" className={"h-4 w-4 shrink-0 " + (active ? "opacity-90" : "opacity-80")} />
       {!collapsed ? <span className="text-[15px] leading-6">{label}</span> : null}
     </Link>
   );
@@ -29,7 +30,7 @@ export function PortalSidebarClient({ collapsed, siteName, siteLogoDataUrl, appV
     <aside className={(collapsed ? "w-16" : "w-60") + " fixed inset-y-0 left-0 bg-white text-gray-700 border-r border-gray-200 flex flex-col z-30 " + (className || "")}>
       <div className="h-16 flex items-center px-5 border-b border-gray-200">
         <Link href="/portal" className="flex items-center gap-3 min-w-0">
-          <img src={siteLogoDataUrl || "/logo.png"} alt="logo" className="h-8 w-8 rounded-full object-cover shrink-0" />
+          <UiImage src={siteLogoDataUrl || "/logo.png"} alt="logo" className="h-8 w-8 rounded-full object-cover shrink-0" />
           {!collapsed ? <span className="font-semibold text-[18px] tracking-wide leading-none text-[#111] truncate">{siteName || "EmbyPanel"}</span> : null}
         </Link>
       </div>

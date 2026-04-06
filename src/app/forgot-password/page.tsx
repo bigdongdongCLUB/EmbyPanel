@@ -1,5 +1,6 @@
 "use client";
 
+import { UiImage } from "@/components/ui-image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -61,7 +62,7 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-[500px] bg-white rounded-2xl border border-[#eaeaea] shadow-sm p-5">
         <div className="flex flex-col items-center text-center">
           <div className="flex items-center gap-2">
-            <img src={siteLogoDataUrl || "/logo.png"} alt="logo" className="h-10 w-10 rounded-full object-cover" />
+            <UiImage src={siteLogoDataUrl || "/logo.png"} alt="logo" className="h-10 w-10 rounded-full object-cover" />
             <div className="text-2xl font-semibold tracking-tight">{siteName}</div>
           </div>
           <p className="text-[#888] mt-1 text-sm">{siteDescription}</p>
@@ -72,7 +73,7 @@ export default function ForgotPasswordPage() {
           <div className="text-center text-[#888] text-sm">输入您的邮箱地址，我们将发送重置链接给您</div>
 
           <div className="border border-gray-200 rounded-xl px-3 py-1.5 flex items-center gap-2 mt-1">
-            <img src="/icons/email.svg" alt="邮箱" className="h-4 w-4 opacity-60" />
+            <UiImage src="/icons/email.svg" alt="邮箱" className="h-4 w-4 opacity-60" />
             <input
               type="email"
               className="w-full text-sm outline-none"

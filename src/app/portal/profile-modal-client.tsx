@@ -1,5 +1,6 @@
 "use client";
 
+import { UiImage } from "@/components/ui-image";
 import { useEffect, useState } from "react";
 
 function mapProfileErrorMessage(code?: string, fallback?: string) {
@@ -67,7 +68,7 @@ export function PortalProfileModalClient() {
         <div className="flex items-center justify-between">
           <div className="text-xl font-semibold">账户设置</div>
           <button className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-[#f2d4d9] bg-[#fff7f8] hover:border-[#e3001b] hover:bg-[#fff0f1]" onClick={() => setOpen(false)} aria-label="关闭">
-            <img src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
+            <UiImage src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
           </button>
         </div>
 
@@ -89,7 +90,7 @@ export function PortalProfileModalClient() {
                   aria-label="订阅到期提醒说明"
                   title="订阅到期提醒说明"
                 >
-                  <img src="/icons/exclamation.svg" alt="提醒说明" className="w-4 h-4" />
+                  <UiImage src="/icons/exclamation.svg" alt="提醒说明" className="w-4 h-4" />
                 </button>
                 <span className="absolute left-0 top-[calc(100%+8px)] z-[70] w-[260px] whitespace-normal rounded-xl border border-[#f1d3d8] bg-white text-[#2d2d2d] text-xs leading-5 px-3 py-2 shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-opacity">
                   开启后，将在订阅即将到期时收到提醒通知

@@ -1,5 +1,6 @@
 "use client";
 
+import { UiImage } from "@/components/ui-image";
 import { useEffect, useState } from "react";
 
 type Data = {
@@ -104,7 +105,7 @@ export function PortalEmbyServicesClient() {
               }}
               title="删除已到期订阅计划"
             >
-              <img src="/icons/delete.svg" alt="删除" className="w-3.5 h-3.5" />
+              <UiImage src="/icons/delete.svg" alt="删除" className="w-3.5 h-3.5" />
             </button>
           ) : null}
 

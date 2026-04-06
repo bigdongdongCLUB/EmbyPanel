@@ -1,5 +1,6 @@
 "use client";
 
+import { UiImage } from "@/components/ui-image";
 import { useEffect, useState } from "react";
 import { AdminShellClient } from "./shell-client";
 import { AdminSidebarClient } from "./sidebar-client";
@@ -62,7 +63,7 @@ export function AdminFrameClient({
       <div className={isMobile ? "" : collapsed ? "pl-16" : "pl-60"}>
         <header className="sticky top-0 z-20 h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 md:px-8">
           <button className="border rounded px-2 py-1 text-sm" onClick={toggle} title={isMobile ? (mobileOpen ? "收起菜单" : "展开菜单") : collapsed ? "展开菜单" : "收起菜单"}>
-            <img src="/icons/menu.svg" alt="菜单" className="h-4 w-4" />
+            <UiImage src="/icons/menu.svg" alt="菜单" className="h-4 w-4" />
           </button>
           <AdminShellClient username={username} />
         </header>

@@ -1,5 +1,6 @@
 "use client";
 
+import { UiImage } from "@/components/ui-image";
 import Link from "next/link";
 import { signOut } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
@@ -36,7 +37,7 @@ export function AdminShellClient({ username }: { username: string }) {
         title="系统日志"
         aria-label="系统日志"
       >
-        <img src="/icons/log.svg" alt="" aria-hidden="true" className="h-[18px] w-[18px]" />
+        <UiImage src="/icons/log.svg" alt="" aria-hidden="true" className="h-[18px] w-[18px]" />
       </button>
 
       <button className="cursor-pointer select-none flex items-center gap-2 rounded-full px-2 py-1 hover:bg-gray-100" onClick={() => setOpen((v) => !v)}>

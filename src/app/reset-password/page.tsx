@@ -1,11 +1,12 @@
 "use client";
 
+import { UiImage } from "@/components/ui-image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 
 function EyeIcon({ off }: { off?: boolean }) {
-  return <img src={off ? "/icons/invisible.svg" : "/icons/visible.svg"} alt={off ? "隐藏密码" : "显示密码"} className="h-4 w-4 opacity-70" />;
+  return <UiImage src={off ? "/icons/invisible.svg" : "/icons/visible.svg"} alt={off ? "隐藏密码" : "显示密码"} className="h-4 w-4 opacity-70" />;
 }
 
 function ResetPasswordContent() {
@@ -132,7 +133,7 @@ function ResetPasswordContent() {
       <div className="w-full max-w-[500px] bg-white rounded-2xl border border-[#eaeaea] shadow-sm p-5">
         <div className="flex flex-col items-center text-center">
           <div className="flex items-center gap-2">
-            <img src={siteLogoDataUrl || "/logo.png"} alt="logo" className="h-10 w-10 rounded-full object-cover" />
+            <UiImage src={siteLogoDataUrl || "/logo.png"} alt="logo" className="h-10 w-10 rounded-full object-cover" />
             <div className="text-2xl font-semibold tracking-tight">{siteName}</div>
           </div>
           <p className="text-[#888] mt-1 text-sm">{siteDescription}</p>
@@ -157,7 +158,7 @@ function ResetPasswordContent() {
             <div className="text-center text-[#888] text-sm">请输入新的登录密码</div>
 
             <div className={`border border-gray-200 rounded-xl px-3 py-2 flex items-center gap-2 ${passwordErrors.length ? "border-red-300" : ""}`}>
-              <img src="/icons/lock.svg" alt="密码" className="h-4 w-4 opacity-60" />
+              <UiImage src="/icons/lock.svg" alt="密码" className="h-4 w-4 opacity-60" />
               <input
                 type={pwdVisible ? "text" : "password"}
                 className="w-full text-sm outline-none"
@@ -175,7 +176,7 @@ function ResetPasswordContent() {
             ))}
 
             <div className={`border border-gray-200 rounded-xl px-3 py-2 flex items-center gap-2 ${confirmError ? "border-red-300" : ""}`}>
-              <img src="/icons/lock.svg" alt="确认密码" className="h-4 w-4 opacity-60" />
+              <UiImage src="/icons/lock.svg" alt="确认密码" className="h-4 w-4 opacity-60" />
               <input
                 type={confirmVisible ? "text" : "password"}
                 className="w-full text-sm outline-none"

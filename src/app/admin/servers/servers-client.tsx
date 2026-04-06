@@ -1,5 +1,6 @@
 "use client";
 
+import { UiImage } from "@/components/ui-image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PaginationBar } from "@/components/pagination-bar";
 
@@ -441,7 +442,7 @@ function UsersTable({
                 }}
                 aria-label="关闭"
               >
-                <img src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
+                <UiImage src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
               </button>
             </div>
             <div className="mt-2 text-sm text-gray-600">关闭日志窗口或刷新页面会停止后续删除操作（不会后台继续）。</div>
@@ -710,7 +711,7 @@ export function ServersClient() {
             <div className="flex items-center justify-between">
               <div className="font-semibold">统计 - {statsModal.name}</div>
               <button className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-[#f2d4d9] bg-[#fff7f8] hover:border-[#e3001b] hover:bg-[#fff0f1]" onClick={() => setStatsModal({ open: false })} aria-label="关闭">
-                <img src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
+                <UiImage src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
               </button>
             </div>
 
@@ -750,7 +751,7 @@ export function ServersClient() {
                 }}
                 aria-label="关闭"
               >
-                <img src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
+                <UiImage src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
               </button>
             </div>
 
@@ -791,7 +792,7 @@ export function ServersClient() {
             <div className="flex items-center justify-between">
               <div className="font-semibold">编辑服务器</div>
               <button className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-[#f2d4d9] bg-[#fff7f8] hover:border-[#e3001b] hover:bg-[#fff0f1]" onClick={() => setModal({ open: false })} aria-label="关闭">
-                <img src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
+                <UiImage src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
               </button>
             </div>
 
@@ -822,7 +823,7 @@ export function ServersClient() {
                       aria-label="外部访问地址说明"
                       title="外部访问地址说明"
                     >
-                      <img src="/icons/exclamation.svg" alt="说明" className="w-4 h-4" />
+                      <UiImage src="/icons/exclamation.svg" alt="说明" className="w-4 h-4" />
                     </button>
                     <span className="absolute left-0 top-[calc(100%+8px)] z-[80] w-[300px] whitespace-normal rounded-xl border border-[#f1d3d8] bg-white text-[#2d2d2d] text-xs leading-5 px-3 py-2 shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-opacity">
                       该地址为用户端展示主线路地址，如果缺失则使用BaseURL
@@ -845,7 +846,7 @@ export function ServersClient() {
                       aria-label="备用地址说明"
                       title="备用地址说明"
                     >
-                      <img src="/icons/exclamation.svg" alt="说明" className="w-4 h-4" />
+                      <UiImage src="/icons/exclamation.svg" alt="说明" className="w-4 h-4" />
                     </button>
                     <span className="absolute left-0 top-[calc(100%+8px)] z-[80] w-[260px] whitespace-normal rounded-xl border border-[#f1d3d8] bg-white text-[#2d2d2d] text-xs leading-5 px-3 py-2 shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-opacity">
                       该地址仅在用户端做备用线路展示
@@ -877,7 +878,7 @@ export function ServersClient() {
                     aria-label={modal.showApiKey ? "隐藏 API Key" : "显示 API Key"}
                     title={modal.showApiKey ? "隐藏 API Key" : "显示 API Key"}
                   >
-                    <img src={modal.showApiKey ? "/icons/invisible.svg" : "/icons/visible.svg"} alt={modal.showApiKey ? "隐藏" : "显示"} className="h-4 w-4 opacity-70" />
+                    <UiImage src={modal.showApiKey ? "/icons/invisible.svg" : "/icons/visible.svg"} alt={modal.showApiKey ? "隐藏" : "显示"} className="h-4 w-4 opacity-70" />
                   </button>
                 </div>
               </div>

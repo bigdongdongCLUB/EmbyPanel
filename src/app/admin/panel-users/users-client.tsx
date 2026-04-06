@@ -1,5 +1,6 @@
 "use client";
 
+import { UiImage } from "@/components/ui-image";
 import { useEffect, useMemo, useState } from "react";
 
 type PanelUser = {
@@ -114,7 +115,7 @@ export function PanelUsersClient() {
             <div className="flex items-center justify-between">
               <div className="font-semibold">创建面板账号</div>
               <button className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-[#f2d4d9] bg-[#fff7f8] hover:border-[#e3001b] hover:bg-[#fff0f1]" onClick={() => setCreateOpen(false)} aria-label="关闭">
-                <img src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
+                <UiImage src="/icons/delete.svg" alt="关闭" className="h-3.5 w-3.5" />
               </button>
             </div>
 

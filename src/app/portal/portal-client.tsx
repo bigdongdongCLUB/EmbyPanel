@@ -1,5 +1,6 @@
 "use client";
 
+import { UiImage } from "@/components/ui-image";
 import { useEffect, useMemo, useState } from "react";
 
 type Data = {
@@ -173,7 +174,7 @@ export function PortalClient() {
                 <div key={`${it.type}-${it.title}`} className="group cursor-pointer">
                   <div className="relative rounded-lg overflow-hidden aspect-[2/3] bg-gradient-to-br from-[#f5f7fa] to-[#c3cfe2]">
                     {it.imageUrl ? (
-                      <img src={it.imageUrl} alt={it.title} className="w-full h-full object-cover" loading="lazy" />
+                      <UiImage src={it.imageUrl} alt={it.title} className="w-full h-full object-cover" loading="lazy" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-xs text-gray-500 p-2 text-center">{it.title}</div>
                     )}

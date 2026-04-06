@@ -1,5 +1,6 @@
 "use client";
 
+import { UiImage } from "@/components/ui-image";
 import { useEffect, useMemo, useState } from "react";
 
 type Plan = {
@@ -175,7 +176,7 @@ export function PortalPurchaseClient() {
                 className="mt-auto w-full bg-[#e3001b] hover:bg-[#c20017] text-white rounded-lg px-3 py-3 text-[15px] font-bold inline-flex items-center justify-center gap-2"
                 onClick={() => openPlanModal(p.id)}
               >
-                <img src="/icons/shopping.svg" alt="" className="h-4 w-4 invert" />
+                <UiImage src="/icons/shopping.svg" alt="" className="h-4 w-4 invert" />
                 <span>立即购买</span>
               </button>
             </div>
