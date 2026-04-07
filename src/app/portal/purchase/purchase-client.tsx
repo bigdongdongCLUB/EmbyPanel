@@ -40,12 +40,25 @@ type OrderDetail = {
 };
 
 function pickMainPrice(p: Plan) {
-  if (p.prices.yearlyYuan !== null) return { price: p.prices.yearlyYuan, cycle: "年付" };
-  if (p.prices.monthlyYuan !== null) return { price: p.prices.monthlyYuan, cycle: "月付" };
-  if (p.prices.quarterlyYuan !== null) return { price: p.prices.quarterlyYuan, cycle: "季付" };
-  if (p.prices.halfYearlyYuan !== null) return { price: p.prices.halfYearlyYuan, cycle: "半年付" };
-  if (p.prices.twoYearlyYuan !== null) return { price: p.prices.twoYearlyYuan, cycle: "两年付" };
-  return { price: 0, cycle: "起" };
+  const paidCycles: Array<{ cycle: string; price: number }> = [
+    { cycle: "月付", price: p.prices.monthlyYuan ?? NaN },
+    { cycle: "季付", price: p.prices.quarterlyYuan ?? NaN },
+    { cycle: "半年付", price: p.prices.halfYearlyYuan ?? NaN },
+    { cycle: "年付", price: p.prices.yearlyYuan ?? NaN },
+    { cycle: "两年付", price: p.prices.twoYearlyYuan ?? NaN },
+  ].filter((x) => Number.isFinite(x.price));
+
+  if (paidCycles.length > 0) {
+    const min = paidCycles.reduce((a, b) => (b.price < a.price ? b : a));
+    return {
+      price: min.price,
+      cycle: min.cycle,
+      hasMore: paidCycles.length > 1,
+    };
+  }
+
+  if (p.prices.trialYuan !== null) return { price: p.prices.trialYuan, cycle: "试用", hasMore: false };
+  return { price: 0, cycle: "起", hasMore: false };
 }
 
 function fmtTime(v: string) {
@@ -167,7 +180,7 @@ export function PortalPurchaseClient() {
               <div className="mb-7 flex items-end gap-1.5 flex-wrap">
                 <span className="text-[#e3001b] text-2xl font-bold leading-none">¥</span>
                 <span className="text-[#e3001b] text-[40px] font-bold leading-none">{main.price}</span>
-                <span className="text-[13px] text-[#888] pb-0.5">/{main.cycle} 起，更多周期可选</span>
+                <span className="text-[13px] text-[#888] pb-0.5">/{main.cycle}{main.hasMore ? "起，更多周期可选" : ""}</span>
               </div>
 
               {p.description ? <div className="text-sm text-[#666] whitespace-pre-wrap mb-4">{p.description}</div> : null}

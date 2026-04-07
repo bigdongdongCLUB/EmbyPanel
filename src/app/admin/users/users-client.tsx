@@ -13,6 +13,7 @@ type UserRow = {
   email: string | null;
   role: "USER" | "ADMIN";
   enabled: boolean;
+  maxConcurrentPlaybacks?: number;
   expiryReminderEnabled?: boolean;
   balance: number | null;
   subscriptionStatus: string | null;
@@ -45,6 +46,7 @@ type EditState =
       newPassword: string;
       role: "USER" | "ADMIN";
       balance: string;
+      maxConcurrentPlaybacks: string;
       expiryReminderEnabled: boolean;
       enabled: boolean;
       // subscription
@@ -195,14 +197,18 @@ export function UsersClient() {
   const [newPassword, setNewPassword] = useState("");
   const [newRole, setNewRole] = useState<"USER" | "ADMIN">("USER");
   const [newBalance, setNewBalance] = useState("0");
+  const [newMaxConcurrentPlaybacks, setNewMaxConcurrentPlaybacks] = useState("1");
 
   const canCreate = useMemo(() => {
     if (!newUsername.trim()) return false;
     if (newPassword.length < 6) return false;
     const b = Number(newBalance);
     if (!Number.isFinite(b) || b < 0) return false;
+    if (!/^\d+$/.test(newMaxConcurrentPlaybacks.trim())) return false;
+    const c = Number(newMaxConcurrentPlaybacks);
+    if (!Number.isInteger(c) || c < 0 || c > 10) return false;
     return true;
-  }, [newUsername, newPassword, newBalance]);
+  }, [newUsername, newPassword, newBalance, newMaxConcurrentPlaybacks]);
 
   const total = rows.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -726,6 +732,7 @@ export function UsersClient() {
                         newPassword: "",
                         role: r.role,
                         balance: String(r.balance ?? 0),
+                        maxConcurrentPlaybacks: String(r.maxConcurrentPlaybacks ?? 1),
                         expiryReminderEnabled: !!r.expiryReminderEnabled,
                         enabled: r.enabled,
                         planId: "",
@@ -753,6 +760,7 @@ export function UsersClient() {
                           newPassword: "",
                           role: u.role,
                           balance: String((u.balanceCents ?? 0) / 100),
+                          maxConcurrentPlaybacks: String(u.maxConcurrentPlaybacks ?? 1),
                           expiryReminderEnabled: !!u.expiryReminderEnabled,
                           enabled: !!u.enabled,
                           planId: sub?.planId ?? "",
@@ -842,6 +850,15 @@ export function UsersClient() {
                   <label className="text-sm">账户余额</label>
                   <input className="mt-1 w-full border border-[#eaeaea] rounded-lg px-3 py-2 bg-[#f4f5f7] focus:border-[#e3001b] outline-none" value={edit.balance} onChange={(e) => setEdit({ ...edit, balance: e.target.value })} />
                 </div>
+                <div>
+                  <label className="text-sm">同播数量（0-10，0=无限制）</label>
+                  <input
+                    className="mt-1 w-full border border-[#eaeaea] rounded-lg px-3 py-2 bg-[#f4f5f7] focus:border-[#e3001b] outline-none"
+                    value={edit.maxConcurrentPlaybacks}
+                    onChange={(e) => setEdit({ ...edit, maxConcurrentPlaybacks: e.target.value.replace(/[^\d]/g, "") })}
+                    inputMode="numeric"
+                  />
+                </div>
                 <div className="flex items-center gap-2">
                   <input
                     id="expiryReminder"
@@ -916,11 +933,21 @@ export function UsersClient() {
                     alert("余额格式不正确");
                     return;
                   }
+                  if (!/^\d+$/.test(edit.maxConcurrentPlaybacks.trim())) {
+                    alert("同播数量格式不正确");
+                    return;
+                  }
+                  const maxConcurrentPlaybacksNum = Number(edit.maxConcurrentPlaybacks);
+                  if (!Number.isInteger(maxConcurrentPlaybacksNum) || maxConcurrentPlaybacksNum < 0 || maxConcurrentPlaybacksNum > 10) {
+                    alert("同播数量仅支持 0-10");
+                    return;
+                  }
 
                   const payload: any = {
                     email: edit.email.trim() ? edit.email.trim() : null,
                     role: edit.role,
                     enabled: edit.enabled,
+                    maxConcurrentPlaybacks: maxConcurrentPlaybacksNum,
                     expiryReminderEnabled: edit.expiryReminderEnabled,
                     balanceCents: Math.round(balanceNum * 100),
                     changePassword: edit.changePassword,
@@ -1752,6 +1779,16 @@ export function UsersClient() {
                 </div>
                 <div className="text-xs text-gray-500 mt-1">创建时可直接充值到该账户（元）。</div>
               </div>
+              <div>
+                <label className="text-sm">同播数量（0-10，0=无限制）</label>
+                <input
+                  className="mt-1 w-full border rounded px-3 py-2"
+                  value={newMaxConcurrentPlaybacks}
+                  onChange={(e) => setNewMaxConcurrentPlaybacks(e.target.value.replace(/[^\d]/g, ""))}
+                  inputMode="numeric"
+                  placeholder="1"
+                />
+              </div>
             </div>
 
             <div className="mt-4 flex gap-2">
@@ -1764,6 +1801,15 @@ export function UsersClient() {
                     alert("账户余额格式不正确");
                     return;
                   }
+                  if (!/^\d+$/.test(newMaxConcurrentPlaybacks.trim())) {
+                    alert("同播数量格式不正确");
+                    return;
+                  }
+                  const maxConcurrentPlaybacksNum = Number(newMaxConcurrentPlaybacks);
+                  if (!Number.isInteger(maxConcurrentPlaybacksNum) || maxConcurrentPlaybacksNum < 0 || maxConcurrentPlaybacksNum > 10) {
+                    alert("同播数量仅支持 0-10");
+                    return;
+                  }
 
                   const res = await fetch("/api/admin/users", {
                     method: "POST",
@@ -1773,6 +1819,7 @@ export function UsersClient() {
                       email: newEmail.trim(),
                       password: newPassword,
                       role: newRole,
+                      maxConcurrentPlaybacks: maxConcurrentPlaybacksNum,
                       balanceCents: Math.round(balanceNum * 100),
                     }),
                   });
@@ -1786,6 +1833,7 @@ export function UsersClient() {
                   setNewPassword("");
                   setNewRole("USER");
                   setNewBalance("0");
+                  setNewMaxConcurrentPlaybacks("1");
                   await refresh();
                 }}
               >

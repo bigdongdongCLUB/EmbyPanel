@@ -1,0 +1,2 @@
+ALTER TABLE "User"
+ADD COLUMN "maxConcurrentPlaybacks" INTEGER NOT NULL DEFAULT 1;

@@ -30,7 +30,7 @@ const PlanServerConfigInput = z.object({
 
 const PatchSchema = z.object({
   name: z.string().min(1).max(100).optional(),
-  description: z.string().max(20000).optional().or(z.literal("")),
+  description: z.string().max(30).optional().or(z.literal("")),
   enabled: z.boolean().optional(),
   // visible removed from admin UI; always true
   serverAssignStrategy: z.enum(["ALL", "LOAD_BALANCE"]).optional(),

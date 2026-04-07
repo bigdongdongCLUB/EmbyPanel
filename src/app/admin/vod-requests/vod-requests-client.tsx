@@ -170,7 +170,7 @@ export function VodRequestsAdminClient() {
     if (!action) return;
     const nextStatus: Row["status"] = action === "COMPLETED" ? "APPROVED" : action === "PENDING" || action === "PROCESSING" ? "PENDING" : "REJECTED";
 
-    const manualReply = (replyMap[row.id] || "").trim().slice(0, 20);
+    const manualReply = (replyMap[row.id] || "").trim().slice(0, 40);
 
     await patchRow(row.id, { status: nextStatus, bizStatus: action, adminNote: manualReply || undefined });
     setReplyMap((m) => ({ ...m, [row.id]: manualReply }));
@@ -194,7 +194,7 @@ export function VodRequestsAdminClient() {
     if (saveTimerRef.current[id]) clearTimeout(saveTimerRef.current[id]);
     saveTimerRef.current[id] = setTimeout(async () => {
       try {
-        await patchRow(id, { adminNote: value.slice(0, 20) });
+        await patchRow(id, { adminNote: value.slice(0, 40) });
       } catch {}
     }, 300);
   }
@@ -349,10 +349,10 @@ export function VodRequestsAdminClient() {
                   <td className="px-3 py-3 min-w-[220px] align-middle">
                     <input
                       className="w-full h-8 border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-2 text-xs focus:border-[#e3001b] outline-none"
-                      maxLength={20}
+                      maxLength={40}
                       value={replyMap[r.id] ?? ""}
                       onChange={(e) => {
-                        const v = e.target.value.replace(/[\r\n]/g, "").slice(0, 20);
+                        const v = e.target.value.replace(/[\r\n]/g, "").slice(0, 40);
                         setReplyMap((m) => ({ ...m, [r.id]: v }));
                         saveReplyDebounced(r.id, v);
                       }}
@@ -439,10 +439,10 @@ export function VodRequestsAdminClient() {
                         <td className="px-3 py-3 min-w-[220px] align-middle">
                           <input
                             className="w-full h-8 border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-2 text-xs focus:border-[#e3001b] outline-none"
-                            maxLength={20}
+                            maxLength={40}
                             value={replyMap[item.id] ?? ""}
                             onChange={(e) => {
-                              const v = e.target.value.replace(/[\r\n]/g, "").slice(0, 20);
+                              const v = e.target.value.replace(/[\r\n]/g, "").slice(0, 40);
                               setReplyMap((m) => ({ ...m, [item.id]: v }));
                               saveReplyDebounced(item.id, v);
                             }}

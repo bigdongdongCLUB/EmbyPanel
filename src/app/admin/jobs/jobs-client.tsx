@@ -1,5 +1,6 @@
 "use client";
 
+import { UiImage } from "@/components/ui-image";
 import { useEffect, useState } from "react";
 import { PaginationBar } from "@/components/pagination-bar";
 
@@ -42,6 +43,7 @@ export function JobsClient() {
   const [jobName, setJobName] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [detailResult, setDetailResult] = useState<string | null>(null);
 
   async function refresh() {
     setLoading(true);
@@ -94,46 +96,38 @@ export function JobsClient() {
       {error ? <pre className="text-xs text-red-600 whitespace-pre-wrap">{error}</pre> : null}
 
       <div className="bg-white border border-[#eaeaea] rounded-2xl overflow-auto">
-        <table className="min-w-[980px] w-full text-sm">
+        <table className="min-w-[980px] w-full text-sm whitespace-nowrap">
           <thead className="text-left text-gray-600 border-b">
             <tr>
-              <th className="py-2 px-3">任务名称</th>
-              <th className="py-2 px-3">触发方式</th>
-              <th className="py-2 px-3">执行时间</th>
-              <th className="py-2 px-3">处理结果</th>
+              <th className="py-2 px-3 whitespace-nowrap">任务名称</th>
+              <th className="py-2 px-3 whitespace-nowrap">触发方式</th>
+              <th className="py-2 px-3 whitespace-nowrap">执行时间</th>
+              <th className="py-2 px-3 whitespace-nowrap">处理结果</th>
             </tr>
           </thead>
           <tbody>
             {(data?.rows ?? []).map((r) => (
               <tr key={r.id} className="border-b last:border-b-0">
-                <td className="py-2 px-3">{r.jobLabel}</td>
-                <td className="py-2 px-3">{r.triggerMode}</td>
-                <td className="py-2 px-3">{fmt(r.executedAt)}</td>
-                <td className="py-2 px-3">
-                  <span className={r.ok === false ? "text-red-600" : r.ok === true ? "text-green-600" : "text-gray-600"}>
-                    {r.result.split(/(异常\d+|失败\d*|失败：[^，, ]*)/g).map((part, i) => {
-                      if (!part) return null;
-
-                      const mAbnormal = part.match(/^异常(\d+)$/);
-                      if (mAbnormal) {
-                        const n = Number(mAbnormal[1]);
-                        return <span key={i} className={n > 0 ? "text-red-600" : ""}>{part}</span>;
-                      }
-
-                      const mFail = part.match(/^失败(\d*)$/);
-                      if (mFail) {
-                        const raw = mFail[1];
-                        const n = raw === "" ? 1 : Number(raw);
-                        return <span key={i} className={n > 0 ? "text-red-600" : ""}>{part}</span>;
-                      }
-
-                      if (/^失败：/.test(part)) {
-                        return <span key={i} className="text-red-600">{part}</span>;
-                      }
-
-                      return <span key={i}>{part}</span>;
-                    })}
-                  </span>
+                <td className="py-2 px-3 whitespace-nowrap">{r.jobLabel}</td>
+                <td className="py-2 px-3 whitespace-nowrap">{r.triggerMode}</td>
+                <td className="py-2 px-3 whitespace-nowrap">{fmt(r.executedAt)}</td>
+                <td className="py-2 px-3 whitespace-nowrap">
+                  <div className="inline-flex items-center gap-2 align-middle">
+                    <span className={`${r.ok === false ? "text-red-600" : r.ok === true ? "text-green-600" : "text-gray-600"} inline-block max-w-[220px] truncate`} title={r.result}>
+                      {r.result.length > 20 ? `${r.result.slice(0, 20)}...` : r.result}
+                    </span>
+                    {r.result.length > 20 ? (
+                      <button
+                        type="button"
+                        className="inline-flex items-center justify-center rounded p-0.5 hover:bg-[#f4f5f7]"
+                        onClick={() => setDetailResult(r.result)}
+                        aria-label="查看详细处理结果"
+                        title="查看详细处理结果"
+                      >
+                        <UiImage src="/icons/exclamation.svg" alt="详情" className="h-4 w-4" />
+                      </button>
+                    ) : null}
+                  </div>
                 </td>
               </tr>
             ))}
@@ -156,6 +150,30 @@ export function JobsClient() {
           onPageSizeChange={(n) => { setPage(1); setPageSize(n); }}
         />
       </div>
+
+      {detailResult !== null ? (
+        <div className="fixed inset-0 z-[260] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/45" onClick={() => setDetailResult(null)} />
+          <div className="relative w-full max-w-[560px] rounded-2xl border border-[#eaeaea] bg-white p-4 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-semibold text-gray-800">处理结果详情</div>
+              <button
+                type="button"
+                className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-[#f2d4d9] bg-[#fff7f8] hover:border-[#e3001b] hover:bg-[#fff0f1]"
+                onClick={() => setDetailResult(null)}
+                aria-label="关闭详情弹窗"
+              >
+                ×
+              </button>
+            </div>
+            <textarea
+              className="mt-3 h-40 w-full resize-none rounded-lg border border-[#eaeaea] bg-[#f8f9fa] px-3 py-2 text-sm text-gray-700 outline-none"
+              value={detailResult}
+              readOnly
+            />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -191,19 +191,24 @@ export async function POST(req: Request) {
 
       const links = await prisma.embyUserLink.findMany({
         where: { embyServerId: server.id, embyUserId: { in: embyUserIds } },
-        select: { id: true, disabled: true, userId: true, embyUserId: true, user: { select: { id: true, username: true } } },
+        select: { id: true, disabled: true, userId: true, embyUserId: true, user: { select: { id: true, username: true, maxConcurrentPlaybacks: true } } },
       });
-      const linkMap = new Map<string, { id: string; disabled: boolean; userId: string; username: string }>();
-      for (const l of links) linkMap.set(l.embyUserId, { id: l.id, disabled: !!l.disabled, userId: l.user.id, username: l.user.username });
+      const linkMap = new Map<string, { id: string; disabled: boolean; userId: string; username: string; maxConcurrentPlaybacks: number }>();
+      for (const l of links) {
+        const raw = Number(l.user.maxConcurrentPlaybacks ?? 1);
+        const maxConcurrentPlaybacks = Number.isFinite(raw) ? Math.max(0, Math.min(10, Math.trunc(raw))) : 1;
+        linkMap.set(l.embyUserId, { id: l.id, disabled: !!l.disabled, userId: l.user.id, username: l.user.username, maxConcurrentPlaybacks });
+      }
 
       for (const [embyUserId, sessions] of byUser.entries()) {
-        if (sessions.length <= 1) continue;
-
         const link = linkMap.get(embyUserId);
         if (!link) {
           skippedOrphanSessions += sessions.length;
           continue;
         }
+        // 0 means unlimited concurrent playbacks, never considered anomaly.
+        if (link.maxConcurrentPlaybacks === 0) continue;
+        if (sessions.length <= link.maxConcurrentPlaybacks) continue;
 
         const key = stateKey(server.id, link.userId);
         detectedKeys.add(key);
@@ -252,10 +257,11 @@ export async function POST(req: Request) {
               userName: link.username,
               anomalyType,
               anomalyTypeLabel: anomalyTypeLabel(anomalyType),
+              maxConcurrentPlaybacks: link.maxConcurrentPlaybacks,
               sessionCount: sessions.length,
               ips,
               titles,
-              description,
+              description: `${description}（允许同播 ${link.maxConcurrentPlaybacks} 台）`,
               excerpt,
               sessions: sessionRows,
             },

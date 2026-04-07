@@ -15,6 +15,7 @@ const PatchSchema = z.object({
   email: z.string().email().nullable().optional(),
   role: z.enum(["USER", "ADMIN"]).optional(),
   enabled: z.boolean().optional(),
+  maxConcurrentPlaybacks: z.number().int().min(0).max(10).optional(),
   expiryReminderEnabled: z.boolean().optional(),
   balanceCents: z.number().int().min(0).optional(),
 
@@ -51,6 +52,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
       email: true,
       role: true,
       enabled: true,
+      maxConcurrentPlaybacks: true,
       balanceCents: true,
       expiryReminderEnabled: true,
       createdAt: true,
@@ -110,6 +112,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if (parsed.data.email !== undefined) data.email = parsed.data.email;
   if (parsed.data.role !== undefined) data.role = parsed.data.role;
   if (parsed.data.enabled !== undefined) data.enabled = parsed.data.enabled;
+  if (parsed.data.maxConcurrentPlaybacks !== undefined) data.maxConcurrentPlaybacks = parsed.data.maxConcurrentPlaybacks;
   if (parsed.data.expiryReminderEnabled !== undefined) data.expiryReminderEnabled = parsed.data.expiryReminderEnabled;
   if (parsed.data.balanceCents !== undefined) data.balanceCents = parsed.data.balanceCents;
 

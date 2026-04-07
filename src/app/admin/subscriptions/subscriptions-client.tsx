@@ -145,7 +145,7 @@ export function SubscriptionsClient() {
       loading: false,
       error: null,
       name: p.name,
-      description: p.description ?? "",
+      description: (p.description ?? "").slice(0, 30),
       enabled: p.enabled,
       serverAssignStrategy: p.serverAssignStrategy,
       trialPrice: centsToYuanInt(pricing?.trial?.priceCents),
@@ -437,18 +437,22 @@ export function SubscriptionsClient() {
               </div>
 
               <div>
-                <label className="text-sm">订阅描述</label>
-                <textarea
-                  className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none min-h-[160px]"
-                  value={edit.description}
-                  onChange={(e) =>
-                    setEditSafe((prev) => {
-                      if (!prev.open) return prev;
-                      return { ...prev, description: e.target.value };
-                    })
-                  }
-                  placeholder="支持 Markdown/HTML（前台以富文本渲染）"
-                />
+                <label className="block text-sm mb-1">订阅描述</label>
+                <div className="w-full">
+                  <textarea
+                    className="w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none h-[84px]"
+                    value={edit.description}
+                    maxLength={30}
+                    onChange={(e) =>
+                      setEditSafe((prev) => {
+                        if (!prev.open) return prev;
+                        return { ...prev, description: e.target.value.slice(0, 30) };
+                      })
+                    }
+                    placeholder="仅支持普通文本（最多30个字符）"
+                  />
+                  <div className="mt-1 text-xs text-gray-500 text-right">{edit.description.length}/30</div>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 gap-3">

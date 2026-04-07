@@ -9,7 +9,7 @@ import { prisma } from "@/lib/db";
 const PatchSchema = z.object({
   status: z.enum(["PENDING", "APPROVED", "REJECTED", "CANCELLED"]).optional(),
   bizStatus: z.enum(["PENDING", "NO_RESOURCE", "PROCESSING", "CANNOT_UPDATE", "COMPLETED"]).optional(),
-  adminNote: z.string().max(20).optional(),
+  adminNote: z.string().max(40).optional(),
 });
 
 function normText(v?: string | null) {

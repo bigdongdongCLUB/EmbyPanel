@@ -73,6 +73,9 @@ model User {
   syncPasswordTag String?
   role         Role     @default(USER)
   enabled      Boolean  @default(true)
+  // Maximum concurrent playing devices allowed for anomaly scan.
+  // 0 means unlimited.
+  maxConcurrentPlaybacks Int @default(1)
   balanceCents Int      @default(0)
   expiryReminderEnabled Boolean @default(true)
   createdAt    DateTime @default(now())
