@@ -39,6 +39,18 @@ function normalizeIp(ipRaw: string): string {
   return ip;
 }
 
+function sessionDeviceKey(s: any) {
+  const deviceId = String(s?.DeviceId ?? "").trim().toLowerCase();
+  if (deviceId) return `did:${deviceId}`;
+
+  const device = String(s?.DeviceName ?? "").trim().toLowerCase();
+  const client = String(s?.Client ?? "").trim().toLowerCase();
+  const ip = normalizeIp(String(s?.RemoteEndPoint ?? "")).trim().toLowerCase();
+
+  if (device || client || ip) return `sig:${device}|${client}|${ip}`;
+  return `sid:${String(s?.Id ?? "").trim().toLowerCase()}`;
+}
+
 function nowPlayingLabel(s: any): string {
   const item: any = s?.NowPlayingItem;
   if (!item) return "";
@@ -206,9 +218,19 @@ export async function POST(req: Request) {
           skippedOrphanSessions += sessions.length;
           continue;
         }
+
+        // 去重同设备会话：优先按 DeviceId，其次按 设备名+客户端+IP 组合。
+        // 这可以避免同一设备异常退出后短时重连，旧会话尚未回收导致的误判。
+        const uniqueByDevice = new Map<string, any>();
+        for (const s of sessions) {
+          uniqueByDevice.set(sessionDeviceKey(s), s);
+        }
+        const uniqueSessions = Array.from(uniqueByDevice.values());
+        const concurrentCount = uniqueSessions.length;
+
         // 0 means unlimited concurrent playbacks, never considered anomaly.
         if (link.maxConcurrentPlaybacks === 0) continue;
-        if (sessions.length <= link.maxConcurrentPlaybacks) continue;
+        if (concurrentCount <= link.maxConcurrentPlaybacks) continue;
 
         const key = stateKey(server.id, link.userId);
         detectedKeys.add(key);
@@ -225,7 +247,7 @@ export async function POST(req: Request) {
           penaltyActive: pendingPenaltyKeys.has(key),
         };
 
-        const sessionRows = sessions.map((s: any) => ({
+        const sessionRows = uniqueSessions.map((s: any) => ({
           device: String(s?.DeviceName ?? ""),
           client: String(s?.Client ?? ""),
           ip: normalizeIp(String(s?.RemoteEndPoint ?? "")),
@@ -236,7 +258,7 @@ export async function POST(req: Request) {
         const anomalyType = detectAnomalyTypeFromIps(ips);
         const titles = Array.from(new Set(sessionRows.map((x) => x.nowPlaying).filter(Boolean)));
         const devices = Array.from(new Set(sessionRows.map((x) => x.device).filter(Boolean)));
-        const description = titles.length >= 2 ? `同时在 ${sessions.length} 个设备上播放不同内容` : `同一时间检测到 ${sessions.length} 个设备播放`;
+        const description = titles.length >= 2 ? `同时在 ${concurrentCount} 个设备上播放不同内容` : `同一时间检测到 ${concurrentCount} 个设备播放`;
         const excerpt = [
           devices.length ? `设备: ${devices.slice(0, 3).join(" / ")}${devices.length > 3 ? ` 等${devices.length}台` : ""}` : "",
           ips.length ? `IP: ${ips.join(", ")}` : "",
@@ -258,7 +280,8 @@ export async function POST(req: Request) {
               anomalyType,
               anomalyTypeLabel: anomalyTypeLabel(anomalyType),
               maxConcurrentPlaybacks: link.maxConcurrentPlaybacks,
-              sessionCount: sessions.length,
+              sessionCount: concurrentCount,
+              rawSessionCount: sessions.length,
               ips,
               titles,
               description: `${description}（允许同播 ${link.maxConcurrentPlaybacks} 台）`,

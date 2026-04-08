@@ -4,6 +4,7 @@ export type EmbySession = {
   Id?: string;
   UserId?: string;
   UserName?: string;
+  DeviceId?: string;
   DeviceName?: string;
   Client?: string;
   ApplicationVersion?: string;
