@@ -330,8 +330,8 @@ export async function POST(req: Request) {
             // 只要拿到 Emby userId，立即 upsert link，降低“远端已创建但本地未关联”的概率
             await prisma.embyUserLink.upsert({
               where: { userId_embyServerId: { userId: u.id, embyServerId: s.id } },
-              update: { embyUserId },
-              create: { userId: u.id, embyServerId: s.id, embyUserId },
+              update: { embyUserId, disabled: false },
+              create: { userId: u.id, embyServerId: s.id, embyUserId, disabled: false },
             });
 
             if (!pw) {
