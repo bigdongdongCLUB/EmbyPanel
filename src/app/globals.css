@@ -141,6 +141,14 @@ body {
   border-radius: 8px;
 }
 
+/* 公告卡片内的图片严格跟随容器宽度，防止超宽内容溢出 */
+.announcement-content img {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
 .docs-content p { margin: 8px 0; }
 .docs-content ul { margin: 8px 0; padding-left: 18px; list-style: disc; }
 .docs-content h1, .docs-content h2, .docs-content h3, .docs-content h4 { font-weight: 600; margin: 10px 0 6px; }

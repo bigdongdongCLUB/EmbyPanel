@@ -1,6 +1,7 @@
 "use client";
 
 import { UiImage } from "@/components/ui-image";
+import { renderMarkdownLite } from "@/lib/markdown-lite";
 import { useEffect, useMemo, useState } from "react";
 
 type Data = {
@@ -30,6 +31,7 @@ export function PortalClient() {
   const [noticeIndex, setNoticeIndex] = useState(0);
 
   const notices = useMemo(() => data?.announcements ?? [], [data]);
+  const currentNoticeHtml = useMemo(() => renderMarkdownLite(notices[noticeIndex]?.content ?? "暂无公告"), [notices, noticeIndex]);
 
   async function refresh() {
     setLoading(true);
@@ -103,7 +105,10 @@ export function PortalClient() {
         <div className="rounded-2xl border border-gray-200 bg-white p-7 text-center">
           <div className="text-base font-bold text-[#222] mb-4">系统公告</div>
           <div className="text-[15px] font-semibold text-center">{notices[noticeIndex]?.title ?? "系统公告"}</div>
-          <div className="text-sm text-gray-600 mt-2 whitespace-pre-wrap min-h-[56px] text-center leading-6">{notices[noticeIndex]?.content ?? "暂无公告"}</div>
+          <div
+            className="docs-content announcement-content text-sm text-gray-600 mt-2 min-h-[56px] max-h-[220px] overflow-y-auto pr-1 leading-6 text-left"
+            dangerouslySetInnerHTML={{ __html: currentNoticeHtml }}
+          />
           {notices.length > 1 ? (
             <div className="mt-3 flex items-center justify-center gap-1.5">
               {notices.map((n, i) => (

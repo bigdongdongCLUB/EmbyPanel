@@ -204,7 +204,7 @@ export function DocsAdminClient() {
               >
                 <textarea
                   ref={taRef}
-                  className="w-full min-h-[260px] text-sm outline-none"
+                  className="w-full h-[220px] max-h-[320px] resize-y overflow-y-auto bg-transparent outline-none text-sm"
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   onPaste={async (e) => {
@@ -225,7 +225,9 @@ export function DocsAdminClient() {
 
               <div className="border rounded-lg p-3">
                 <div className="text-sm font-medium mb-2">预览</div>
-                <div className="docs-content" dangerouslySetInnerHTML={{ __html: previewHtml }} />
+                <div className="max-h-[320px] overflow-y-auto pr-1">
+                  <div className="docs-content" dangerouslySetInnerHTML={{ __html: previewHtml }} />
+                </div>
               </div>
 
               <div className="flex gap-2 pt-1">

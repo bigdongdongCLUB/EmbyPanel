@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { renderMarkdownLite } from "@/lib/markdown-lite";
 
 function ImeInput({ value, onChange, ...props }: any) {
   const [composing, setComposing] = useState(false);
@@ -12,34 +13,6 @@ function ImeInput({ value, onChange, ...props }: any) {
 
   return (
     <input
-      {...props}
-      value={localValue}
-      onCompositionStart={() => setComposing(true)}
-      onCompositionEnd={(e) => {
-        const v = e.currentTarget.value;
-        setComposing(false);
-        setLocalValue(v);
-        onChange(v);
-      }}
-      onChange={(e) => {
-        const v = e.target.value;
-        setLocalValue(v);
-        if (!composing) onChange(v);
-      }}
-    />
-  );
-}
-
-function ImeTextarea({ value, onChange, ...props }: any) {
-  const [composing, setComposing] = useState(false);
-  const [localValue, setLocalValue] = useState(value ?? "");
-
-  useEffect(() => {
-    setLocalValue(value ?? "");
-  }, [value]);
-
-  return (
-    <textarea
       {...props}
       value={localValue}
       onCompositionStart={() => setComposing(true)}
@@ -79,8 +52,10 @@ export function AnnouncementsClient() {
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const taRef = useRef<HTMLTextAreaElement | null>(null);
 
   const canSave = useMemo(() => !!title.trim() && !!content.trim(), [title, content]);
+  const previewHtml = useMemo(() => renderMarkdownLite(content), [content]);
 
   async function refresh() {
     setLoading(true);
@@ -112,6 +87,35 @@ export function AnnouncementsClient() {
     setTitle(r.title);
     setContent(r.content);
     setOpen(true);
+  }
+
+  async function uploadImage(file: File) {
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/admin/docs/upload", { method: "POST", body: fd });
+    const json = await res.json().catch(() => null);
+    if (!res.ok) throw new Error(json?.error || "upload_failed");
+    return String(json.url);
+  }
+
+  async function insertImage(file: File) {
+    const url = await uploadImage(file);
+    const md = `\n![${file.name}](${url})\n`;
+    const ta = taRef.current;
+    if (!ta) {
+      setContent((x) => x + md);
+      return;
+    }
+
+    const st = ta.selectionStart ?? content.length;
+    const ed = ta.selectionEnd ?? content.length;
+    const next = content.slice(0, st) + md + content.slice(ed);
+    setContent(next);
+    requestAnimationFrame(() => {
+      ta.focus();
+      const p = st + md.length;
+      ta.setSelectionRange(p, p);
+    });
   }
 
   return (
@@ -176,7 +180,48 @@ export function AnnouncementsClient() {
 
             <div>
               <label className="text-sm">公告内容</label>
-              <ImeTextarea key={`content-${editId ?? 'new'}`} className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none min-h-[220px]" value={content} onChange={setContent} placeholder="请输入公告内容" />
+              <div
+                className="mt-1 border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus-within:border-[#e3001b]"
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={async (e) => {
+                  e.preventDefault();
+                  const f = e.dataTransfer.files?.[0];
+                  if (!f) return;
+                  try {
+                    await insertImage(f);
+                  } catch (err: any) {
+                    alert(`图片上传失败: ${err?.message || err}`);
+                  }
+                }}
+              >
+                <textarea
+                  key={`content-${editId ?? "new"}`}
+                  ref={taRef}
+                  className="w-full h-[220px] max-h-[320px] resize-y overflow-y-auto bg-transparent outline-none text-sm"
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  onPaste={async (e) => {
+                    const files = Array.from(e.clipboardData?.files ?? []);
+                    const img = files.find((f) => String(f.type || "").startsWith("image/"));
+                    if (!img) return;
+                    e.preventDefault();
+                    try {
+                      await insertImage(img);
+                    } catch (err: any) {
+                      alert(`图片上传失败: ${err?.message || err}`);
+                    }
+                  }}
+                  placeholder="Markdown 公告内容（支持拖拽/粘贴图片上传）"
+                />
+              </div>
+              <div className="mt-1 text-xs text-gray-500">提示：拖拽图片或 Ctrl+V / Cmd+V 粘贴图片到编辑框，会自动上传并插入 Markdown 图片语法。</div>
+            </div>
+
+            <div className="border rounded-lg p-3">
+              <div className="text-sm font-medium mb-2">预览</div>
+              <div className="max-h-[320px] overflow-y-auto pr-1">
+                <div className="docs-content" dangerouslySetInnerHTML={{ __html: previewHtml }} />
+              </div>
             </div>
 
             <div className="flex gap-2">
