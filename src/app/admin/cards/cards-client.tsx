@@ -174,6 +174,14 @@ export function CardCodesClient() {
 
       <div className="flex flex-wrap items-center gap-2 bg-white border border-[#eaeaea] rounded-xl p-2 shadow-sm">
         <input className="w-full md:w-72 h-8 border border-transparent bg-[#f4f5f7] rounded-lg px-3 text-xs focus:border-[#e3001b] outline-none" placeholder="搜索卡密/备注" value={q} onChange={(e) => setQ(e.target.value)} />
+        {q ? (
+          <button
+            className="border border-[#eaeaea] bg-white hover:bg-[#f4f5f7] text-gray-600 rounded-lg px-4 py-2"
+            onClick={() => setQ("")}
+          >
+            清除
+          </button>
+        ) : null}
         <select className="h-8 border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 text-xs focus:border-[#e3001b] outline-none" value={type} onChange={(e) => setType(e.target.value)}>
           <option value="">全部类型</option>
           <option value="BALANCE">余额卡密</option>
