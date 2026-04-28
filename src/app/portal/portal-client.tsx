@@ -22,6 +22,13 @@ function fmtDateYmd(v?: string | null) {
   return new Date(v).toLocaleDateString("zh-CN", { timeZone: "Asia/Shanghai" });
 }
 
+function redeemErrorMessage(message: string) {
+  if (["card_not_found", "card_not_usable", "card_already_used", "invalid_payload"].includes(message)) {
+    return "兑换失败 卡密错误";
+  }
+  return `兑换失败: ${message || "unknown"}`;
+}
+
 export function PortalClient() {
   const [data, setData] = useState<Data | null>(null);
   const [loading, setLoading] = useState(true);
@@ -41,8 +48,8 @@ export function PortalClient() {
       const json = await res.json().catch(() => null);
       if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
       setData(json);
-    } catch (e: any) {
-      setError(e?.message || "load_failed");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "load_failed");
     } finally {
       setLoading(false);
     }
@@ -68,6 +75,16 @@ export function PortalClient() {
     return () => window.clearInterval(t);
   }, [notices.length]);
 
+  useEffect(() => {
+    if (!redeeming) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [redeeming]);
+
   const remainingDays = data?.dashboard.remainingDays ?? 0;
   const isExpired = !!data?.dashboard.subscriptionEndAt && new Date(data.dashboard.subscriptionEndAt).getTime() < Date.now();
   const isDue = remainingDays <= 0;
@@ -75,6 +92,16 @@ export function PortalClient() {
 
   return (
     <div className="space-y-5">
+      {redeeming ? (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/45 px-4">
+          <div className="w-full max-w-xs rounded-2xl border border-gray-100 bg-white p-6 text-center shadow-xl">
+            <div className="mx-auto h-9 w-9 rounded-full border-4 border-gray-200 border-t-[#e3001b] animate-spin" />
+            <div className="mt-4 text-base font-semibold text-[#222]">进行中...</div>
+            <div className="mt-1 text-xs text-gray-500">正在兑换卡密，请稍候，不要刷新或离开页面。</div>
+          </div>
+        </div>
+      ) : null}
+
       {error ? <div className="text-sm text-red-600">{error}</div> : null}
       {loading ? <div className="text-sm text-gray-500">加载中…</div> : null}
 
@@ -134,6 +161,7 @@ export function PortalClient() {
               placeholder="请输入卡密"
               value={redeemCode}
               onChange={(e) => setRedeemCode(e.target.value.toUpperCase())}
+              disabled={redeeming}
             />
             <button
               className="w-full bg-[#e3001b] hover:bg-[#cc0018] text-white rounded-lg px-4 py-3 text-sm font-semibold disabled:opacity-50"
@@ -151,14 +179,14 @@ export function PortalClient() {
                   alert("兑换成功");
                   setRedeemCode("");
                   await refresh();
-                } catch (e: any) {
-                  alert(`兑换失败: ${e?.message || "unknown"}`);
+                } catch (e: unknown) {
+                  alert(redeemErrorMessage(e instanceof Error ? e.message : "unknown"));
                 } finally {
                   setRedeeming(false);
                 }
               }}
             >
-              兑换并使用
+              {redeeming ? "兑换中..." : "兑换并使用"}
             </button>
           </div>
         </div>
