@@ -5,82 +5,21 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
 import { normalizeBaseUrl } from "@/lib/emby";
+import { isVodLibraryMatch } from "@/lib/vod-library-match";
+import type { LibraryMediaCandidate } from "@/lib/vod-library-match";
 
 type CheckItem = {
   id: number;           // TMDB id
   title: string;
   titleOriginal: string;
-  year?: number;
+  year?: number | string | null;
   mediaType: "movie" | "tv";
 };
-
-// Simple title normalize: lowercase, remove punctuation, spaces
-function norm(s: string) {
-  return s.toLowerCase().replace(/[^\w\u4e00-\u9fff]/g, "");
-}
-
-function titleMatch(embyName: string, embyOriginalTitle: string | null, item: CheckItem, embyYear?: number) {
-  const n = norm(embyName);
-  const nOrig = norm(embyOriginalTitle || "");
-  const t = norm(item.title);
-  const o = norm(item.titleOriginal || "");
-  const itemYear = item.year ? Number(item.year) : null;
-  
-  if (!n) return false;
-  
-  // 1. OriginalTitle（原始英文名）精确匹配 - 最高优先级（不同地区译名但同一部）
-  if (nOrig && o && nOrig === o) {
-    if (itemYear && embyYear) {
-      return Math.abs(embyYear - itemYear) <= 1;
-    }
-    return true;
-  }
-  
-  // 2. 本地译名精确匹配
-  if (n === t || n === o) {
-    if (itemYear && embyYear) {
-      return Math.abs(embyYear - itemYear) <= 1;
-    }
-    return true;
-  }
-  
-  // 3. OriginalTitle 包含匹配（处理副标题等情况）
-  if (nOrig && o && (nOrig.includes(o) || o.includes(nOrig))) {
-    if (itemYear && embyYear) {
-      return Math.abs(embyYear - itemYear) <= 1;
-    }
-    // 无年份时要求较高的重叠度
-    const overlap = Math.min(nOrig.length, o.length) / Math.max(nOrig.length, o.length);
-    return overlap >= 0.6;
-  }
-  
-  // 4. 本地译名包含匹配 - 需要更严格的长度验证（避免摩斯探长问题）
-  const lenRatio = n.length / Math.max(t.length, o.length || 1);
-  if (lenRatio > 1.5 || lenRatio < 0.67) {
-    // 长度差异超过 50%，不考虑包含匹配
-    return false;
-  }
-  
-  if (n.includes(t) || (!!o && n.includes(o)) || t.includes(n) || (!!o && o.includes(n))) {
-    if (itemYear && embyYear) {
-      return Math.abs(embyYear - itemYear) <= 1;
-    }
-    const overlap = Math.min(n.length, t.length) / Math.max(n.length, t.length);
-    return overlap >= 0.7;
-  }
-  
-  return false;
-}
-
-function byTmdbId(entry: any, tmdbId: number) {
-  const pid = entry?.ProviderIds?.Tmdb ?? entry?.ProviderIds?.TMDB ?? entry?.ProviderIds?.tmdb;
-  return String(pid || "") === String(tmdbId);
-}
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const username = (session as any)?.username as string | undefined;
+  const username = (session as { username?: string | null })?.username ?? undefined;
   if (!username) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const dbUser = await prisma.user.findUnique({ where: { username }, select: { id: true } });
   if (!dbUser) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -104,7 +43,7 @@ export async function POST(req: Request) {
     links.map(async (link) => {
       const server = link.embyServer;
       if (!server?.baseUrl) return;
-      const apiKey = getEmbyApiKeyForServer(server as any);
+      const apiKey = getEmbyApiKeyForServer(server);
       const base = normalizeBaseUrl(server.baseUrl);
 
       // Batch: search each item in parallel within this server
@@ -117,12 +56,9 @@ export async function POST(req: Request) {
             const url = `${base}/Items?SearchTerm=${encodeURIComponent(item.title)}&IncludeItemTypes=${types}&Recursive=true&api_key=${apiKey}&Limit=50&Fields=${encodeURIComponent(fields)}`;
             const res = await fetch(url, { signal: AbortSignal.timeout(7000) });
             if (!res.ok) return;
-            const data = await res.json();
+            const data = (await res.json()) as { Items?: LibraryMediaCandidate[] };
             const list = data.Items ?? [];
-            let found = list.some((e: any) => byTmdbId(e, item.id));
-            if (!found) {
-              found = list.some((e: any) => titleMatch(e.Name ?? "", e.OriginalTitle ?? null, item, e.ProductionYear));
-            }
+            const found = list.some((e) => isVodLibraryMatch(e, item));
             if (found) {
               inLibraryIds.add(item.id);
               return;
@@ -132,9 +68,9 @@ export async function POST(req: Request) {
               const url2 = `${base}/Items?SearchTerm=${encodeURIComponent(item.titleOriginal)}&IncludeItemTypes=${types}&Recursive=true&api_key=${apiKey}&Limit=50&Fields=${encodeURIComponent(fields)}`;
               const res2 = await fetch(url2, { signal: AbortSignal.timeout(7000) });
               if (!res2.ok) return;
-              const data2 = await res2.json();
+              const data2 = (await res2.json()) as { Items?: LibraryMediaCandidate[] };
               const list2 = data2.Items ?? [];
-              const found2 = list2.some((e: any) => byTmdbId(e, item.id)) || list2.some((e: any) => titleMatch(e.Name ?? "", e.OriginalTitle ?? null, item, e.ProductionYear));
+              const found2 = list2.some((e) => isVodLibraryMatch(e, item));
               if (found2) {
                 inLibraryIds.add(item.id);
                 return;

@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
 import { normalizeBaseUrl } from "@/lib/emby";
+import { scoreVodLibraryMatch } from "@/lib/vod-library-match";
 
 const TMDB_BASE = "https://api.themoviedb.org/3";
 
@@ -16,105 +17,35 @@ type EmbyItem = {
   ProviderIds?: Record<string, string>;
 };
 
-function norm(s: string) {
-  return String(s || "")
-    .toLowerCase()
-    .replace(/[\s\-_.:：,，'"“”‘’!！?？()（）\[\]【】]/g, "")
-    .trim();
-}
+type EmbyItemsResponse<T = EmbyItem> = { Items?: T[] };
+type SeasonItem = { IndexNumber?: number | string | null };
+type TmdbSeason = { season_number: number; name: string; episode_count: number };
+type TmdbDetail = {
+  id: number;
+  title?: string;
+  name?: string;
+  original_title?: string;
+  original_name?: string;
+  overview?: string;
+  poster_path?: string | null;
+  release_date?: string;
+  first_air_date?: string;
+  vote_average?: number;
+  seasons?: TmdbSeason[];
+};
 
-function getTmdbProviderId(item: EmbyItem) {
-  const p = item?.ProviderIds ?? {};
-  return String(p.Tmdb ?? p.TMDb ?? p.tmdb ?? "").trim();
-}
-
-function scoreMatch(item: EmbyItem, title: string, originalTitle: string, year: number | null, tmdbId: string, embyOriginalTitle?: string) {
-  let score = 0;
-  const name = String(item?.Name ?? "");
-  const n = norm(name);
-  const nOrig = norm(embyOriginalTitle ?? "");
-  const t1 = norm(title);
-  const t2 = norm(originalTitle);
-
-  const providerTmdb = getTmdbProviderId(item);
-  if (providerTmdb && providerTmdb === tmdbId) score += 1000;
-
-  // 1. OriginalTitle（Emby 原始英文名）精确匹配 - 最高优先级（跨地区译名）
-  if (nOrig && t2 && nOrig === t2) {
-    score += 150;
-    if (year && item?.ProductionYear) {
-      const dy = Math.abs(Number(item.ProductionYear) - year);
-      if (dy === 0) score += 40;
-      else if (dy <= 1) score += 20;
-    }
-    return score;
-  }
-
-  // 2. 本地译名精确匹配
-  if (n && t1 && n === t1) {
-    score += 120;
-    if (year && item?.ProductionYear) {
-      const dy = Math.abs(Number(item.ProductionYear) - year);
-      if (dy === 0) score += 40;
-      else if (dy <= 1) score += 20;
-    }
-    return score;
-  }
-  if (n && t2 && n === t2) {
-    score += 110;
-    if (year && item?.ProductionYear) {
-      const dy = Math.abs(Number(item.ProductionYear) - year);
-      if (dy === 0) score += 40;
-      else if (dy <= 1) score += 20;
-    }
-    return score;
-  }
-
-  // 3. OriginalTitle 包含匹配（需要长度验证）
-  if (nOrig && t2) {
-    const lenRatio = nOrig.length / Math.max(t2.length, 1);
-    if (lenRatio <= 1.5 && lenRatio >= 0.67) {
-      if (nOrig.includes(t2) || t2.includes(nOrig)) {
-        score += 65;
-        if (year && item?.ProductionYear) {
-          const dy = Math.abs(Number(item.ProductionYear) - year);
-          if (dy === 0) score += 40;
-          else if (dy <= 1) score += 20;
-        }
-        return score;
-      }
-    }
-  }
-
-  // 4. 本地译名包含匹配 - 严格长度验证（避免摩斯探长问题）
-  const lenRatio = n.length / Math.max(t1.length, t2.length || 1);
-  if (lenRatio <= 1.5 && lenRatio >= 0.67) {
-    if ((n && t1 && (n.includes(t1) || t1.includes(n))) || (n && t2 && (n.includes(t2) || t2.includes(n)))) {
-      score += 50;
-      if (year && item?.ProductionYear) {
-        const dy = Math.abs(Number(item.ProductionYear) - year);
-        if (dy === 0) score += 40;
-        else if (dy <= 1) score += 20;
-      }
-      return score;
-    }
-  }
-
-  return score;
-}
-
-async function fetchJsonWithRetry(url: string, timeoutMs = 5000, retries = 1) {
-  let lastErr: any = null;
+async function fetchJsonWithRetry<T = unknown>(url: string, timeoutMs = 5000, retries = 1): Promise<T> {
+  let lastErr: unknown = null;
   for (let i = 0; i <= retries; i++) {
     try {
       const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return await res.json();
-    } catch (e: any) {
+      return (await res.json()) as T;
+    } catch (e: unknown) {
       lastErr = e;
     }
   }
-  throw lastErr ?? new Error("fetch_failed");
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr ?? "fetch_failed"));
 }
 
 async function searchBestItemByTitle(params: {
@@ -132,7 +63,7 @@ async function searchBestItemByTitle(params: {
   for (const term of terms) {
     const u = `${params.base}/Items?SearchTerm=${encodeURIComponent(term)}&IncludeItemTypes=${params.includeType}&Recursive=true&api_key=${params.embyKey}&Limit=50&Fields=Name,OriginalTitle,ProductionYear,ProviderIds`;
     try {
-      const data = await fetchJsonWithRetry(u, 5000, 1);
+      const data = await fetchJsonWithRetry<EmbyItemsResponse>(u, 5000, 1);
       all.push(...(data?.Items ?? []));
     } catch {
       // ignore term-level failure
@@ -149,7 +80,12 @@ async function searchBestItemByTitle(params: {
   let best: EmbyItem | null = null;
   let bestScore = -1;
   for (const x of dedup.values()) {
-    const s = scoreMatch(x, params.title, params.originalTitle, params.year, params.tmdbId, x.OriginalTitle);
+    const s = scoreVodLibraryMatch(x, {
+      id: params.tmdbId,
+      title: params.title,
+      titleOriginal: params.originalTitle,
+      year: params.year,
+    });
     if (s > bestScore) {
       bestScore = s;
       best = x;
@@ -163,7 +99,7 @@ async function searchBestItemByTitle(params: {
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const username = (session as any)?.username as string | undefined;
+  const username = (session as { username?: string | null })?.username ?? undefined;
   if (!username) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const dbUser = await prisma.user.findUnique({ where: { username }, select: { id: true } });
   if (!dbUser) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -175,20 +111,21 @@ export async function GET(req: Request) {
   if (!tmdbId || !mediaType) return NextResponse.json({ error: "missing_params" }, { status: 400 });
 
   const row = await prisma.appSetting.findUnique({ where: { key: "vod_settings" } });
-  const apiKey = ((row?.valueJson as any)?.tmdbApiKey ?? "").trim();
+  const settings = (row?.valueJson ?? {}) as { tmdbApiKey?: string };
+  const apiKey = (settings.tmdbApiKey ?? "").trim();
   if (!apiKey) return NextResponse.json({ error: "tmdb_not_configured" }, { status: 503 });
 
   try {
     const detailUrl = `${TMDB_BASE}/${mediaType}/${tmdbId}?api_key=${apiKey}&language=zh-CN&append_to_response=seasons,external_ids`;
     const detailRes = await fetch(detailUrl, { signal: AbortSignal.timeout(8000) });
     if (!detailRes.ok) throw new Error(`TMDB detail ${detailRes.status}`);
-    const detail = await detailRes.json();
+    const detail = (await detailRes.json()) as TmdbDetail;
 
     const seasons =
       mediaType === "tv"
         ? (detail.seasons ?? [])
-            .filter((s: any) => s.season_number > 0)
-            .map((s: any) => ({ seasonNumber: s.season_number, name: s.name, episodeCount: s.episode_count }))
+            .filter((s) => s.season_number > 0)
+            .map((s) => ({ seasonNumber: s.season_number, name: s.name, episodeCount: s.episode_count }))
         : [];
 
     const links = await prisma.embyUserLink.findMany({
@@ -205,7 +142,7 @@ export async function GET(req: Request) {
     for (const link of links) {
       const server = link.embyServer;
       if (!server?.baseUrl) continue;
-      const embyKey = getEmbyApiKeyForServer(server as any);
+      const embyKey = getEmbyApiKeyForServer(server);
       const base = normalizeBaseUrl(server.baseUrl);
 
       try {
@@ -224,15 +161,15 @@ export async function GET(req: Request) {
           for (const s of seasons) seasonsPresent[s.seasonNumber] = false;
 
           if (bestSeries?.Id) {
-            let seasonItems: any[] = [];
+            let seasonItems: SeasonItem[] = [];
             try {
               const seasonsUrl = `${base}/Shows/${bestSeries.Id}/Seasons?api_key=${embyKey}`;
-              const seasonsData = await fetchJsonWithRetry(seasonsUrl, 5000, 1);
+              const seasonsData = await fetchJsonWithRetry<EmbyItemsResponse<SeasonItem>>(seasonsUrl, 5000, 1);
               seasonItems = seasonsData?.Items ?? [];
             } catch {
               try {
                 const fallbackUrl = `${base}/Items?ParentId=${encodeURIComponent(bestSeries.Id)}&IncludeItemTypes=Season&Recursive=false&api_key=${embyKey}&Limit=200&Fields=IndexNumber`;
-                const fallbackData = await fetchJsonWithRetry(fallbackUrl, 5000, 1);
+                const fallbackData = await fetchJsonWithRetry<EmbyItemsResponse<SeasonItem>>(fallbackUrl, 5000, 1);
                 seasonItems = fallbackData?.Items ?? [];
               } catch {
                 seasonItems = [];
@@ -278,7 +215,7 @@ export async function GET(req: Request) {
       },
       serverResults,
     });
-  } catch (e: any) {
-    return NextResponse.json({ error: "detail_failed", message: e?.message }, { status: 502 });
+  } catch (e: unknown) {
+    return NextResponse.json({ error: "detail_failed", message: e instanceof Error ? e.message : String(e) }, { status: 502 });
   }
 }
