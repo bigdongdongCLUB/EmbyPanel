@@ -16,6 +16,14 @@ const Schema = z.object({
   note: z.string().max(120).optional(),
 });
 
+type SessionWithUsername = { username?: string | null };
+type VodSettings = {
+  enabled?: boolean;
+  dailyTotalQuota?: number | string | null;
+  dailyMovieQuota?: number | string | null;
+  dailyTvQuota?: number | string | null;
+};
+
 function shanghaiDayStart(now = new Date()) {
   const ms = now.getTime() + 8 * 3600 * 1000;
   const d = new Date(ms);
@@ -35,7 +43,7 @@ function deriveBizStatus(row: { status: "PENDING" | "APPROVED" | "REJECTED" | "C
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const username = (session as any)?.username as string | undefined;
+  const username = (session as SessionWithUsername)?.username ?? undefined;
   if (!username) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const dbUser = await prisma.user.findUnique({
     where: { username },
@@ -61,9 +69,18 @@ export async function POST(req: Request) {
   const { tmdbId, mediaType, title, titleOriginal, posterPath, year, season, note } = parsed.data;
 
   const settingRow = await prisma.appSetting.findUnique({ where: { key: "vod_settings" } });
-  const settings = (settingRow?.valueJson as any) ?? {};
+  const settings = (settingRow?.valueJson ?? {}) as VodSettings;
   const enabled = Boolean(settings.enabled ?? false);
   if (!enabled) return NextResponse.json({ error: "vod_disabled", message: "目前点播功能暂未开启" }, { status: 403 });
+
+  const existingRequest = await prisma.vodRequest.findFirst({
+    where: mediaType === "TV" ? { userId, tmdbId, mediaType, season: season ?? null } : { userId, tmdbId, mediaType },
+    select: { id: true },
+  });
+  if (existingRequest) {
+    return NextResponse.json({ error: "duplicate_vod_request", message: "请勿重复点播" }, { status: 409 });
+  }
+
   const dailyTotalQuota = Number(settings.dailyTotalQuota ?? 5);
   const dailyMovieQuota = Number(settings.dailyMovieQuota ?? 5);
   const dailyTvQuota = Number(settings.dailyTvQuota ?? 5);
@@ -95,7 +112,7 @@ export async function POST(req: Request) {
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const username = (session as any)?.username as string | undefined;
+  const username = (session as SessionWithUsername)?.username ?? undefined;
   if (!username) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const dbUser = await prisma.user.findUnique({ where: { username }, select: { id: true } });
   if (!dbUser) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -121,7 +138,7 @@ export async function GET(req: Request) {
     ok: true,
     rows: rows.map((r) => ({
       ...r,
-      bizStatus: deriveBizStatus({ status: r.status, bizStatus: (r as any).bizStatus, adminNote: r.adminNote }),
+      bizStatus: deriveBizStatus({ status: r.status, bizStatus: r.bizStatus, adminNote: r.adminNote }),
     })),
     pagination: { page, pageSize, total, totalPages: Math.max(1, Math.ceil(total / pageSize)) },
   });
@@ -130,7 +147,7 @@ export async function GET(req: Request) {
 export async function DELETE(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const username = (session as any)?.username as string | undefined;
+  const username = (session as SessionWithUsername)?.username ?? undefined;
   if (!username) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const dbUser = await prisma.user.findUnique({ where: { username }, select: { id: true } });
   if (!dbUser) return NextResponse.json({ error: "unauthorized" }, { status: 401 });

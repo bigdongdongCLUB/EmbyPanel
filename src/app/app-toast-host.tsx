@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 type Toast = { id: number; text: string; tone: "success" | "error" | "info" };
+type ToastWindow = Window & { __oldAlert?: Window["alert"] };
 
 function pickTone(text: string): Toast["tone"] {
   const t = text.toLowerCase();
@@ -20,7 +21,7 @@ function pickTone(text: string): Toast["tone"] {
 
 export function AppToastHost() {
   const [toast, setToast] = useState<Toast | null>(null);
-  const timerRef = useRef<any>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const idRef = useRef(1);
 
   useEffect(() => {
@@ -32,8 +33,9 @@ export function AppToastHost() {
     }
 
     const oldAlert = window.alert;
-    (window as any).__oldAlert = oldAlert;
-    window.alert = (message?: any) => {
+    const toastWindow = window as ToastWindow;
+    toastWindow.__oldAlert = oldAlert;
+    window.alert = (message?: unknown) => {
       const text = String(message ?? "");
       show(text);
     };
@@ -46,7 +48,7 @@ export function AppToastHost() {
     window.addEventListener("app:toast", onToast as EventListener);
     return () => {
       window.removeEventListener("app:toast", onToast as EventListener);
-      if ((window as any).__oldAlert) window.alert = (window as any).__oldAlert;
+      if (toastWindow.__oldAlert) window.alert = toastWindow.__oldAlert;
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, []);
@@ -64,7 +66,7 @@ export function AppToastHost() {
   const iconCls = toast.tone === "error" ? "bg-red-500" : toast.tone === "success" ? "bg-green-500" : "bg-blue-500";
 
   return (
-    <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100]">
+    <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[1000]">
       <div className={`max-w-[80vw] bg-white border rounded-2xl shadow-xl p-[10px] flex items-center justify-center gap-2 ${toneCls}`}>
         <span className={`inline-flex h-7 w-7 min-h-7 min-w-7 shrink-0 aspect-square items-center justify-center rounded-full text-white text-[18px] font-semibold leading-none ${iconCls}`}>{icon}</span>
         <span className="text-base font-medium break-words text-center">{toast.text}</span>

@@ -12,6 +12,8 @@ type MediaItem = {
   year: string;
   rating: number | null;
   mediaType: "movie" | "tv";
+  requestedSeason?: number;
+  requestCount?: number;
 };
 
 type Season = { seasonNumber: number; name: string; episodeCount: number };
@@ -49,11 +51,11 @@ type Quota = {
   nextReset: string;
 };
 
-type Tab = "now_playing_movie" | "now_playing_tv" | "popular_movie" | "popular_tv";
+type Tab = "now_playing_movie" | "now_playing_tv" | "popular_movie" | "popular_tv" | "requested_movie" | "requested_tv";
 const MAX_DISCOVER_PAGES = 10;
 
-function mediaItemKey(item: Pick<MediaItem, "id" | "mediaType">) {
-  return `${item.mediaType}:${item.id}`;
+function mediaItemKey(item: Pick<MediaItem, "id" | "mediaType" | "requestedSeason">) {
+  return `${item.mediaType}:${item.id}${item.mediaType === "tv" && item.requestedSeason ? `:s${item.requestedSeason}` : ""}`;
 }
 
 function isAllInLibraryByDetail(detailData: DetailData | null | undefined) {
@@ -76,6 +78,8 @@ const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: "now_playing_tv", label: "最新电视剧", icon: "📺" },
   { key: "popular_movie", label: "热门电影", icon: "🔥" },
   { key: "popular_tv", label: "热门电视剧", icon: "🔥" },
+  { key: "requested_movie", label: "热门点播电影", icon: "🔝" },
+  { key: "requested_tv", label: "热门点播电视剧", icon: "🔝" },
 ];
 
 function PosterCard({ item, inLibrary, onClick }: { item: MediaItem; inLibrary: boolean; onClick: () => void }) {
@@ -108,7 +112,11 @@ function PosterCard({ item, inLibrary, onClick }: { item: MediaItem; inLibrary: 
       </div>
       <div className="mt-2 px-0.5">
         <div className="text-sm font-bold text-[#222] truncate">{item.title}</div>
-        <div className="text-xs text-[#888]">{item.year}</div>
+        <div className="text-xs text-[#888]">
+          {item.requestedSeason ? `第${item.requestedSeason}季 · ` : ""}
+          {item.year || "-"}
+          {item.requestCount ? ` · ${item.requestCount}次点播` : ""}
+        </div>
       </div>
     </div>
   );
@@ -137,10 +145,10 @@ function DetailModal({
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
-    setSelectedSeason("");
+    setSelectedSeason(detail?.detail.mediaType === "tv" && item?.requestedSeason ? item.requestedSeason : "");
     setNote("");
     setSubmitError(null);
-  }, [detail]);
+  }, [detail, item?.requestedSeason]);
 
   if (!detail || !item) return null;
   const { detail: d, serverResults } = detail;
@@ -160,7 +168,12 @@ function DetailModal({
       await onSubmit({ season: isTv && selectedSeason !== "" ? Number(selectedSeason) : undefined, note });
       onClose();
     } catch (e) {
-      setSubmitError((e as Error)?.message ?? "提交失败");
+      const message = (e as Error)?.message ?? "提交失败";
+      if (message === "请勿重复点播") {
+        alert(message);
+      } else {
+        setSubmitError(message);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -619,7 +632,7 @@ export function VodClient() {
         <>
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
             {items.map((item) => (
-              <PosterCard key={`${item.mediaType}-${item.id}`} item={item} inLibrary={inLibrarySet.has(mediaItemKey(item))} onClick={() => openDetail(item)} />
+              <PosterCard key={mediaItemKey(item)} item={item} inLibrary={inLibrarySet.has(mediaItemKey(item))} onClick={() => openDetail(item)} />
             ))}
             {items.length === 0 && (
               <div className="col-span-6 py-16 text-center text-gray-400 text-sm">暂无内容</div>
