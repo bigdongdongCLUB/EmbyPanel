@@ -34,6 +34,7 @@ type DiscoverItem = {
 };
 
 type TrendingVodRow = {
+  userId: string;
   tmdbId: number;
   title: string;
   titleOriginal: string;
@@ -46,7 +47,7 @@ type TrendingVodRow = {
 
 type TrendingGroup = {
   key: string;
-  count: number;
+  userIds: Set<string>;
   firstCreatedAt: Date;
   row: TrendingVodRow;
 };
@@ -101,7 +102,7 @@ async function loadTrendingRequests(params: {
   const rows = await prisma.vodRequest.findMany({
     where: isTv ? { mediaType, season: { not: null } } : { mediaType },
     orderBy: { createdAt: "asc" },
-    select: { tmdbId: true, title: true, titleOriginal: true, posterPath: true, year: true, mediaType: true, season: true, createdAt: true },
+    select: { userId: true, tmdbId: true, title: true, titleOriginal: true, posterPath: true, year: true, mediaType: true, season: true, createdAt: true },
   });
 
   const groupMap = new Map<string, TrendingGroup>();
@@ -109,14 +110,14 @@ async function loadTrendingRequests(params: {
     const key = isTv ? `${row.tmdbId}:${row.season}` : String(row.tmdbId);
     const current = groupMap.get(key);
     if (!current) {
-      groupMap.set(key, { key, count: 1, firstCreatedAt: row.createdAt, row });
+      groupMap.set(key, { key, userIds: new Set([row.userId]), firstCreatedAt: row.createdAt, row });
       continue;
     }
-    current.count += 1;
+    current.userIds.add(row.userId);
   }
 
   const groups = Array.from(groupMap.values()).sort((a, b) => {
-    if (b.count !== a.count) return b.count - a.count;
+    if (b.userIds.size !== a.userIds.size) return b.userIds.size - a.userIds.size;
     return a.firstCreatedAt.getTime() - b.firstCreatedAt.getTime();
   });
 
@@ -135,7 +136,7 @@ async function loadTrendingRequests(params: {
         rating: null,
         mediaType: row.mediaType === "TV" ? "tv" : "movie",
         requestedSeason: row.season ?? undefined,
-        requestCount: group.count,
+        requestCount: group.userIds.size,
       },
       params.apiKey,
       params.cacheHours
