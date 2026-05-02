@@ -58,17 +58,12 @@ function mediaItemKey(item: Pick<MediaItem, "id" | "mediaType" | "requestedSeaso
   return `${item.mediaType}:${item.id}${item.mediaType === "tv" && item.requestedSeason ? `:s${item.requestedSeason}` : ""}`;
 }
 
-function isAllInLibraryByDetail(detailData: DetailData | null | undefined) {
+function isInLibraryByDetail(detailData: DetailData | null | undefined) {
   if (!detailData) return false;
   const { detail, serverResults } = detailData;
   const isTv = detail.mediaType === "tv";
-  const seasons = detail.seasons ?? [];
   if (isTv) {
-    return (
-      seasons.length > 0 &&
-      serverResults.length > 0 &&
-      seasons.every((s) => serverResults.some((sr) => sr.seasons[s.seasonNumber]))
-    );
+    return serverResults.some((sr) => Object.values(sr.seasons).some(Boolean));
   }
   return serverResults.some((sr) => sr.hasMovie);
 }
@@ -154,7 +149,7 @@ function DetailModal({
   const { detail: d, serverResults } = detail;
   const isTv = d.mediaType === "tv";
   const seasons = d.seasons ?? [];
-  const allExist = isAllInLibraryByDetail(detail);
+  const allExist = isInLibraryByDetail(detail);
 
   const overview = d.overview.length > 100 ? d.overview.slice(0, 100) + "…" : d.overview;
   const canSubmit = vodEnabled && vodCanRequest && (!isTv || selectedSeason !== "") && !submitting;
@@ -195,8 +190,8 @@ function DetailModal({
             <div className="flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3 mb-4">
               <span className="text-green-500 text-lg mt-0.5 shrink-0">✓</span>
               <div>
-                <div className="font-medium text-green-800 text-sm">{isTv ? "所有季度已存在或已点播" : "该电影已存在于媒体库"}</div>
-                <div className="text-xs text-green-700 mt-0.5">{isTv ? "所有季度均已上线或已被点播，无需再次点播。" : "该电影已上线，无需再次点播。"}</div>
+                <div className="font-medium text-green-800 text-sm">{isTv ? "该电视剧已存在于媒体库" : "该电影已存在于媒体库"}</div>
+                <div className="text-xs text-green-700 mt-0.5">{isTv ? "媒体库中已存在该电视剧的至少一季，无需再次点播。" : "该电影已上线，无需再次点播。"}</div>
               </div>
             </div>
           )}
@@ -387,7 +382,7 @@ export function VodClient() {
         const r = await fetch(`/api/portal/vod/detail?tmdb_id=${item.id}&media_type=${item.mediaType}`);
         const j = await r.json().catch(() => null);
         if (!r.ok || !j?.ok) return null;
-        return isAllInLibraryByDetail(j as DetailData) ? mediaItemKey(item) : null;
+        return isInLibraryByDetail(j as DetailData) ? mediaItemKey(item) : null;
       })
     );
     const next = new Set<string>();
@@ -471,7 +466,7 @@ export function VodClient() {
       const j = await r.json();
       if (j?.ok) {
         setSelectedDetail(j);
-        if (isAllInLibraryByDetail(j as DetailData)) {
+        if (isInLibraryByDetail(j as DetailData)) {
           setInLibrarySet((prev) => {
             const next = new Set(prev);
             next.add(mediaItemKey(item));
