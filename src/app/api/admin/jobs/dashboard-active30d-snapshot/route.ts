@@ -26,7 +26,7 @@ export async function POST(req: Request) {
       serverCount: snap.perServer.length,
       snapshotAt: snap.snapshotAt,
     });
-  } catch (e: any) {
-    return NextResponse.json({ error: "snapshot_failed", message: String(e?.message ?? e) }, { status: 500 });
+  } catch (e: unknown) {
+    return NextResponse.json({ error: "snapshot_failed", message: e instanceof Error ? e.message : String(e) }, { status: 500 });
   }
 }

@@ -13,13 +13,20 @@ type TooltipState = {
   color: string;
 };
 
-function niceChartMax(value: number) {
-  if (value <= 10) return 10;
-  const padded = value * 1.12;
-  const magnitude = Math.pow(10, Math.floor(Math.log10(padded)));
-  const normalized = padded / magnitude;
-  const nice = normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10;
+function niceTickStep(rawStep: number) {
+  if (rawStep <= 0) return 1;
+  const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
+  const normalized = rawStep / magnitude;
+  const niceSteps = [1, 1.25, 1.5, 2, 2.5, 3, 4, 5, 7.5, 10];
+  const nice = niceSteps.find((step) => normalized <= step) ?? 10;
   return nice * magnitude;
+}
+
+function buildYAxisTicks(maxDataValue: number) {
+  if (maxDataValue <= 10) return [0, 3, 6, 9, 12];
+  const tickCount = 5;
+  const step = niceTickStep(maxDataValue / (tickCount - 1));
+  return Array.from({ length: tickCount }, (_, index) => step * index);
 }
 
 export function UserTrendChart({ series }: { series: UserTrendSeries[] }) {
@@ -29,14 +36,15 @@ export function UserTrendChart({ series }: { series: UserTrendSeries[] }) {
     return series.find((item) => item.id === selectedId) ?? series[0] ?? { id: "all", name: "全部服务器", data: [] };
   }, [selectedId, series]);
   const chartData = selectedSeries.data.slice(-30);
-  const maxValue = niceChartMax(Math.max(...chartData.flatMap((d) => [d.activeUsers, d.totalUsers]), 0));
+  const maxDataValue = Math.max(...chartData.flatMap((d) => [d.activeUsers, d.totalUsers]), 0);
+  const ticks = buildYAxisTicks(maxDataValue);
+  const maxValue = ticks[ticks.length - 1] || 10;
   const width = 960;
   const height = 360;
   const plot = { x: 70, y: 34, width: 840, height: 230 };
   const baseline = plot.y + plot.height;
   const groupWidth = plot.width / Math.max(chartData.length, 1);
   const barWidth = Math.max(4, Math.min(11, groupWidth * 0.26));
-  const ticks = Array.from({ length: 5 }, (_, index) => Math.round((maxValue / 4) * index));
   const labelIndexes = new Set([0, 4, 9, 14, 19, 24, 29].filter((index) => index < chartData.length));
   const latest = chartData[chartData.length - 1];
   const isAllServers = selectedSeries.id === "all";

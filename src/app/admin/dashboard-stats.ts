@@ -4,6 +4,7 @@ import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
 import { embyFetchUsers } from "@/lib/emby";
 
 const DASHBOARD_ACTIVE30D_CACHE_KEY = "admin_dashboard_active30d_snapshot";
+const DASHBOARD_USER_TREND_CACHE_KEY = "admin_dashboard_user_trend_30d_snapshot";
 const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000;
 
 export type UserTrendPoint = {
@@ -32,6 +33,11 @@ export type DashboardStats = {
 type ActiveSnapshot = {
   embyActive30dTotal: number;
   perServer: DashboardStats["perServer"];
+  snapshotAt: string;
+};
+
+type UserTrendSnapshot = {
+  series: UserTrendSeries[];
   snapshotAt: string;
 };
 
@@ -103,6 +109,7 @@ export async function refreshActive30dSnapshot() {
     create: { key: DASHBOARD_ACTIVE30D_CACHE_KEY, valueJson },
     update: { valueJson },
   });
+  await refreshUserTrend30dSnapshot();
   return snap;
 }
 
@@ -129,6 +136,50 @@ async function readActive30dSnapshot(): Promise<ActiveSnapshot | null> {
     perServer,
     snapshotAt: typeof v.snapshotAt === "string" ? v.snapshotAt : null,
   } as ActiveSnapshot;
+}
+
+function serializeUserTrendSeries(series: UserTrendSeries[]): Prisma.InputJsonArray {
+  return series.map((item) => ({
+    id: item.id,
+    name: item.name,
+    data: item.data.map((point) => ({
+      date: point.date,
+      label: point.label,
+      activeUsers: point.activeUsers,
+      totalUsers: point.totalUsers,
+    })),
+  }));
+}
+
+function parseUserTrendSeries(v: unknown): UserTrendSeries[] {
+  if (!Array.isArray(v)) return [];
+  return v.filter(isRecord).map((item) => {
+    const data = Array.isArray(item.data)
+      ? item.data.filter(isRecord).map((point) => ({
+          date: typeof point.date === "string" ? point.date : "",
+          label: typeof point.label === "string" ? point.label : "",
+          activeUsers: typeof point.activeUsers === "number" ? point.activeUsers : 0,
+          totalUsers: typeof point.totalUsers === "number" ? point.totalUsers : 0,
+        }))
+      : [];
+    return {
+      id: typeof item.id === "string" ? item.id : "",
+      name: typeof item.name === "string" ? item.name : "",
+      data,
+    };
+  });
+}
+
+async function readUserTrend30dSnapshot(): Promise<UserTrendSnapshot | null> {
+  const row = await prisma.appSetting.findUnique({ where: { key: DASHBOARD_USER_TREND_CACHE_KEY } });
+  const v: unknown = row?.valueJson;
+  if (!isRecord(v)) return null;
+  const series = parseUserTrendSeries(v.series);
+  if (!series.length) return null;
+  return {
+    series,
+    snapshotAt: typeof v.snapshotAt === "string" ? v.snapshotAt : "",
+  };
 }
 
 function startOfShanghaiDay(input: Date) {
@@ -263,11 +314,26 @@ async function getUserTrend30d(): Promise<UserTrendSeries[]> {
   return series;
 }
 
+export async function refreshUserTrend30dSnapshot(): Promise<UserTrendSnapshot> {
+  const series = await getUserTrend30d();
+  const snap: UserTrendSnapshot = { series, snapshotAt: new Date().toISOString() };
+  const valueJson: Prisma.InputJsonObject = {
+    series: serializeUserTrendSeries(series),
+    snapshotAt: snap.snapshotAt,
+  };
+  await prisma.appSetting.upsert({
+    where: { key: DASHBOARD_USER_TREND_CACHE_KEY },
+    create: { key: DASHBOARD_USER_TREND_CACHE_KEY, valueJson },
+    update: { valueJson },
+  });
+  return snap;
+}
+
 export async function getDashboardStats(expiringSoonDays = 7): Promise<DashboardStats> {
   const now = new Date();
   const soon = new Date(now.getTime() + expiringSoonDays * 24 * 60 * 60 * 1000);
 
-  const [panelUserCount, expiringSoonCount, cached, userTrend30d] = await Promise.all([
+  const [panelUserCount, expiringSoonCount, cached, userTrendCached] = await Promise.all([
     prisma.user.count(),
     prisma.subscription.count({
       where: {
@@ -277,10 +343,11 @@ export async function getDashboardStats(expiringSoonDays = 7): Promise<Dashboard
       },
     }),
     readActive30dSnapshot(),
-    getUserTrend30d(),
+    readUserTrend30dSnapshot(),
   ]);
 
   const active = cached ?? (await refreshActive30dSnapshot());
+  const userTrend = userTrendCached ?? (await readUserTrend30dSnapshot()) ?? (await refreshUserTrend30dSnapshot());
 
   return {
     panelUserCount,
@@ -289,6 +356,6 @@ export async function getDashboardStats(expiringSoonDays = 7): Promise<Dashboard
     expiringSoonDays,
     perServer: active.perServer,
     activeSnapshotAt: active.snapshotAt ?? null,
-    userTrend30d,
+    userTrend30d: userTrend.series,
   };
 }
