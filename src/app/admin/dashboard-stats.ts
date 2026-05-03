@@ -176,6 +176,13 @@ async function readUserTrend30dSnapshot(): Promise<UserTrendSnapshot | null> {
   if (!isRecord(v)) return null;
   const series = parseUserTrendSeries(v.series);
   if (!series.length) return null;
+  const expectedDays = getCompletedTrendDays();
+  const expectedFirst = expectedDays[0]?.date;
+  const expectedLast = expectedDays[expectedDays.length - 1]?.date;
+  const allSeries = series.find((item) => item.id === "all") ?? series[0];
+  const first = allSeries?.data[0]?.date;
+  const last = allSeries?.data[allSeries.data.length - 1]?.date;
+  if (first !== expectedFirst || last !== expectedLast) return null;
   return {
     series,
     snapshotAt: typeof v.snapshotAt === "string" ? v.snapshotAt : "",
@@ -210,10 +217,11 @@ function createActiveMap(days: Array<{ date: string }>) {
   return map;
 }
 
-async function getUserTrend30d(): Promise<UserTrendSeries[]> {
+function getCompletedTrendDays() {
   const todayStart = startOfShanghaiDay(new Date());
-  const days = Array.from({ length: 30 }, (_, index) => {
-    const start = addDays(todayStart, index - 29);
+  const latestCompleteDayStart = addDays(todayStart, -1);
+  return Array.from({ length: 30 }, (_, index) => {
+    const start = addDays(latestCompleteDayStart, index - 29);
     return {
       start,
       end: addDays(start, 1),
@@ -221,6 +229,10 @@ async function getUserTrend30d(): Promise<UserTrendSeries[]> {
       label: formatShanghaiShortDate(start),
     };
   });
+}
+
+async function getUserTrend30d(): Promise<UserTrendSeries[]> {
+  const days = getCompletedTrendDays();
   const firstStart = days[0].start;
   const lastEnd = days[days.length - 1].end;
 
@@ -313,6 +325,7 @@ async function getUserTrend30d(): Promise<UserTrendSeries[]> {
 
   return series;
 }
+
 
 export async function refreshUserTrend30dSnapshot(): Promise<UserTrendSnapshot> {
   const series = await getUserTrend30d();

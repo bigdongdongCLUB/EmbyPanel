@@ -96,7 +96,7 @@ async function ensureRepeatable(queue) {
     { kind: "dashboard-active30d" },
     {
       jobId: "repeat:dashboard-active30d",
-      repeat: { pattern: "10 2 * * *", tz: "Asia/Shanghai" },
+      repeat: { pattern: "0 1 * * *", tz: "Asia/Shanghai" },
       removeOnComplete: true,
       removeOnFail: 1000,
     }

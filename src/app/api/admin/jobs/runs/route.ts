@@ -1,6 +1,7 @@
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
@@ -22,7 +23,8 @@ function mapJobName(jobName: string) {
     "anomaly-scan": "播放异常检测",
     "anomaly-unban": "处罚自动解禁",
     "cache-cleanup": "缓存清理",
-    "playback-collect": "播放记录采集", 
+    "dashboard-active30d": "仪表盘30日用户快照",
+    "playback-collect": "播放记录采集",
   };
   return m[jobName] || jobName;
 }
@@ -34,6 +36,7 @@ function triggerMode(jobName: string) {
   if (jobName === "subscription-expiry-reminder") return "定时任务（每10分钟）";
   if (jobName === "anomaly-scan") return "定时任务（每5分钟）";
   if (jobName === "cache-cleanup") return "定时任务（每日 02:00）";
+  if (jobName === "dashboard-active30d") return "定时任务（每日 01:00）";
   if (jobName === "playback-collect") return "定时任务（每20秒）";
   return "定时任务";
 }
@@ -73,7 +76,7 @@ export async function GET(req: Request) {
   // 仅保留24小时内任务结果
   await prisma.jobRun.deleteMany({ where: { startedAt: { lt: cutoff24h } } });
 
-  const where: any = { startedAt: { gte: cutoff24h }, ...(jobName ? { jobName } : {}) };
+  const where: Prisma.JobRunWhereInput = { startedAt: { gte: cutoff24h }, ...(jobName ? { jobName } : {}) };
 
   const [rows, total] = await Promise.all([
     prisma.jobRun.findMany({

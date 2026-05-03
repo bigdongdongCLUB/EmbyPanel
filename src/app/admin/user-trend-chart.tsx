@@ -59,7 +59,7 @@ export function UserTrendChart({ series }: { series: UserTrendSeries[] }) {
         <div>
           <div className="text-base font-bold text-[#222]">30天用户数概览</div>
           <div className="text-sm text-[#888] mt-1">
-            {isAllServers ? "红色为截至当天的面板用户总数，灰色为当天有播放记录的活跃用户数。" : "红色为截至当天分配至该服务器的面板用户数，灰色为该服务器当天活跃用户数。"}
+            {isAllServers ? "红色为截至对应完整日期的面板用户总数，灰色为对应完整日期有播放记录的活跃用户数。" : "红色为截至对应完整日期分配至该服务器的面板用户数，灰色为该服务器对应完整日期活跃用户数。"}
           </div>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -77,8 +77,8 @@ export function UserTrendChart({ series }: { series: UserTrendSeries[] }) {
           </select>
           {latest ? (
             <div className="flex flex-wrap gap-2 text-xs">
-              <span className="rounded-full bg-[#fff4f1] text-[#c93a24] border border-[#ffd6cc] px-3 py-1">当前总用户 {latest.totalUsers}</span>
-              <span className="rounded-full bg-[#f3f4f6] text-[#555] border border-[#e5e7eb] px-3 py-1">今日活跃 {latest.activeUsers}</span>
+              <span className="rounded-full bg-[#fff4f1] text-[#c93a24] border border-[#ffd6cc] px-3 py-1">截止昨日总用户 {latest.totalUsers}</span>
+              <span className="rounded-full bg-[#f3f4f6] text-[#555] border border-[#e5e7eb] px-3 py-1">昨日活跃数 {latest.activeUsers}</span>
             </div>
           ) : null}
         </div>

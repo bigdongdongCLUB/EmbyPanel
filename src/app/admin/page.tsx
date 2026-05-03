@@ -33,7 +33,7 @@ export default async function AdminHome() {
         <StatCard
           title="所有 Emby 服务器 30 日活跃用户"
           value={String(stats.embyActive30dTotal)}
-          hint={stats.activeSnapshotAt ? `每日更新：${new Date(stats.activeSnapshotAt).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false })}` : "每日更新"}
+          hint={stats.activeSnapshotAt ? `每日 01:00 更新：${new Date(stats.activeSnapshotAt).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false })}` : "每日 01:00 更新"}
         />
         <StatCard title="即将到期用户" value={String(stats.expiringSoonCount)} hint={`未来 ${stats.expiringSoonDays} 天内到期`} highlight badge="需关注" />
       </div>

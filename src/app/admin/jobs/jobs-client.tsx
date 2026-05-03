@@ -57,8 +57,8 @@ export function JobsClient() {
       const json = await res.json().catch(() => null);
       if (!res.ok) throw new Error(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
       setData(json);
-    } catch (e: any) {
-      setError(e?.message ?? "load_failed");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "load_failed");
     } finally {
       setLoading(false);
     }
@@ -87,6 +87,7 @@ export function JobsClient() {
           <option value="anomaly-scan">播放异常检测</option>
           <option value="anomaly-unban">处罚自动解禁</option>
           <option value="cache-cleanup">缓存清理</option>
+          <option value="dashboard-active30d">仪表盘30日用户快照</option>
         </select>
 
         <button className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" onClick={refresh} disabled={loading}>刷新</button>
