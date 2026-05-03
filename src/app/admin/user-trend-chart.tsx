@@ -3,6 +3,16 @@
 import { useMemo, useState } from "react";
 import type { UserTrendSeries } from "./dashboard-stats";
 
+type TooltipState = {
+  x: number;
+  y: number;
+  date: string;
+  seriesName: string;
+  label: string;
+  value: number;
+  color: string;
+};
+
 function niceChartMax(value: number) {
   if (value <= 10) return 10;
   const padded = value * 1.12;
@@ -14,6 +24,7 @@ function niceChartMax(value: number) {
 
 export function UserTrendChart({ series }: { series: UserTrendSeries[] }) {
   const [selectedId, setSelectedId] = useState("all");
+  const [tooltip, setTooltip] = useState<TooltipState | null>(null);
   const selectedSeries = useMemo(() => {
     return series.find((item) => item.id === selectedId) ?? series[0] ?? { id: "all", name: "全部服务器", data: [] };
   }, [selectedId, series]);
@@ -29,6 +40,10 @@ export function UserTrendChart({ series }: { series: UserTrendSeries[] }) {
   const labelIndexes = new Set([0, 4, 9, 14, 19, 24, 29].filter((index) => index < chartData.length));
   const latest = chartData[chartData.length - 1];
   const isAllServers = selectedSeries.id === "all";
+  const tooltipWidth = 184;
+  const tooltipHeight = 70;
+  const tooltipX = tooltip ? Math.max(8, Math.min(width - tooltipWidth - 8, tooltip.x - tooltipWidth / 2)) : 0;
+  const tooltipY = tooltip ? Math.max(8, tooltip.y - tooltipHeight - 12) : 0;
 
   return (
     <div className="bg-white border border-[#eaeaea] rounded-2xl p-5 sm:p-8 shadow-sm">
@@ -94,14 +109,38 @@ export function UserTrendChart({ series }: { series: UserTrendSeries[] }) {
             const totalHeight = (point.totalUsers / maxValue) * plot.height;
             const activeX = center - barWidth - 1.5;
             const totalX = center + 1.5;
+            const activeY = baseline - activeHeight;
+            const totalY = baseline - totalHeight;
             return (
               <g key={point.date}>
-                <rect x={activeX} y={baseline - activeHeight} width={barWidth} height={activeHeight} rx="2" fill="url(#activeUserBar)">
-                  <title>{`${point.date} 活跃用户 ${point.activeUsers}`}</title>
-                </rect>
-                <rect x={totalX} y={baseline - totalHeight} width={barWidth} height={totalHeight} rx="2" fill="url(#totalUserBar)">
-                  <title>{`${point.date} 总用户 ${point.totalUsers}`}</title>
-                </rect>
+                <rect
+                  x={activeX}
+                  y={activeY}
+                  width={barWidth}
+                  height={activeHeight}
+                  rx="2"
+                  fill="url(#activeUserBar)"
+                  className="cursor-pointer transition-opacity hover:opacity-80"
+                  tabIndex={0}
+                  onFocus={() => setTooltip({ x: activeX + barWidth / 2, y: activeY, date: point.date, seriesName: selectedSeries.name, label: "日活跃", value: point.activeUsers, color: "#4d4f53" })}
+                  onBlur={() => setTooltip(null)}
+                  onMouseEnter={() => setTooltip({ x: activeX + barWidth / 2, y: activeY, date: point.date, seriesName: selectedSeries.name, label: "日活跃", value: point.activeUsers, color: "#4d4f53" })}
+                  onMouseLeave={() => setTooltip(null)}
+                />
+                <rect
+                  x={totalX}
+                  y={totalY}
+                  width={barWidth}
+                  height={totalHeight}
+                  rx="2"
+                  fill="url(#totalUserBar)"
+                  className="cursor-pointer transition-opacity hover:opacity-80"
+                  tabIndex={0}
+                  onFocus={() => setTooltip({ x: totalX + barWidth / 2, y: totalY, date: point.date, seriesName: selectedSeries.name, label: "总用户", value: point.totalUsers, color: "#b92f1f" })}
+                  onBlur={() => setTooltip(null)}
+                  onMouseEnter={() => setTooltip({ x: totalX + barWidth / 2, y: totalY, date: point.date, seriesName: selectedSeries.name, label: "总用户", value: point.totalUsers, color: "#b92f1f" })}
+                  onMouseLeave={() => setTooltip(null)}
+                />
                 {labelIndexes.has(index) ? (
                   <text x={center} y={baseline + 28} textAnchor="middle" className="fill-[#333] text-[15px] font-semibold">
                     {point.label}
@@ -117,6 +156,22 @@ export function UserTrendChart({ series }: { series: UserTrendSeries[] }) {
             <rect x="150" y="-12" width="14" height="14" rx="2" fill="url(#totalUserBar)" />
             <text x="176" y="0" className="fill-[#222] font-medium">总用户</text>
           </g>
+
+          {tooltip ? (
+            <g pointerEvents="none" transform={`translate(${tooltipX} ${tooltipY})`}>
+              <rect width={tooltipWidth} height={tooltipHeight} rx="10" fill="#111827" opacity="0.94" />
+              <rect x="14" y="17" width="10" height="10" rx="2" fill={tooltip.color} />
+              <text x="32" y="25" className="fill-white text-[13px] font-semibold">
+                {tooltip.label}：{tooltip.value}
+              </text>
+              <text x="14" y="46" className="fill-[#d1d5db] text-[12px]">
+                {tooltip.date}
+              </text>
+              <text x="14" y="62" className="fill-[#d1d5db] text-[12px]">
+                {tooltip.seriesName}
+              </text>
+            </g>
+          ) : null}
         </svg>
       </div>
     </div>
