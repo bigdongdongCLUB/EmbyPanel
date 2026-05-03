@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { authOptions } from "@/lib/auth";
 import { getDashboardStats } from "./dashboard-stats";
+import { UserTrendChart } from "./user-trend-chart";
 
 function StatCard({ title, value, hint, highlight, badge }: { title: string; value: string; hint?: string; highlight?: boolean; badge?: string }) {
   return (
@@ -17,7 +18,7 @@ function StatCard({ title, value, hint, highlight, badge }: { title: string; val
 
 export default async function AdminHome() {
   const session = await getServerSession(authOptions);
-  const role = (session as any)?.role;
+  const role = (session as { role?: string | null } | null)?.role;
   if (!session) redirect("/login");
   if (role !== "ADMIN") redirect("/portal");
 
@@ -36,6 +37,8 @@ export default async function AdminHome() {
         />
         <StatCard title="即将到期用户" value={String(stats.expiringSoonCount)} hint={`未来 ${stats.expiringSoonDays} 天内到期`} highlight badge="需关注" />
       </div>
+
+      <UserTrendChart series={stats.userTrend30d} />
 
       <div className="bg-white border border-[#eaeaea] rounded-2xl p-8 shadow-sm">
         <div className="text-base font-bold text-[#222] mb-5">各 Emby 服务器活跃概览（30 天）</div>
