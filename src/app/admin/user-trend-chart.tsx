@@ -29,12 +29,21 @@ function buildYAxisTicks(maxDataValue: number) {
   return Array.from({ length: tickCount }, (_, index) => step * index);
 }
 
+function estimateSelectWidth(text: string) {
+  const textWidth = Array.from(text).reduce((total, char) => total + (char.charCodeAt(0) > 255 ? 16 : 8), 0);
+  return Math.min(320, Math.max(118, textWidth + 58));
+}
+
 export function UserTrendChart({ series }: { series: UserTrendSeries[] }) {
   const [selectedId, setSelectedId] = useState("all");
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
   const selectedSeries = useMemo(() => {
     return series.find((item) => item.id === selectedId) ?? series[0] ?? { id: "all", name: "全部服务器", data: [] };
   }, [selectedId, series]);
+  const selectWidth = useMemo(() => {
+    const longestName = series.reduce((longest, item) => (estimateSelectWidth(item.name) > estimateSelectWidth(longest) ? item.name : longest), "全部服务器");
+    return estimateSelectWidth(longestName);
+  }, [series]);
   const chartData = selectedSeries.data.slice(-30);
   const maxDataValue = Math.max(...chartData.flatMap((d) => [d.activeUsers, d.totalUsers]), 0);
   const ticks = buildYAxisTicks(maxDataValue);
@@ -64,7 +73,8 @@ export function UserTrendChart({ series }: { series: UserTrendSeries[] }) {
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <select
-            className="h-9 min-w-[180px] rounded-lg border border-[#eaeaea] bg-[#f8f9fa] px-3 text-sm text-[#333] outline-none focus:border-[#e3001b]"
+            className="h-9 rounded-lg border border-[#eaeaea] bg-[#f8f9fa] px-3 text-sm text-[#333] outline-none focus:border-[#e3001b]"
+            style={{ width: selectWidth }}
             value={selectedSeries.id}
             onChange={(e) => setSelectedId(e.target.value)}
             aria-label="选择服务器"

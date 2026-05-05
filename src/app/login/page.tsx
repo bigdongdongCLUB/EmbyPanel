@@ -149,7 +149,7 @@ export default function LoginPage() {
         callbackUrl: "/",
       });
 
-      if ((res as any)?.error || !(res as any)?.ok) {
+      if (res?.error || !res?.ok) {
         let msg = "用户名或密码错误";
         try {
           const riskRes = await fetch("/api/auth/login-risk-status", {
@@ -170,7 +170,7 @@ export default function LoginPage() {
         return;
       }
 
-      window.location.href = (res as any)?.url || "/";
+      window.location.href = res?.url || "/";
     } finally {
       setLoginLoading(false);
     }
@@ -215,7 +215,7 @@ export default function LoginPage() {
         redirect: false,
         callbackUrl: "/portal",
       });
-      if ((loginRes as any)?.error || !(loginRes as any)?.ok) {
+      if (loginRes?.error || !loginRes?.ok) {
         setMode("login");
         setLoginUsername(username.trim());
         setLoginPassword("");
@@ -223,7 +223,7 @@ export default function LoginPage() {
         return;
       }
 
-      window.location.href = (loginRes as any)?.url || "/portal";
+      window.location.href = loginRes?.url || "/portal";
     } finally {
       setRegisterLoading(false);
     }
@@ -395,7 +395,7 @@ export default function LoginPage() {
                       const res = await fetch("/api/auth/register/send-code", {
                         method: "POST",
                         headers: { "content-type": "application/json" },
-                        body: JSON.stringify({ email: email.trim() }),
+                        body: JSON.stringify({ email: email.trim(), username: username.trim() }),
                       });
                       const json = await res.json().catch(() => null);
                       if (!res.ok) {
