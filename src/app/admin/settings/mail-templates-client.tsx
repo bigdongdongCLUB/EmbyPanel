@@ -21,7 +21,28 @@ const LABELS: Record<string, string> = {
   order_confirm: "订单确认邮件",
 };
 
-const VARS = ["{{siteName}}", "{{siteUrl}}", "{{username}}", "{{email}}", "{{verificationCode}}", "{{resetUrl}}", "{{expireAt}}", "{{orderNo}}", "{{amount}}", "{{renewUrl}}"];
+const VARS = [
+  "{{siteName}}",
+  "{{siteUrl}}",
+  "{{username}}",
+  "{{email}}",
+  "{{verificationCode}}",
+  "{{resetUrl}}",
+  "{{expireAt}}",
+  "{{expiryDate}}",
+  "{{expiredDate}}",
+  "{{subscriptionName}}",
+  "{{orderNo}}",
+  "{{orderNumber}}",
+  "{{orderDate}}",
+  "{{amount}}",
+  "{{renewUrl}}",
+  "{{currentYear}}",
+];
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
 
 export function MailTemplatesClient() {
   const [loading, setLoading] = useState(true);
@@ -47,8 +68,8 @@ export function MailTemplatesClient() {
       setActiveKey(k);
       setSubject(t[k]?.subject ?? "");
       setBodyHtml(t[k]?.bodyHtml ?? "");
-    } catch (e: any) {
-      setError(e?.message || "load_failed");
+    } catch (e: unknown) {
+      setError(getErrorMessage(e, "load_failed"));
     } finally {
       setLoading(false);
     }
@@ -132,8 +153,8 @@ export function MailTemplatesClient() {
                 if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
                 alert("保存模板成功");
                 await refresh();
-              } catch (e: any) {
-                setError(e?.message || "save_failed");
+              } catch (e: unknown) {
+                setError(getErrorMessage(e, "save_failed"));
               } finally {
                 setSaving(false);
               }
@@ -152,9 +173,15 @@ export function MailTemplatesClient() {
                 .replaceAll("{{verificationCode}}", "123456")
                 .replaceAll("{{resetUrl}}", "https://example.com/reset")
                 .replaceAll("{{expireAt}}", "2026-12-31")
+                .replaceAll("{{expiryDate}}", "2026-12-31")
+                .replaceAll("{{expiredDate}}", "2026-12-31")
+                .replaceAll("{{subscriptionName}}", "月付订阅")
                 .replaceAll("{{orderNo}}", "NO20260001")
+                .replaceAll("{{orderNumber}}", "NO20260001")
+                .replaceAll("{{orderDate}}", "2026-05-05")
                 .replaceAll("{{amount}}", "99")
-                .replaceAll("{{renewUrl}}", "https://example.com");
+                .replaceAll("{{renewUrl}}", "https://example.com")
+                .replaceAll("{{currentYear}}", "2026");
               const w = window.open("", "_blank", "width=900,height=700");
               if (!w) return;
               w.document.write(html);

@@ -6,24 +6,12 @@ import nodemailer from "nodemailer";
 
 import { prisma } from "@/lib/db";
 import { decryptString } from "@/lib/crypto";
+import { MAIL_TEMPLATES_KEY, resolveMailTemplate } from "@/lib/mail-templates";
 
 const BodySchema = z.object({ email: z.string().email(), username: z.string().max(100).optional() });
 const MAIL_KEY = "mail_basic";
-const TEMPLATE_KEY = "mail_templates";
+const TEMPLATE_KEY = MAIL_TEMPLATES_KEY;
 const SITE_KEY = "site_basic";
-const DEFAULT_SUBJECT = "欢迎注册 {{siteName}} - 请验证您的邮箱";
-const DEFAULT_BODY = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <h2 style="color: #333;">欢迎注册 {{siteName}}</h2>
-  <p>尊敬的 {{username}}，</p>
-  <p>感谢您注册 {{siteName}}！为了确保您的账户安全，请使用以下验证码完成邮箱验证：</p>
-
-  <div style="background: #f5f5f5; padding: 20px; text-align: center; margin: 20px 0;">
-    <span style="font-size: 24px; font-weight: bold; color: #007bff;">{{verificationCode}}</span>
-  </div>
-
-  <p>此验证码将在 10 分钟后过期，请尽快完成验证。</p>
-  <p>如果您没有注册此账户，请忽略此邮件。</p>
-</div>`;
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return !!v && typeof v === "object" && !Array.isArray(v);
@@ -80,10 +68,9 @@ export async function POST(req: Request) {
     auth: mail.smtpUser ? { user: String(mail.smtpUser), pass: password } : undefined,
   });
 
-  const templates = isRecord(templateRow?.valueJson) ? templateRow.valueJson : {};
-  const registerTemplate = isRecord(templates.register_verify) ? templates.register_verify : {};
-  const subjectTpl = String(registerTemplate.subject || DEFAULT_SUBJECT);
-  const bodyTpl = String(registerTemplate.bodyHtml || DEFAULT_BODY);
+  const registerTemplate = resolveMailTemplate(templateRow?.valueJson, "register_verify");
+  const subjectTpl = registerTemplate.subject;
+  const bodyTpl = registerTemplate.bodyHtml;
   const site = isRecord(siteRow?.valueJson) ? siteRow.valueJson : {};
   const siteName = String(site.siteName || "EmbyPanel");
   const siteUrl = normalizeSiteUrl(req);

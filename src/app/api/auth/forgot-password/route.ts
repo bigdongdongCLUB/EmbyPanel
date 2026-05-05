@@ -7,23 +7,29 @@ import nodemailer from "nodemailer";
 
 import { prisma } from "@/lib/db";
 import { decryptString } from "@/lib/crypto";
+import { MAIL_TEMPLATES_KEY, resolveMailTemplate } from "@/lib/mail-templates";
 
 const BODY_SCHEMA = z.object({
   email: z.string().email(),
 });
 
 const RESET_TOKEN_KEY = "password_reset_tokens";
-const TEMPLATE_KEY = "mail_templates";
+const TEMPLATE_KEY = MAIL_TEMPLATES_KEY;
 const MAIL_KEY = "mail_basic";
 const SITE_KEY = "site_basic";
 
-const DEFAULT_SUBJECT = "{{siteName}} - 重置密码请求";
-const DEFAULT_BODY = `<p>尊敬的 {{username}}，</p><p>点击链接重置密码：<a href="{{resetUrl}}">{{resetUrl}}</a></p><p>链接将在1小时后过期。</p>`;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
 
-function decodePassword(value: any): string {
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function decodePassword(value: unknown): string {
   try {
-    if (value?.smtpPasswordEnc && value?.smtpPasswordIv && value?.smtpPasswordTag) {
-      return decryptString({ enc: value.smtpPasswordEnc, iv: value.smtpPasswordIv, tag: value.smtpPasswordTag });
+    if (isRecord(value) && value.smtpPasswordEnc && value.smtpPasswordIv && value.smtpPasswordTag) {
+      return decryptString({ enc: String(value.smtpPasswordEnc), iv: String(value.smtpPasswordIv), tag: String(value.smtpPasswordTag) });
     }
   } catch {}
   return "";
@@ -68,7 +74,7 @@ export async function POST(req: Request) {
     prisma.appSetting.findUnique({ where: { key: RESET_TOKEN_KEY } }),
   ]);
 
-  const mail = (mailRow?.valueJson as any) ?? {};
+  const mail = isRecord(mailRow?.valueJson) ? mailRow.valueJson : {};
   if (!mail?.enabled || !mail?.smtpHost || !mail?.fromEmail) {
     return NextResponse.json({ error: "mail_not_configured" }, { status: 400 });
   }
@@ -86,11 +92,11 @@ export async function POST(req: Request) {
     auth: mail.smtpUser ? { user: String(mail.smtpUser), pass: smtpPassword } : undefined,
   });
 
-  const tpl = ((templateRow?.valueJson as any)?.reset_password ?? {}) as { subject?: string; bodyHtml?: string };
-  const subjectTpl = String(tpl.subject || DEFAULT_SUBJECT);
-  const bodyTpl = String(tpl.bodyHtml || DEFAULT_BODY);
+  const tpl = resolveMailTemplate(templateRow?.valueJson, "reset_password");
+  const subjectTpl = tpl.subject;
+  const bodyTpl = tpl.bodyHtml;
 
-  const site = (siteRow?.valueJson as any) ?? {};
+  const site = isRecord(siteRow?.valueJson) ? siteRow.valueJson : {};
   const siteName = String(site.siteName || "BestEmby");
   const siteUrl = normalizeSiteUrl(req);
 
@@ -111,16 +117,16 @@ export async function POST(req: Request) {
 
   try {
     await transporter.sendMail({
-      from: mail.fromName ? `${mail.fromName} <${mail.fromEmail}>` : mail.fromEmail,
+      from: mail.fromName ? `${String(mail.fromName)} <${String(mail.fromEmail)}>` : String(mail.fromEmail),
       to: user.email,
       subject: applyVars(subjectTpl, vars),
       html: applyVars(bodyTpl, vars),
     });
-  } catch (e: any) {
-    return NextResponse.json({ error: "send_mail_failed", message: String(e?.message ?? e) }, { status: 500 });
+  } catch (e: unknown) {
+    return NextResponse.json({ error: "send_mail_failed", message: getErrorMessage(e) }, { status: 500 });
   }
 
-  const tokenMap = ((tokenRow?.valueJson as any) ?? {}) as Record<string, { userId: string; email: string; expiresAt: number; createdAt: number }>;
+  const tokenMap = (isRecord(tokenRow?.valueJson) ? tokenRow.valueJson : {}) as Record<string, { userId: string; email: string; expiresAt: number; createdAt: number }>;
 
   // 清理过期 token，避免无限增长
   for (const [k, v] of Object.entries(tokenMap)) {
