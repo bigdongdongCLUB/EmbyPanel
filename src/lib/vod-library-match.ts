@@ -68,7 +68,7 @@ function hasTitleMatch(item: LibraryMediaCandidate, requested: RequestedVodMedia
 
 export function isVodLibraryMatch(item: LibraryMediaCandidate, requested: RequestedVodMedia) {
   const providerTmdb = getVodTmdbProviderId(item);
-  if (providerTmdb && providerTmdb === String(requested.id)) return true;
+  if (providerTmdb) return providerTmdb === String(requested.id);
 
   const requestedYear = parseVodYear(requested.year);
   const libraryYear = parseVodYear(item.ProductionYear);
@@ -79,7 +79,7 @@ export function isVodLibraryMatch(item: LibraryMediaCandidate, requested: Reques
 
 export function scoreVodLibraryMatch(item: LibraryMediaCandidate, requested: RequestedVodMedia) {
   const providerTmdb = getVodTmdbProviderId(item);
-  if (providerTmdb && providerTmdb === String(requested.id)) return 1000;
+  if (providerTmdb) return providerTmdb === String(requested.id) ? 1000 : 0;
 
   const requestedYear = parseVodYear(requested.year);
   const libraryYear = parseVodYear(item.ProductionYear);

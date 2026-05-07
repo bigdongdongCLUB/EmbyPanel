@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { SettingsTabs } from "./tabs";
 
 type Template = { label: string; subject: string; bodyHtml: string };
@@ -87,12 +87,6 @@ export function MailTemplatesClient() {
     setBodyHtml(t.bodyHtml);
   }, [activeKey, templates]);
 
-  const dirty = useMemo(() => {
-    const t = templates[activeKey];
-    if (!t) return false;
-    return t.subject !== subject || t.bodyHtml !== bodyHtml;
-  }, [activeKey, templates, subject, bodyHtml]);
-
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-semibold">系统设置</h1>
@@ -139,7 +133,7 @@ export function MailTemplatesClient() {
         <div className="pt-3 border-t flex gap-2">
           <button
             className="bg-[#e3001b] text-white rounded px-4 py-2 disabled:opacity-60"
-            disabled={saving || !subject.trim() || !bodyHtml.trim() || !dirty}
+            disabled={saving || !subject.trim() || !bodyHtml.trim()}
             onClick={async () => {
               setSaving(true);
               setError(null);
@@ -151,7 +145,7 @@ export function MailTemplatesClient() {
                 });
                 const json = await res.json().catch(() => null);
                 if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
-                alert("保存模板成功");
+                alert(json?.defaultTemplate ? "已恢复为默认模板" : "保存模板成功");
                 await refresh();
               } catch (e: unknown) {
                 setError(getErrorMessage(e, "save_failed"));
@@ -160,7 +154,7 @@ export function MailTemplatesClient() {
               }
             }}
           >
-            {saving ? "保存中…" : "保存模板"}
+            {saving ? "保存中…" : "保存修改"}
           </button>
           <button
             className="border border-[#eaeaea] bg-white rounded-lg px-4 py-2 hover:bg-[#f4f5f7]"
@@ -191,6 +185,7 @@ export function MailTemplatesClient() {
             预览
           </button>
         </div>
+        <div className="text-xs text-gray-500">默认邮件模板由代码内置，未修改时无需保存；只有编辑过主题或内容后才会保存为自定义模板。</div>
 
         <div className="border rounded-lg p-4 bg-gray-50">
           <div className="font-medium mb-2">可用变量</div>

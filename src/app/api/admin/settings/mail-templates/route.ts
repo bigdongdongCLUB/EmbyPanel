@@ -5,7 +5,7 @@ import { z } from "zod";
 
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
-import { MAIL_TEMPLATES_KEY, isMailTemplateKey, mergeMailTemplates } from "@/lib/mail-templates";
+import { DEFAULT_MAIL_TEMPLATES, MAIL_TEMPLATES_KEY, isMailTemplateKey, mergeMailTemplates } from "@/lib/mail-templates";
 
 const KEY = MAIL_TEMPLATES_KEY;
 const NOTICE_KEY = "subscription_notice";
@@ -64,7 +64,14 @@ export async function PATCH(req: Request) {
 
   const row = await prisma.appSetting.findUnique({ where: { key: KEY } });
   const current = isRecord(row?.valueJson) ? { ...row.valueJson } : {};
-  current[key] = { subject, bodyHtml };
+  const defaultTemplate = DEFAULT_MAIL_TEMPLATES[key];
+  const isDefaultTemplate = subject === defaultTemplate.subject && bodyHtml === defaultTemplate.bodyHtml;
+
+  if (isDefaultTemplate) {
+    delete current[key];
+  } else {
+    current[key] = { subject, bodyHtml };
+  }
 
   await prisma.appSetting.upsert({
     where: { key: KEY },
@@ -72,5 +79,5 @@ export async function PATCH(req: Request) {
     update: { valueJson: current },
   });
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, defaultTemplate: isDefaultTemplate });
 }
