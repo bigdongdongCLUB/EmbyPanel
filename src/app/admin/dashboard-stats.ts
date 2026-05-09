@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
 import { embyFetchUsers } from "@/lib/emby";
+import { EXPIRING_SOON_DAYS, isSubscriptionExpiringSoon } from "@/lib/subscription-status";
 
 const DASHBOARD_ACTIVE30D_CACHE_KEY = "admin_dashboard_active30d_snapshot";
 const DASHBOARD_USER_TREND_CACHE_KEY = "admin_dashboard_user_trend_30d_snapshot";
@@ -342,22 +343,26 @@ export async function refreshUserTrend30dSnapshot(): Promise<UserTrendSnapshot> 
   return snap;
 }
 
-export async function getDashboardStats(expiringSoonDays = 7): Promise<DashboardStats> {
+export async function getDashboardStats(expiringSoonDays = EXPIRING_SOON_DAYS): Promise<DashboardStats> {
   const now = new Date();
-  const soon = new Date(now.getTime() + expiringSoonDays * 24 * 60 * 60 * 1000);
 
-  const [panelUserCount, expiringSoonCount, cached, userTrendCached] = await Promise.all([
+  const [panelUserCount, expiringUsers, cached, userTrendCached] = await Promise.all([
     prisma.user.count(),
-    prisma.subscription.count({
-      where: {
-        status: "ACTIVE",
-        endAt: { gt: now, lte: soon },
-        user: { enabled: true },
+    prisma.user.findMany({
+      where: { enabled: true },
+      select: {
+        subscriptions: {
+          where: { status: { in: ["ACTIVE", "EXPIRED"] } },
+          orderBy: [{ endAt: "desc" }, { createdAt: "desc" }],
+          take: 1,
+          select: { endAt: true },
+        },
       },
     }),
     readActive30dSnapshot(),
     readUserTrend30dSnapshot(),
   ]);
+  const expiringSoonCount = expiringUsers.filter((u) => isSubscriptionExpiringSoon(u.subscriptions[0]?.endAt, now, expiringSoonDays)).length;
 
   const active = cached ?? (await refreshActive30dSnapshot());
   const userTrend = userTrendCached ?? (await readUserTrend30dSnapshot()) ?? (await refreshUserTrend30dSnapshot());

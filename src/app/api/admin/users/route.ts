@@ -9,6 +9,7 @@ import { hashPassword } from "@/lib/password";
 import { encryptSyncPassword } from "@/lib/user-secrets";
 import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
 import { embySetUserDisabled } from "@/lib/emby-provision";
+import { isSubscriptionExpiringSoon } from "@/lib/subscription-status";
 
 export async function GET(req: Request) {
   const auth = await requireAdmin();
@@ -17,7 +18,7 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const q = (url.searchParams.get("q") ?? "").trim();
   const planId = (url.searchParams.get("planId") ?? "").trim();
-  const subStatus = (url.searchParams.get("subStatus") ?? "").trim(); // valid|expired|none
+  const subStatus = (url.searchParams.get("subStatus") ?? "").trim(); // valid|expiring|expired|none
   const sortBy = (url.searchParams.get("sortBy") ?? "createdAt").trim(); // createdAt|endAt
   const sortOrder = (url.searchParams.get("sortOrder") ?? "desc").trim() === "asc" ? "asc" : "desc";
 
@@ -103,8 +104,9 @@ export async function GET(req: Request) {
     .map((u) => {
       const sub = u.subscriptions[0] as any;
       const subValid = sub && sub.endAt > now;
+      const expiringSoon = subValid && isSubscriptionExpiringSoon(sub.endAt, now);
 
-      const statusLabel = sub ? (subValid ? "有效" : "已过期") : null;
+      const statusLabel = sub ? (subValid ? (expiringSoon ? "即将到期" : "有效") : "已过期") : null;
 
       const linkByServerId = new Map((u.embyLinks ?? []).map((l: any) => [l.embyServer.id, l] as const));
       const assignedServers = (sub?.servers ?? []).map((x: any) => x.embyServer);
@@ -144,6 +146,7 @@ export async function GET(req: Request) {
         expiryReminderEnabled: u.expiryReminderEnabled,
         balance: u.balanceCents / 100,
         subscriptionStatus: statusLabel,
+        isExpiringSoon: expiringSoon,
         planId: sub?.planId ?? null,
         planName: sub?.plan?.name ?? null,
         payCycle: sub?.payCycle ?? null,
@@ -158,7 +161,8 @@ export async function GET(req: Request) {
     })
     .filter((row) => {
       if (!subStatus) return true;
-      if (subStatus === "valid") return row.subscriptionStatus === "有效";
+      if (subStatus === "valid") return row.subscriptionStatus === "有效" || row.subscriptionStatus === "即将到期";
+      if (subStatus === "expiring") return row.isExpiringSoon;
       if (subStatus === "expired") return row.subscriptionStatus === "已过期";
       if (subStatus === "none") return row.subscriptionStatus === null;
       return true;

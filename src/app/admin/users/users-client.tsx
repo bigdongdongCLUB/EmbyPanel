@@ -6,6 +6,7 @@ import { PaginationBar } from "@/components/pagination-bar";
 
 type EmbyServerOption = { id: string; name: string; enabled: boolean };
 type PlanOption = { id: string; name: string };
+type SubscriptionStatusFilter = "" | "valid" | "expiring" | "expired" | "none";
 
 type UserRow = {
   id: string;
@@ -17,6 +18,7 @@ type UserRow = {
   expiryReminderEnabled?: boolean;
   balance: number | null;
   subscriptionStatus: string | null;
+  isExpiringSoon?: boolean;
   planId?: string | null;
   planName: string | null;
   servers: Array<{
@@ -116,7 +118,7 @@ function findScrollableParent(el: HTMLElement | null): HTMLElement | null {
 export function UsersClient() {
   const [q, setQ] = useState("");
   const [filterPlanId, setFilterPlanId] = useState("");
-  const [filterSubStatus, setFilterSubStatus] = useState<"" | "valid" | "expired" | "none">("");
+  const [filterSubStatus, setFilterSubStatus] = useState<SubscriptionStatusFilter>("");
   const [filterPlans, setFilterPlans] = useState<PlanOption[]>([]);
 
   const [loading, setLoading] = useState(true);
@@ -494,9 +496,10 @@ export function UsersClient() {
             ))}
           </select>
 
-          <select className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={filterSubStatus} onChange={(e) => setFilterSubStatus(e.target.value as any)}>
+          <select className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={filterSubStatus} onChange={(e) => setFilterSubStatus(e.target.value as SubscriptionStatusFilter)}>
             <option value="">选择订阅状态</option>
             <option value="valid">有效</option>
+            <option value="expiring">即将到期</option>
             <option value="expired">已过期</option>
             <option value="none">无订阅</option>
           </select>
@@ -659,6 +662,8 @@ export function UsersClient() {
                 <td className="py-2 px-3">
                   {r.subscriptionStatus && (r.subscriptionStatus === "有效" || r.subscriptionStatus === "ACTIVE") ? (
                     <span className="inline-flex items-center rounded border border-green-200 bg-green-50 text-green-700 px-2 py-0.5 text-xs font-medium">有效</span>
+                  ) : r.subscriptionStatus === "即将到期" ? (
+                    <span className="inline-flex items-center rounded border border-amber-200 bg-amber-50 text-amber-700 px-2 py-0.5 text-xs font-medium">即将到期</span>
                   ) : r.subscriptionStatus && (r.subscriptionStatus === "已过期" || r.subscriptionStatus === "EXPIRED") ? (
                     <span className="inline-flex items-center rounded border border-red-200 bg-red-50 text-red-600 px-2 py-0.5 text-xs font-medium">已过期</span>
                   ) : (

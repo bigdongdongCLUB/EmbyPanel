@@ -6,8 +6,36 @@ import { verifyPassword } from "@/lib/password";
 import { encryptSyncPassword } from "@/lib/user-secrets";
 import { clearLoginRiskOnSuccess, getLoginRiskStatus, recordLoginFailure } from "@/lib/login-risk";
 
+const PANEL_SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
+const PANEL_SESSION_MAX_AGE_MS = PANEL_SESSION_MAX_AGE_SECONDS * 1000;
+
+type AuthorizedUser = {
+  id: string;
+  username: string;
+  email?: string;
+  name?: string;
+  role: string;
+};
+
+type PanelToken = {
+  role?: string;
+  username?: string;
+  panelLoginAt?: number;
+};
+
+type PanelSession = {
+  role?: string;
+  username?: string;
+};
+
 export const authOptions: NextAuthOptions = {
-  session: { strategy: "jwt" },
+  session: {
+    strategy: "jwt",
+    maxAge: PANEL_SESSION_MAX_AGE_SECONDS,
+  },
+  jwt: {
+    maxAge: PANEL_SESSION_MAX_AGE_SECONDS,
+  },
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -60,21 +88,38 @@ export const authOptions: NextAuthOptions = {
           email: user.email ?? undefined,
           name: user.name ?? undefined,
           role: user.role,
-        } as any;
+        } satisfies AuthorizedUser;
       },
     }),
   ],
   callbacks: {
     async jwt({ token, user }) {
+      const panelToken = token as PanelToken;
       if (user) {
-        (token as any).role = (user as any).role;
-        (token as any).username = (user as any).username;
+        const authorizedUser = user as AuthorizedUser;
+        panelToken.role = authorizedUser.role;
+        panelToken.username = authorizedUser.username;
+        panelToken.panelLoginAt = Date.now();
+        return token;
       }
+
+      // Existing JWTs created before this rule get a fresh 30-day window from
+      // their first validation after deployment, then expire absolutely.
+      if (!panelToken.panelLoginAt) {
+        panelToken.panelLoginAt = Date.now();
+        return token;
+      }
+
+      if (Date.now() - Number(panelToken.panelLoginAt) > PANEL_SESSION_MAX_AGE_MS) {
+        throw new Error("panel_session_expired");
+      }
+
       return token;
     },
     async session({ session, token }) {
-      (session as any).role = (token as any).role;
-      (session as any).username = (token as any).username;
+      const panelToken = token as PanelToken;
+      (session as PanelSession).role = panelToken.role;
+      (session as PanelSession).username = panelToken.username;
       return session;
     },
   },
