@@ -614,6 +614,7 @@ export function UsersClient() {
               <th className="py-2 px-3">状态</th>
               <th className="py-2 px-3">余额</th>
               <th className="py-2 px-3">订阅状态</th>
+              <th className="py-2 px-3">同播数</th>
               <th className="py-2 px-3">订阅计划</th>
               <th className="py-2 px-3">服务器分配</th>
               <th className="py-2 px-3">
@@ -669,6 +670,9 @@ export function UsersClient() {
                   ) : (
                     <span className="inline-flex items-center rounded border border-gray-300 bg-gray-50 text-gray-600 px-2 py-0.5 text-xs font-medium">{dash(r.subscriptionStatus)}</span>
                   )}
+                </td>
+                <td className="py-2 px-3">
+                  {r.maxConcurrentPlaybacks === 0 ? "无限制" : `${r.maxConcurrentPlaybacks ?? 1}`}
                 </td>
                 <td className="py-2 px-3">{dash(r.planName)}</td>
                 <td className="py-2 px-3">
@@ -782,7 +786,7 @@ export function UsersClient() {
             ))}
             {!loading && total === 0 ? (
               <tr>
-                <td className="py-6 px-3 text-gray-500" colSpan={11}>
+                <td className="py-6 px-3 text-gray-500" colSpan={12}>
                   无数据
                 </td>
               </tr>
