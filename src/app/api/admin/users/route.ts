@@ -11,6 +11,23 @@ import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
 import { embySetUserDisabled } from "@/lib/emby-provision";
 import { isSubscriptionExpiringSoon } from "@/lib/subscription-status";
 
+const DEFAULT_MAX_CONCURRENT_PLAYBACKS = 1;
+
+function hasEffectiveSubscriptionPlan(sub: { planId?: string | null; endAt?: Date | null } | null | undefined, now: Date) {
+  return !!(sub?.planId && sub?.endAt && sub.endAt > now);
+}
+
+function shouldResetConcurrentPlaybackLimit(
+  user: { maxConcurrentPlaybacks: number; maxConcurrentPlaybacksExpiresAt?: Date | null },
+  sub: { planId?: string | null; endAt?: Date | null } | null | undefined,
+  now: Date
+) {
+  if (user.maxConcurrentPlaybacks === DEFAULT_MAX_CONCURRENT_PLAYBACKS) return false;
+  if (!hasEffectiveSubscriptionPlan(sub, now)) return true;
+  if (!user.maxConcurrentPlaybacksExpiresAt) return true;
+  return user.maxConcurrentPlaybacksExpiresAt <= now;
+}
+
 export async function GET(req: Request) {
   const auth = await requireAdmin();
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
@@ -53,6 +70,7 @@ export async function GET(req: Request) {
       role: true,
       enabled: true,
       maxConcurrentPlaybacks: true,
+      maxConcurrentPlaybacksExpiresAt: true,
       balanceCents: true,
       expiryReminderEnabled: true,
       createdAt: true,
@@ -100,10 +118,27 @@ export async function GET(req: Request) {
     }
   }
 
+  const usersNeedingConcurrencyReset = users.filter((u) => {
+    const sub = u.subscriptions?.[0];
+    return shouldResetConcurrentPlaybackLimit(u, sub, now);
+  });
+  if (usersNeedingConcurrencyReset.length) {
+    await prisma.user.updateMany({
+      where: { id: { in: usersNeedingConcurrencyReset.map((u) => u.id) } },
+      data: { maxConcurrentPlaybacks: DEFAULT_MAX_CONCURRENT_PLAYBACKS, maxConcurrentPlaybacksExpiresAt: null },
+    });
+    for (const u of usersNeedingConcurrencyReset) {
+      u.maxConcurrentPlaybacks = DEFAULT_MAX_CONCURRENT_PLAYBACKS;
+      u.maxConcurrentPlaybacksExpiresAt = null;
+    }
+  }
+
   const mapped = users
     .map((u) => {
       const sub = u.subscriptions[0] as any;
       const subValid = sub && sub.endAt > now;
+      const effectiveSubscriptionPlan = hasEffectiveSubscriptionPlan(sub, now);
+      const effectiveConcurrencyLimit = !shouldResetConcurrentPlaybackLimit(u, sub, now);
       const expiringSoon = subValid && isSubscriptionExpiringSoon(sub.endAt, now);
 
       const statusLabel = sub ? (subValid ? (expiringSoon ? "即将到期" : "有效") : "已过期") : null;
@@ -142,7 +177,7 @@ export async function GET(req: Request) {
         // panel admin, not emby admin
         role: u.role,
         enabled: u.enabled,
-        maxConcurrentPlaybacks: u.maxConcurrentPlaybacks,
+        maxConcurrentPlaybacks: effectiveSubscriptionPlan && effectiveConcurrencyLimit ? u.maxConcurrentPlaybacks : DEFAULT_MAX_CONCURRENT_PLAYBACKS,
         expiryReminderEnabled: u.expiryReminderEnabled,
         balance: u.balanceCents / 100,
         subscriptionStatus: statusLabel,
@@ -224,11 +259,12 @@ export async function POST(req: Request) {
       syncPasswordTag: enc.tag,
       role: (parsed.data.role as any) ?? "USER",
       enabled: parsed.data.enabled ?? true,
-      maxConcurrentPlaybacks: parsed.data.maxConcurrentPlaybacks ?? 1,
+      maxConcurrentPlaybacks: DEFAULT_MAX_CONCURRENT_PLAYBACKS,
+      maxConcurrentPlaybacksExpiresAt: null,
       expiryReminderEnabled: true,
       balanceCents: parsed.data.balanceCents ?? 0,
     },
-    select: { id: true, username: true, email: true, role: true, enabled: true, maxConcurrentPlaybacks: true, balanceCents: true, createdAt: true },
+    select: { id: true, username: true, email: true, role: true, enabled: true, maxConcurrentPlaybacks: true, maxConcurrentPlaybacksExpiresAt: true, balanceCents: true, createdAt: true },
   });
 
   return NextResponse.json({ ok: true, user }, { status: 201 });

@@ -98,6 +98,17 @@ function isValidYmd(v: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(String(v || "").trim());
 }
 
+function hasEffectiveEditSubscriptionPlan(edit: EditState) {
+  if (!edit.open || !edit.planId || !isValidYmd(edit.endAt)) return false;
+  const endAt = new Date(edit.endAt + "T00:00:00.000Z");
+  return Number.isFinite(endAt.getTime()) && endAt > new Date();
+}
+
+function enforceDefaultConcurrentIfNoSubscription<T extends Extract<EditState, { open: true }>>(next: T): T {
+  if (hasEffectiveEditSubscriptionPlan(next)) return next;
+  return { ...next, maxConcurrentPlaybacks: "1" };
+}
+
 function serverBadgeText(r: UserRow) {
   const total = r.serverCount ?? r.servers?.length ?? 0;
   const online = r.serverOnlineCount ?? (r.servers ?? []).filter((x) => x.status === "ACTIVE").length;
@@ -472,6 +483,8 @@ export function UsersClient() {
       setImportLoading(false);
     }
   }
+
+  const editHasEffectiveSubscriptionPlan = hasEffectiveEditSubscriptionPlan(edit);
 
   return (
     <div className="space-y-6">
@@ -882,7 +895,10 @@ export function UsersClient() {
                   <select
                     className="mt-1 w-full border border-[#eaeaea] rounded-lg px-3 py-2 bg-[#f4f5f7] focus:border-[#e3001b] outline-none"
                     value={edit.planId}
-                    onChange={(e) => setEdit({ ...edit, planId: e.target.value })}
+                    onChange={(e) => {
+                      const next = { ...edit, planId: e.target.value };
+                      setEdit(enforceDefaultConcurrentIfNoSubscription(next));
+                    }}
                   >
                     <option value="">-</option>
                     {edit.plans.map((p) => (
@@ -912,19 +928,25 @@ export function UsersClient() {
                     type="text"
                     placeholder="YYYY-MM-DD"
                     value={edit.endAt}
-                    onChange={(e) => setEdit({ ...edit, endAt: e.target.value.trim() })}
+                    onChange={(e) => {
+                      const next = { ...edit, endAt: e.target.value.trim() };
+                      setEdit(enforceDefaultConcurrentIfNoSubscription(next));
+                    }}
                   />
                 </div>
 
                 <div>
                   <label className="text-sm">同播数量（0-10，0=无限制）</label>
                   <input
-                    className="mt-1 w-full border border-[#eaeaea] rounded-lg px-3 py-2 bg-[#f4f5f7] focus:border-[#e3001b] outline-none"
+                    className="mt-1 w-full border border-[#eaeaea] rounded-lg px-3 py-2 bg-[#f4f5f7] focus:border-[#e3001b] outline-none disabled:cursor-not-allowed disabled:text-gray-400"
                     value={edit.maxConcurrentPlaybacks}
                     onChange={(e) => setEdit({ ...edit, maxConcurrentPlaybacks: e.target.value.replace(/[^\d]/g, "") })}
                     inputMode="numeric"
+                    disabled={!editHasEffectiveSubscriptionPlan}
                   />
-                  <div className="text-xs text-gray-500 mt-1">该设置用于订阅用户的异常播放监控，0 表示不限制同播设备数。</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {editHasEffectiveSubscriptionPlan ? "保存非默认值时，会按当前订阅结束日期锁定恢复时间；之后续期不会自动延长。0 表示不限制同播设备数。" : "无有效订阅计划时同播数量固定为 1，暂不可修改。"}
+                  </div>
                 </div>
               </div>
             </div>
@@ -947,6 +969,10 @@ export function UsersClient() {
                   const maxConcurrentPlaybacksNum = Number(edit.maxConcurrentPlaybacks);
                   if (!Number.isInteger(maxConcurrentPlaybacksNum) || maxConcurrentPlaybacksNum < 0 || maxConcurrentPlaybacksNum > 10) {
                     alert("同播数量仅支持 0-10");
+                    return;
+                  }
+                  if (!hasEffectiveEditSubscriptionPlan(edit) && maxConcurrentPlaybacksNum !== 1) {
+                    alert("无有效订阅计划");
                     return;
                   }
 
@@ -993,6 +1019,8 @@ export function UsersClient() {
                       let msg = text;
                       if (body?.error === "cannot_demote_last_admin") {
                         msg = "面板至少需要保留一位管理员";
+                      } else if (body?.error === "no_active_subscription") {
+                        msg = body?.message || "无有效订阅计划";
                       } else if (body?.error) {
                         msg = String(body.error);
                       }

@@ -76,6 +76,8 @@ model User {
   // Maximum concurrent playing devices allowed for anomaly scan.
   // 0 means unlimited.
   maxConcurrentPlaybacks Int @default(1)
+  // Non-default concurrent playback limit expires independently after it is set.
+  maxConcurrentPlaybacksExpiresAt DateTime?
   balanceCents Int      @default(0)
   expiryReminderEnabled Boolean @default(true)
   createdAt    DateTime @default(now())

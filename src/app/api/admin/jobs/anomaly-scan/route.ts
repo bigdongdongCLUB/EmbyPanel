@@ -14,6 +14,7 @@ const PENALTY_CONFIG_KEY = "anomaly_penalty_config";
 const PENALTY_STACK_WINDOW_DAYS = 7;
 const PENALTY_STACK_MULTIPLIER_MAX = 4;
 const PENALTY_DETECTION_WINDOW_MINUTES = 30;
+const DEFAULT_MAX_CONCURRENT_PLAYBACKS = 1;
 
 function ipPrefix3(ip?: string) {
   const m = String(ip || "").match(/^(\d+)\.(\d+)\.(\d+)\./);
@@ -156,6 +157,17 @@ export async function POST(req: Request) {
     });
 
     const now = new Date();
+    const concurrencyLimitResetResult = await prisma.user.updateMany({
+      where: {
+        maxConcurrentPlaybacks: { not: DEFAULT_MAX_CONCURRENT_PLAYBACKS },
+        OR: [
+          { maxConcurrentPlaybacksExpiresAt: null },
+          { maxConcurrentPlaybacksExpiresAt: { lte: now } },
+          { subscriptions: { none: { status: "ACTIVE", planId: { not: null }, endAt: { gt: now } } } },
+        ],
+      },
+      data: { maxConcurrentPlaybacks: DEFAULT_MAX_CONCURRENT_PLAYBACKS, maxConcurrentPlaybacksExpiresAt: null },
+    });
     const penaltyConfig = await loadPenaltyConfig();
 
     const penaltyState = await loadPenaltyState();
@@ -203,12 +215,13 @@ export async function POST(req: Request) {
 
       const links = await prisma.embyUserLink.findMany({
         where: { embyServerId: server.id, embyUserId: { in: embyUserIds } },
-        select: { id: true, disabled: true, userId: true, embyUserId: true, user: { select: { id: true, username: true, maxConcurrentPlaybacks: true } } },
+        select: { id: true, disabled: true, userId: true, embyUserId: true, user: { select: { id: true, username: true, maxConcurrentPlaybacks: true, maxConcurrentPlaybacksExpiresAt: true } } },
       });
       const linkMap = new Map<string, { id: string; disabled: boolean; userId: string; username: string; maxConcurrentPlaybacks: number }>();
       for (const l of links) {
-        const raw = Number(l.user.maxConcurrentPlaybacks ?? 1);
-        const maxConcurrentPlaybacks = Number.isFinite(raw) ? Math.max(0, Math.min(10, Math.trunc(raw))) : 1;
+        const expiredLimit = l.user.maxConcurrentPlaybacks !== DEFAULT_MAX_CONCURRENT_PLAYBACKS && (!l.user.maxConcurrentPlaybacksExpiresAt || l.user.maxConcurrentPlaybacksExpiresAt <= now);
+        const raw = Number(expiredLimit ? DEFAULT_MAX_CONCURRENT_PLAYBACKS : l.user.maxConcurrentPlaybacks ?? DEFAULT_MAX_CONCURRENT_PLAYBACKS);
+        const maxConcurrentPlaybacks = Number.isFinite(raw) ? Math.max(0, Math.min(10, Math.trunc(raw))) : DEFAULT_MAX_CONCURRENT_PLAYBACKS;
         linkMap.set(l.embyUserId, { id: l.id, disabled: !!l.disabled, userId: l.user.id, username: l.user.username, maxConcurrentPlaybacks });
       }
 
@@ -443,7 +456,7 @@ export async function POST(req: Request) {
       data: {
         finishedAt,
         ok: true,
-        message: JSON.stringify({ warnings, scannedSessions, createdEvents, skippedOrphanSessions, penaltiesApplied }),
+        message: JSON.stringify({ warnings, scannedSessions, createdEvents, skippedOrphanSessions, penaltiesApplied, concurrencyLimitResets: concurrencyLimitResetResult.count }),
       },
     });
 
@@ -457,6 +470,7 @@ export async function POST(req: Request) {
       createdEvents,
       skippedOrphanSessions,
       penaltiesApplied,
+      concurrencyLimitResets: concurrencyLimitResetResult.count,
       penaltyEnabled: penaltyConfig.enabled,
       penaltyDurationMinutes: penaltyConfig.durationMinutes,
     });

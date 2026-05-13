@@ -11,6 +11,25 @@ import { embyCreateUser, embySetUserDisabled, embySetUserPassword } from "@/lib/
 import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
 import { embyFetchUsers } from "@/lib/emby";
 
+const DEFAULT_MAX_CONCURRENT_PLAYBACKS = 1;
+
+function hasEffectiveSubscriptionPlan(sub: { planId?: string | null; endAt?: string | Date | null } | null | undefined, now: Date) {
+  if (!sub?.planId || !sub.endAt) return false;
+  const endAt = sub.endAt instanceof Date ? sub.endAt : new Date(sub.endAt);
+  return Number.isFinite(endAt.getTime()) && endAt > now;
+}
+
+function shouldResetConcurrentPlaybackLimit(
+  user: { maxConcurrentPlaybacks: number; maxConcurrentPlaybacksExpiresAt?: Date | null },
+  sub: { planId?: string | null; endAt?: string | Date | null } | null | undefined,
+  now: Date
+) {
+  if (user.maxConcurrentPlaybacks === DEFAULT_MAX_CONCURRENT_PLAYBACKS) return false;
+  if (!hasEffectiveSubscriptionPlan(sub, now)) return true;
+  if (!user.maxConcurrentPlaybacksExpiresAt) return true;
+  return user.maxConcurrentPlaybacksExpiresAt <= now;
+}
+
 const PatchSchema = z.object({
   email: z.string().email().nullable().optional(),
   role: z.enum(["USER", "ADMIN"]).optional(),
@@ -53,6 +72,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
       role: true,
       enabled: true,
       maxConcurrentPlaybacks: true,
+      maxConcurrentPlaybacksExpiresAt: true,
       balanceCents: true,
       expiryReminderEnabled: true,
       createdAt: true,
@@ -74,6 +94,13 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   });
 
   if (!user) return NextResponse.json({ error: "not_found" }, { status: 404 });
+
+  const latestSub = user.subscriptions[0];
+  if (shouldResetConcurrentPlaybackLimit(user, latestSub, new Date())) {
+    await prisma.user.update({ where: { id }, data: { maxConcurrentPlaybacks: DEFAULT_MAX_CONCURRENT_PLAYBACKS, maxConcurrentPlaybacksExpiresAt: null } });
+    user.maxConcurrentPlaybacks = DEFAULT_MAX_CONCURRENT_PLAYBACKS;
+    user.maxConcurrentPlaybacksExpiresAt = null;
+  }
 
   const [servers, plans] = await Promise.all([
     prisma.embyServer.findMany({ where: { enabled: true }, orderBy: { createdAt: "desc" }, select: { id: true, name: true } }),
@@ -98,7 +125,10 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     );
   }
 
-  const targetUser = await prisma.user.findUnique({ where: { id }, select: { id: true, role: true } });
+  const targetUser = await prisma.user.findUnique({
+    where: { id },
+    select: { id: true, role: true, maxConcurrentPlaybacks: true, maxConcurrentPlaybacksExpiresAt: true },
+  });
   if (!targetUser) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
   if (parsed.data.role === "USER" && targetUser.role === "ADMIN") {
@@ -108,11 +138,52 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     }
   }
 
+  const subscription = parsed.data.subscription;
+  const now = new Date();
+  let effectiveSubscriptionEndAt: Date | null = null;
+  if (subscription !== undefined) {
+    if (hasEffectiveSubscriptionPlan(subscription, now)) {
+      effectiveSubscriptionEndAt = new Date(subscription!.endAt);
+    }
+  } else {
+    const activePlanSub = await prisma.subscription.findFirst({
+      where: { userId: id, status: "ACTIVE", planId: { not: null }, endAt: { gt: now } },
+      orderBy: { endAt: "desc" },
+      select: { id: true, endAt: true },
+    });
+    effectiveSubscriptionEndAt = activePlanSub?.endAt ?? null;
+  }
+  const hasValidSubscriptionPlan = !!effectiveSubscriptionEndAt;
+
+  const requestedMaxConcurrentPlaybacks = parsed.data.maxConcurrentPlaybacks;
+  if (!hasValidSubscriptionPlan && requestedMaxConcurrentPlaybacks !== undefined && requestedMaxConcurrentPlaybacks !== DEFAULT_MAX_CONCURRENT_PLAYBACKS) {
+    return NextResponse.json({ error: "no_active_subscription", message: "无有效订阅计划" }, { status: 400 });
+  }
+
   const data: any = {};
   if (parsed.data.email !== undefined) data.email = parsed.data.email;
   if (parsed.data.role !== undefined) data.role = parsed.data.role;
   if (parsed.data.enabled !== undefined) data.enabled = parsed.data.enabled;
-  if (parsed.data.maxConcurrentPlaybacks !== undefined) data.maxConcurrentPlaybacks = parsed.data.maxConcurrentPlaybacks;
+  if (requestedMaxConcurrentPlaybacks !== undefined) {
+    if (requestedMaxConcurrentPlaybacks === DEFAULT_MAX_CONCURRENT_PLAYBACKS) {
+      data.maxConcurrentPlaybacks = DEFAULT_MAX_CONCURRENT_PLAYBACKS;
+      data.maxConcurrentPlaybacksExpiresAt = null;
+    } else {
+      data.maxConcurrentPlaybacks = requestedMaxConcurrentPlaybacks;
+      const shouldLockNewExpiry =
+        targetUser.maxConcurrentPlaybacks !== requestedMaxConcurrentPlaybacks ||
+        targetUser.maxConcurrentPlaybacksExpiresAt === null ||
+        targetUser.maxConcurrentPlaybacksExpiresAt <= now;
+      if (shouldLockNewExpiry) {
+        data.maxConcurrentPlaybacksExpiresAt = effectiveSubscriptionEndAt;
+      }
+    }
+  } else if (shouldResetConcurrentPlaybackLimit(targetUser, { planId: effectiveSubscriptionEndAt ? "active" : null, endAt: effectiveSubscriptionEndAt }, now)) {
+    data.maxConcurrentPlaybacks = DEFAULT_MAX_CONCURRENT_PLAYBACKS;
+    data.maxConcurrentPlaybacksExpiresAt = null;
+  } else {
+    // 未修改同播数时保留原独立恢复时间，不随订阅延期自动变化。
+  }
   if (parsed.data.expiryReminderEnabled !== undefined) data.expiryReminderEnabled = parsed.data.expiryReminderEnabled;
   if (parsed.data.balanceCents !== undefined) data.balanceCents = parsed.data.balanceCents;
 
@@ -127,8 +198,6 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     data.syncPasswordTag = enc.tag;
     newPlainPassword = pw;
   }
-
-  const subscription = parsed.data.subscription;
 
   // snapshot previous assigned servers from latest ACTIVE/EXPIRED subscription
   const prevSub = await prisma.subscription.findFirst({
