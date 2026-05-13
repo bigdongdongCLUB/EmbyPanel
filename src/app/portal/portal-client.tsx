@@ -131,7 +131,7 @@ export function PortalClient() {
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
         <div className="rounded-2xl border border-gray-200 bg-white p-7 text-center">
           <div className="text-base font-bold text-[#222] mb-4">系统公告</div>
-          <div className="text-[15px] font-semibold text-center">{notices[noticeIndex]?.title ?? "系统公告"}</div>
+          {notices[noticeIndex]?.title ? <div className="text-[15px] font-semibold text-center">{notices[noticeIndex]?.title}</div> : null}
           <div
             className="docs-content announcement-content text-sm text-gray-600 mt-2 min-h-[56px] max-h-[220px] overflow-y-auto pr-1 leading-6 text-left"
             dangerouslySetInnerHTML={{ __html: currentNoticeHtml }}

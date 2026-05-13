@@ -35,6 +35,7 @@ type Row = {
   id: string;
   title: string;
   content: string;
+  allVisible?: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -52,9 +53,10 @@ export function AnnouncementsClient() {
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [allVisible, setAllVisible] = useState(true);
   const taRef = useRef<HTMLTextAreaElement | null>(null);
 
-  const canSave = useMemo(() => !!title.trim() && !!content.trim(), [title, content]);
+  const canSave = useMemo(() => !!content.trim(), [content]);
   const previewHtml = useMemo(() => renderMarkdownLite(content), [content]);
 
   async function refresh() {
@@ -79,6 +81,7 @@ export function AnnouncementsClient() {
     setEditId(null);
     setTitle("");
     setContent("");
+    setAllVisible(true);
     setOpen(true);
   }
 
@@ -86,6 +89,7 @@ export function AnnouncementsClient() {
     setEditId(r.id);
     setTitle(r.title);
     setContent(r.content);
+    setAllVisible(r.allVisible !== false);
     setOpen(true);
   }
 
@@ -133,6 +137,7 @@ export function AnnouncementsClient() {
           <thead className="border-b text-left text-gray-600">
             <tr>
               <th className="px-3 py-2">标题</th>
+              <th className="px-3 py-2">可见范围</th>
               <th className="px-3 py-2">创建时间</th>
               <th className="px-3 py-2">操作</th>
             </tr>
@@ -141,6 +146,7 @@ export function AnnouncementsClient() {
             {rows.map((r) => (
               <tr key={r.id} className="border-b last:border-b-0">
                 <td className="px-3 py-2">{r.title}</td>
+                <td className="px-3 py-2 text-xs text-gray-600">{r.allVisible === false ? "仅有效订阅计划用户" : "所有人"}</td>
                 <td className="px-3 py-2">{fmt(r.createdAt)}</td>
                 <td className="px-3 py-2">
                   <div className="flex items-center gap-3 text-xs">
@@ -161,7 +167,7 @@ export function AnnouncementsClient() {
             ))}
             {!loading && !rows.length ? (
               <tr>
-                <td className="px-3 py-6 text-gray-500" colSpan={3}>暂无公告</td>
+                <td className="px-3 py-6 text-gray-500" colSpan={4}>暂无公告</td>
               </tr>
             ) : null}
           </tbody>
@@ -177,6 +183,17 @@ export function AnnouncementsClient() {
               <label className="text-sm">公告标题</label>
               <ImeInput key={`title-${editId ?? 'new'}`} className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={title} onChange={setTitle} placeholder="请输入公告标题" />
             </div>
+
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="h-4 w-4"
+                checked={allVisible}
+                onChange={(e) => setAllVisible(e.target.checked)}
+              />
+              所有人可见
+            </label>
+            <div className="text-xs text-gray-500 -mt-2">取消勾选后，该公告仅对有有效订阅计划的用户显示。</div>
 
             <div>
               <label className="text-sm">公告内容</label>
@@ -232,6 +249,7 @@ export function AnnouncementsClient() {
                   const payload = {
                     title: title.trim(),
                     content,
+                    allVisible,
                   };
                   const res = await fetch("/api/admin/announcements", {
                     method: editId ? "PATCH" : "POST",

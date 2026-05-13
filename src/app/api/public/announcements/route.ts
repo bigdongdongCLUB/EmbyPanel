@@ -10,6 +10,7 @@ export async function GET() {
   const list = Array.isArray(row?.valueJson) ? (row!.valueJson as any[]) : [];
   const rows = list
     .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
+    .filter((x) => x?.allVisible !== false)
     .map((x) => ({
       id: String(x.id || ""),
       title: String(x.title || ""),

@@ -9,21 +9,24 @@ const KEY = "announcements_list";
 
 const ItemSchema = z.object({
   id: z.string(),
-  title: z.string(),
+  title: z.string().default(""),
   content: z.string(),
+  allVisible: z.boolean().optional().default(true),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
 
 const CreateSchema = z.object({
-  title: z.string().min(1).max(200),
+  title: z.string().max(200).optional().default(""),
   content: z.string().min(1).max(20000),
+  allVisible: z.boolean().optional().default(true),
 });
 
 const UpdateSchema = z.object({
   id: z.string().min(1),
-  title: z.string().min(1).max(200).optional(),
+  title: z.string().max(200).optional(),
   content: z.string().min(1).max(20000).optional(),
+  allVisible: z.boolean().optional(),
 });
 
 function nowIso() {
@@ -72,8 +75,9 @@ export async function POST(req: Request) {
   const now = nowIso();
   const item = {
     id: crypto.randomUUID(),
-    title: p.data.title,
+    title: p.data.title.trim(),
     content: p.data.content,
+    allVisible: p.data.allVisible,
     createdAt: now,
     updatedAt: now,
   };
@@ -96,8 +100,9 @@ export async function PATCH(req: Request) {
   const prev = list[i];
   list[i] = {
     ...prev,
-    ...(p.data.title !== undefined ? { title: p.data.title } : {}),
+    ...(p.data.title !== undefined ? { title: p.data.title.trim() } : {}),
     ...(p.data.content !== undefined ? { content: p.data.content } : {}),
+    ...(p.data.allVisible !== undefined ? { allVisible: p.data.allVisible } : {}),
     updatedAt: nowIso(),
   };
   await saveList(list);
