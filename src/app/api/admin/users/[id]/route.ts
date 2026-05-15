@@ -196,6 +196,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     data.syncPasswordEnc = enc.enc;
     data.syncPasswordIv = enc.iv;
     data.syncPasswordTag = enc.tag;
+    data.sessionInvalidatedAt = new Date();
     newPlainPassword = pw;
   }
 

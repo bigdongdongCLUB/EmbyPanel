@@ -67,6 +67,8 @@ model User {
   email        String?  @unique
   name         String?
   passwordHash String
+  // Any JWT session issued before this time is invalid.
+  sessionInvalidatedAt DateTime?
   // Encrypted sync password used for provisioning Emby users (AES-256-GCM)
   syncPasswordEnc String?
   syncPasswordIv  String?

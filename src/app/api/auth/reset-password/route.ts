@@ -131,6 +131,7 @@ export async function POST(req: Request) {
       syncPasswordEnc: enc.enc,
       syncPasswordIv: enc.iv,
       syncPasswordTag: enc.tag,
+      sessionInvalidatedAt: new Date(),
     },
   });
 

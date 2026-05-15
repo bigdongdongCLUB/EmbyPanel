@@ -82,6 +82,7 @@ export async function PATCH(req: Request) {
     data.syncPasswordEnc = enc.enc;
     data.syncPasswordIv = enc.iv;
     data.syncPasswordTag = enc.tag;
+    data.sessionInvalidatedAt = new Date();
   }
 
   await prisma.user.update({ where: { id: me.user.id }, data });

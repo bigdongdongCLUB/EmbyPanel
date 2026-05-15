@@ -18,6 +18,7 @@ type AuthorizedUser = {
 };
 
 type PanelToken = {
+  userId?: string;
   role?: string;
   username?: string;
   panelLoginAt?: number;
@@ -97,6 +98,7 @@ export const authOptions: NextAuthOptions = {
       const panelToken = token as PanelToken;
       if (user) {
         const authorizedUser = user as AuthorizedUser;
+        panelToken.userId = authorizedUser.id;
         panelToken.role = authorizedUser.role;
         panelToken.username = authorizedUser.username;
         panelToken.panelLoginAt = Date.now();
@@ -112,6 +114,26 @@ export const authOptions: NextAuthOptions = {
 
       if (Date.now() - Number(panelToken.panelLoginAt) > PANEL_SESSION_MAX_AGE_MS) {
         throw new Error("panel_session_expired");
+      }
+
+      if (panelToken.userId || panelToken.username) {
+        const dbUser = await prisma.user.findFirst({
+          where: panelToken.userId
+            ? { id: panelToken.userId }
+            : { username: { equals: panelToken.username, mode: "insensitive" } },
+          select: { id: true, role: true, username: true, sessionInvalidatedAt: true },
+        });
+
+        if (!dbUser) throw new Error("panel_session_invalid");
+
+        panelToken.userId = dbUser.id;
+        panelToken.role = dbUser.role;
+        panelToken.username = dbUser.username;
+
+        const invalidatedAtMs = dbUser.sessionInvalidatedAt?.getTime() ?? 0;
+        if (invalidatedAtMs > Number(panelToken.panelLoginAt)) {
+          throw new Error("panel_session_invalidated");
+        }
       }
 
       return token;
