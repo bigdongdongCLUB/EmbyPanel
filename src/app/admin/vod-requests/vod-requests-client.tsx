@@ -54,6 +54,14 @@ type Resp = {
   rows: Row[];
 };
 
+const BIZ_STATUS_OPTIONS: Array<{ value: BizStatus; label: string }> = [
+  { value: "PENDING", label: "待处理" },
+  { value: "NO_RESOURCE", label: "无资源" },
+  { value: "PROCESSING", label: "进行中" },
+  { value: "CANNOT_UPDATE", label: "无法更新" },
+  { value: "COMPLETED", label: "已完成" },
+];
+
 function fmt(v?: string | null) {
   if (!v) return "-";
   return new Date(v).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false }).replace(/\//g, "-");
@@ -79,6 +87,10 @@ function statusCls(v: BizStatus) {
   return "border-green-200 bg-green-50 text-green-700";
 }
 
+function deleteStatusCls() {
+  return "border-red-200 bg-red-50 text-red-600";
+}
+
 function tmdbUrl(r: Row) {
   if (!r.tmdbId) return null;
   return `https://www.themoviedb.org/${r.mediaType === "MOVIE" ? "movie" : "tv"}/${r.tmdbId}`;
@@ -101,7 +113,7 @@ export function VodRequestsAdminClient() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [replyMap, setReplyMap] = useState<Record<string, string>>({});
-  const [actionMap, setActionMap] = useState<Record<string, string>>({});
+  const [openActionId, setOpenActionId] = useState<string | null>(null);
   const [noteTooltipId, setNoteTooltipId] = useState<string | null>(null);
   const [noteDialog, setNoteDialog] = useState<{ open: boolean; text: string }>({ open: false, text: "" });
   const [openMoreId, setOpenMoreId] = useState<string | null>(null);
@@ -134,6 +146,7 @@ export function VodRequestsAdminClient() {
         }
         return out;
       });
+      setOpenActionId(null);
       setOpenMoreId((prev) => ((json?.rows || []).some((r) => r.id === prev) ? prev : null));
     } catch (e) {
       setError((e as Error)?.message || "load_failed");
@@ -155,6 +168,17 @@ export function VodRequestsAdminClient() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!openActionId) return;
+    function onDocMouseDown(e: MouseEvent) {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest?.("[data-vod-action-menu='1']")) return;
+      setOpenActionId(null);
+    }
+    document.addEventListener("mousedown", onDocMouseDown);
+    return () => document.removeEventListener("mousedown", onDocMouseDown);
+  }, [openActionId]);
 
   async function patchRow(id: string, body: { status?: Row["status"]; bizStatus?: BizStatus; adminNote?: string }) {
     const res = await fetch(`/api/admin/vod-requests/${id}`, {
@@ -197,6 +221,54 @@ export function VodRequestsAdminClient() {
         await patchRow(id, { adminNote: value.slice(0, 40) });
       } catch {}
     }, 300);
+  }
+
+  function renderStatusActionMenu(row: Pick<Row, "id" | "status" | "bizStatus"> | Pick<RelatedRequest, "id" | "status" | "bizStatus">) {
+    const current = deriveBizStatus(row);
+    const isOpen = openActionId === row.id;
+
+    return (
+      <div className="relative inline-block" data-vod-action-menu="1">
+        <button
+          type="button"
+          className={`inline-flex h-7 min-w-[76px] items-center justify-center rounded-full border px-2.5 text-xs font-medium transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60 ${statusCls(current)}`}
+          disabled={loading}
+          onClick={() => setOpenActionId(isOpen ? null : row.id)}
+          aria-haspopup="menu"
+          aria-expanded={isOpen}
+        >
+          {statusText(current)}
+          <span className="ml-1 text-[10px]">▾</span>
+        </button>
+        {isOpen ? (
+          <div className="absolute left-1/2 top-full z-50 mt-1 flex w-32 -translate-x-1/2 flex-col gap-1 rounded-xl border border-[#eaeaea] bg-white p-1.5 shadow-lg">
+            {BIZ_STATUS_OPTIONS.map((item) => (
+              <button
+                key={item.value}
+                type="button"
+                className={`flex w-full shrink-0 items-center justify-center rounded-full border px-2 py-1 text-xs font-medium transition hover:brightness-95 ${statusCls(item.value)}`}
+                onClick={async () => {
+                  setOpenActionId(null);
+                  await applyQuickAction(row, item.value);
+                }}
+              >
+                {item.label}
+              </button>
+            ))}
+            <button
+              type="button"
+              className={`flex w-full shrink-0 items-center justify-center rounded-full border px-2 py-1 text-xs font-medium transition hover:brightness-95 ${deleteStatusCls()}`}
+              onClick={async () => {
+                setOpenActionId(null);
+                await deleteRow(row.id);
+              }}
+            >
+              删除
+            </button>
+          </div>
+        ) : null}
+      </div>
+    );
   }
 
   const visibleRows = useMemo(() => rows, [rows]);
@@ -362,43 +434,7 @@ export function VodRequestsAdminClient() {
                   </td>
                   <td className="px-3 py-3 text-xs whitespace-nowrap align-middle">{fmt(r.createdAt)}</td>
                   <td className="px-3 py-3 whitespace-nowrap align-middle">
-                    <div className="flex items-center gap-2">
-                      <select
-                        className="h-8 border border-[#eaeaea] bg-white rounded-lg px-2 text-xs focus:border-[#e3001b] outline-none"
-                        value={actionMap[r.id] ?? ""}
-                        disabled={loading}
-                        onChange={(e) => {
-                          const v = e.target.value as "" | BizStatus | "DELETE";
-                          if (!v) return;
-                          if (v === "DELETE") {
-                            (async () => {
-                              try {
-                                await deleteRow(r.id);
-                              } finally {
-                                setActionMap((m) => ({ ...m, [r.id]: "" }));
-                              }
-                            })();
-                            return;
-                          }
-                          (async () => {
-                            try {
-                              await applyQuickAction(r, v as BizStatus);
-                            } finally {
-                              setActionMap((m) => ({ ...m, [r.id]: "" }));
-                            }
-                          })();
-                        }}
-                      >
-                        <option value="">操作</option>
-                        <option value="PENDING">待处理</option>
-                        <option value="NO_RESOURCE">无资源</option>
-                        <option value="PROCESSING">进行中</option>
-                        <option value="CANNOT_UPDATE">无法更新</option>
-                        <option value="COMPLETED">已完成</option>
-                        <option value="DELETE" className="text-red-600">删除</option>
-                      </select>
-                      <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${statusCls(deriveBizStatus(r))}`}>{statusText(deriveBizStatus(r))}</span>
-                    </div>
+                    {renderStatusActionMenu(r)}
                   </td>
                 </tr>
                 {openMoreId === r.id
@@ -452,43 +488,7 @@ export function VodRequestsAdminClient() {
                         </td>
                         <td className="px-3 py-3 text-xs whitespace-nowrap align-middle">{fmt(item.createdAt)}</td>
                         <td className="px-3 py-3 whitespace-nowrap align-middle">
-                          <div className="flex items-center gap-2">
-                            <select
-                              className="h-8 border border-[#eaeaea] bg-white rounded-lg px-2 text-xs focus:border-[#e3001b] outline-none"
-                              value={actionMap[item.id] ?? ""}
-                              disabled={loading}
-                              onChange={(e) => {
-                                const v = e.target.value as "" | BizStatus | "DELETE";
-                                if (!v) return;
-                                if (v === "DELETE") {
-                                  (async () => {
-                                    try {
-                                      await deleteRow(item.id);
-                                    } finally {
-                                      setActionMap((m) => ({ ...m, [item.id]: "" }));
-                                    }
-                                  })();
-                                  return;
-                                }
-                                (async () => {
-                                  try {
-                                    await applyQuickAction(item, v as BizStatus);
-                                  } finally {
-                                    setActionMap((m) => ({ ...m, [item.id]: "" }));
-                                  }
-                                })();
-                              }}
-                            >
-                              <option value="">操作</option>
-                              <option value="PENDING">待处理</option>
-                              <option value="NO_RESOURCE">无资源</option>
-                              <option value="PROCESSING">进行中</option>
-                              <option value="CANNOT_UPDATE">无法更新</option>
-                              <option value="COMPLETED">已完成</option>
-                              <option value="DELETE" className="text-red-600">删除</option>
-                            </select>
-                            <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${statusCls(deriveBizStatus(item))}`}>{statusText(deriveBizStatus(item))}</span>
-                          </div>
+                          {renderStatusActionMenu(item)}
                         </td>
                       </tr>
                     ))
