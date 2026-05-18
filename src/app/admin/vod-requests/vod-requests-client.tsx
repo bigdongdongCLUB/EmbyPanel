@@ -61,6 +61,9 @@ const BIZ_STATUS_OPTIONS: Array<{ value: BizStatus; label: string }> = [
   { value: "CANNOT_UPDATE", label: "无法更新" },
   { value: "COMPLETED", label: "已完成" },
 ];
+const ACTION_MENU_WIDTH = 128;
+const ACTION_MENU_ESTIMATED_HEIGHT = 190;
+const ACTION_MENU_GAP = 6;
 
 function fmt(v?: string | null) {
   if (!v) return "-";
@@ -113,7 +116,7 @@ export function VodRequestsAdminClient() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [replyMap, setReplyMap] = useState<Record<string, string>>({});
-  const [openActionId, setOpenActionId] = useState<string | null>(null);
+  const [actionMenu, setActionMenu] = useState<{ id: string; left: number; top: number; placement: "up" | "down" } | null>(null);
   const [noteTooltipId, setNoteTooltipId] = useState<string | null>(null);
   const [noteDialog, setNoteDialog] = useState<{ open: boolean; text: string }>({ open: false, text: "" });
   const [openMoreId, setOpenMoreId] = useState<string | null>(null);
@@ -146,7 +149,7 @@ export function VodRequestsAdminClient() {
         }
         return out;
       });
-      setOpenActionId(null);
+      setActionMenu(null);
       setOpenMoreId((prev) => ((json?.rows || []).some((r) => r.id === prev) ? prev : null));
     } catch (e) {
       setError((e as Error)?.message || "load_failed");
@@ -170,15 +173,15 @@ export function VodRequestsAdminClient() {
   }, []);
 
   useEffect(() => {
-    if (!openActionId) return;
+    if (!actionMenu) return;
     function onDocMouseDown(e: MouseEvent) {
       const target = e.target as HTMLElement | null;
       if (target?.closest?.("[data-vod-action-menu='1']")) return;
-      setOpenActionId(null);
+      setActionMenu(null);
     }
     document.addEventListener("mousedown", onDocMouseDown);
     return () => document.removeEventListener("mousedown", onDocMouseDown);
-  }, [openActionId]);
+  }, [actionMenu]);
 
   async function patchRow(id: string, body: { status?: Row["status"]; bizStatus?: BizStatus; adminNote?: string }) {
     const res = await fetch(`/api/admin/vod-requests/${id}`, {
@@ -223,9 +226,42 @@ export function VodRequestsAdminClient() {
     }, 300);
   }
 
+  function getActionMenuPosition(button: HTMLButtonElement, placementOverride?: "up" | "down") {
+    const rect = button.getBoundingClientRect();
+    const minLeft = ACTION_MENU_WIDTH / 2 + 8;
+    const maxLeft = window.innerWidth - ACTION_MENU_WIDTH / 2 - 8;
+    const left = Math.min(Math.max(rect.left + rect.width / 2, minLeft), Math.max(minLeft, maxLeft));
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    const placement =
+      placementOverride ??
+      (spaceBelow < ACTION_MENU_ESTIMATED_HEIGHT + ACTION_MENU_GAP && spaceAbove >= ACTION_MENU_ESTIMATED_HEIGHT + ACTION_MENU_GAP ? "up" : "down");
+    const top =
+      placement === "up"
+        ? Math.max(8, rect.top - ACTION_MENU_GAP - ACTION_MENU_ESTIMATED_HEIGHT)
+        : Math.min(rect.bottom + ACTION_MENU_GAP, Math.max(8, window.innerHeight - ACTION_MENU_ESTIMATED_HEIGHT - 8));
+
+    return { left, top, placement };
+  }
+
+  function openStatusMenu(id: string, button: HTMLButtonElement) {
+    const current = getActionMenuPosition(button);
+    const rect = button.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+
+    if (spaceBelow < ACTION_MENU_ESTIMATED_HEIGHT + ACTION_MENU_GAP && spaceAbove < ACTION_MENU_ESTIMATED_HEIGHT + ACTION_MENU_GAP) {
+      button.scrollIntoView({ block: "center", inline: "nearest", behavior: "auto" });
+      requestAnimationFrame(() => setActionMenu({ id, ...getActionMenuPosition(button, "down") }));
+      return;
+    }
+
+    setActionMenu({ id, ...current });
+  }
+
   function renderStatusActionMenu(row: Pick<Row, "id" | "status" | "bizStatus"> | Pick<RelatedRequest, "id" | "status" | "bizStatus">) {
     const current = deriveBizStatus(row);
-    const isOpen = openActionId === row.id;
+    const isOpen = actionMenu?.id === row.id;
 
     return (
       <div className="relative inline-block" data-vod-action-menu="1">
@@ -233,7 +269,13 @@ export function VodRequestsAdminClient() {
           type="button"
           className={`inline-flex h-7 min-w-[76px] items-center justify-center rounded-full border px-2.5 text-xs font-medium transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60 ${statusCls(current)}`}
           disabled={loading}
-          onClick={() => setOpenActionId(isOpen ? null : row.id)}
+          onClick={(e) => {
+            if (isOpen) {
+              setActionMenu(null);
+              return;
+            }
+            openStatusMenu(row.id, e.currentTarget);
+          }}
           aria-haspopup="menu"
           aria-expanded={isOpen}
         >
@@ -241,14 +283,17 @@ export function VodRequestsAdminClient() {
           <span className="ml-1 text-[10px]">▾</span>
         </button>
         {isOpen ? (
-          <div className="absolute left-1/2 top-full z-50 mt-1 flex w-32 -translate-x-1/2 flex-col gap-1 rounded-xl border border-[#eaeaea] bg-white p-1.5 shadow-lg">
+          <div
+            className="fixed z-50 flex w-32 -translate-x-1/2 flex-col gap-1 rounded-xl border border-[#eaeaea] bg-white p-1.5 shadow-lg"
+            style={{ left: actionMenu.left, top: actionMenu.top }}
+          >
             {BIZ_STATUS_OPTIONS.map((item) => (
               <button
                 key={item.value}
                 type="button"
                 className={`flex w-full shrink-0 items-center justify-center rounded-full border px-2 py-1 text-xs font-medium transition hover:brightness-95 ${statusCls(item.value)}`}
                 onClick={async () => {
-                  setOpenActionId(null);
+                  setActionMenu(null);
                   await applyQuickAction(row, item.value);
                 }}
               >
@@ -259,7 +304,7 @@ export function VodRequestsAdminClient() {
               type="button"
               className={`flex w-full shrink-0 items-center justify-center rounded-full border px-2 py-1 text-xs font-medium transition hover:brightness-95 ${deleteStatusCls()}`}
               onClick={async () => {
-                setOpenActionId(null);
+                setActionMenu(null);
                 await deleteRow(row.id);
               }}
             >
