@@ -47,26 +47,7 @@ export async function GET(req: Request) {
 
   const since30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-  const [
-    total,
-    pending,
-    noResource,
-    processing,
-    cannotUpdate,
-    completed,
-    recentTvCount,
-    recentMovieCount,
-    recentTopUserGroup,
-    allRows,
-  ] = await Promise.all([
-    prisma.vodRequest.count(),
-    prisma.vodRequest.count({ where: { bizStatus: "PENDING" } }),
-    prisma.vodRequest.count({ where: { bizStatus: "NO_RESOURCE" } }),
-    prisma.vodRequest.count({ where: { bizStatus: "PROCESSING" } }),
-    prisma.vodRequest.count({ where: { bizStatus: "CANNOT_UPDATE" } }),
-    prisma.vodRequest.count({ where: { bizStatus: "COMPLETED" } }),
-    prisma.vodRequest.count({ where: { createdAt: { gte: since30 }, mediaType: "TV" } }),
-    prisma.vodRequest.count({ where: { createdAt: { gte: since30 }, mediaType: "MOVIE" } }),
+  const [recentTopUserGroup, allRows] = await Promise.all([
     prisma.vodRequest.groupBy({ by: ["userId"], where: { createdAt: { gte: since30 } }, _count: { _all: true }, orderBy: { _count: { userId: "desc" } }, take: 1 }),
     prisma.vodRequest.findMany({
       include: { user: { select: { id: true, username: true, email: true } } },
@@ -125,6 +106,32 @@ export async function GET(req: Request) {
     };
   });
 
+  const mediaSummary = {
+    total: groupedRows.length,
+    pending: 0,
+    noResource: 0,
+    processing: 0,
+    cannotUpdate: 0,
+    completed: 0,
+    recentTvCount: 0,
+    recentMovieCount: 0,
+  };
+  for (const group of groupedMap.values()) {
+    const [latest] = group;
+    const groupStatuses = new Set(group.map((row) => (row as any).bizStatus));
+    if (groupStatuses.has("PENDING")) mediaSummary.pending += 1;
+    if (groupStatuses.has("NO_RESOURCE")) mediaSummary.noResource += 1;
+    if (groupStatuses.has("PROCESSING")) mediaSummary.processing += 1;
+    if (groupStatuses.has("CANNOT_UPDATE")) mediaSummary.cannotUpdate += 1;
+    if (groupStatuses.has("COMPLETED")) mediaSummary.completed += 1;
+
+    const latestRequestTime = latest.createdAt instanceof Date ? latest.createdAt : new Date(latest.createdAt);
+    if (latestRequestTime >= since30) {
+      if (latest.mediaType === "TV") mediaSummary.recentTvCount += 1;
+      if (latest.mediaType === "MOVIE") mediaSummary.recentMovieCount += 1;
+    }
+  }
+
   if (["PENDING", "NO_RESOURCE", "PROCESSING", "CANNOT_UPDATE", "COMPLETED"].includes(bizStatus)) {
     groupedRows = groupedRows.filter((row) => {
       if (row.bizStatus === bizStatus) return true;
@@ -166,14 +173,14 @@ export async function GET(req: Request) {
   return NextResponse.json({
     ok: true,
     summary: {
-      total,
-      pending,
-      noResource,
-      processing,
-      cannotUpdate,
-      completed,
-      recentTvCount,
-      recentMovieCount,
+      total: mediaSummary.total,
+      pending: mediaSummary.pending,
+      noResource: mediaSummary.noResource,
+      processing: mediaSummary.processing,
+      cannotUpdate: mediaSummary.cannotUpdate,
+      completed: mediaSummary.completed,
+      recentTvCount: mediaSummary.recentTvCount,
+      recentMovieCount: mediaSummary.recentMovieCount,
       recentTopUser: topUser ? (topUser.username || topUser.email || "-") : "-",
       recentTopUserCount: topUserCount,
     },
