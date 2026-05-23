@@ -56,23 +56,28 @@ export async function POST(req: Request) {
     let trialUsersDeleted = 0;
     let vodRequestsCleared = 0;
     let concurrencyResets = 0;
+    let skippedLatestStillValid = 0;
     let apiWarnings = 0;
 
     for (const u of users) {
       usersScanned += 1;
-
-      // 订阅到期后清空该用户“我的点播”全部记录
-      const cleared = await prisma.vodRequest.deleteMany({ where: { userId: u.id } });
-      vodRequestsCleared += cleared.count;
 
       const latestActive = await prisma.subscription.findFirst({
         where: { userId: u.id, status: "ACTIVE" },
         orderBy: { endAt: "desc" },
         select: { id: true, payCycle: true, endAt: true },
       });
+      if (!latestActive || latestActive.endAt > now) {
+        skippedLatestStillValid += 1;
+        continue;
+      }
+
+      // 订阅到期后清空该用户“我的点播”全部记录
+      const cleared = await prisma.vodRequest.deleteMany({ where: { userId: u.id } });
+      vodRequestsCleared += cleared.count;
 
       // 规则：试用号到期后直接删除（面板 + Emby）
-      if (latestActive && latestActive.payCycle === "TRIAL" && latestActive.endAt <= now) {
+      if (latestActive.payCycle === "TRIAL") {
         for (const l of u.embyLinks) {
           try {
             const apiKey = getEmbyApiKeyForServer(l.embyServer as any);
@@ -115,8 +120,8 @@ export async function POST(req: Request) {
     }
 
     const finishedAt = new Date();
-    await prisma.jobRun.update({ where: { id: job.id }, data: { finishedAt, ok: true, message: JSON.stringify({ usersScanned, linksDisabled, trialUsersDeleted, vodRequestsCleared, concurrencyResets, apiWarnings }) } });
-    return NextResponse.json({ ok: true, usersScanned, linksDisabled, trialUsersDeleted, vodRequestsCleared, concurrencyResets, apiWarnings, jobRunId: job.id });
+    await prisma.jobRun.update({ where: { id: job.id }, data: { finishedAt, ok: true, message: JSON.stringify({ usersScanned, skippedLatestStillValid, linksDisabled, trialUsersDeleted, vodRequestsCleared, concurrencyResets, apiWarnings }) } });
+    return NextResponse.json({ ok: true, usersScanned, skippedLatestStillValid, linksDisabled, trialUsersDeleted, vodRequestsCleared, concurrencyResets, apiWarnings, jobRunId: job.id });
   } catch (e: any) {
     const finishedAt = new Date();
     await prisma.jobRun.update({ where: { id: job.id }, data: { finishedAt, ok: false, message: String(e?.message ?? e) } });

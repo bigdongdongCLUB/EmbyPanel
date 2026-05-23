@@ -115,16 +115,9 @@ function serverBadgeText(r: UserRow) {
   return `${total}台服务器（${online}在线）`;
 }
 
-function findScrollableParent(el: HTMLElement | null): HTMLElement | null {
-  let p = el?.parentElement ?? null;
-  while (p) {
-    const style = window.getComputedStyle(p);
-    const overflowY = style.overflowY;
-    if ((overflowY === "auto" || overflowY === "scroll") && p.scrollHeight > p.clientHeight) return p;
-    p = p.parentElement;
-  }
-  return null;
-}
+const SERVER_POPOVER_WIDTH = 320;
+const SERVER_POPOVER_ESTIMATED_HEIGHT = 386;
+const SERVER_POPOVER_GAP = 8;
 
 export function UsersClient() {
   const [q, setQ] = useState("");
@@ -201,8 +194,7 @@ export function UsersClient() {
   const [importEmbyUsersLoaded, setImportEmbyUsersLoaded] = useState(false);
   const [importEmbyUserSearch, setImportEmbyUserSearch] = useState("");
   const [importSelectedEmbyUsers, setImportSelectedEmbyUsers] = useState<Record<string, boolean>>({});
-  const [openServerDetailUserId, setOpenServerDetailUserId] = useState<string | null>(null);
-  const usersTableWrapRef = useRef<HTMLDivElement | null>(null);
+  const [serverPopover, setServerPopover] = useState<{ userId: string; left: number; top: number; placement: "up" | "down" } | null>(null);
   const sortInitRef = useRef(false);
 
   const [newUsername, setNewUsername] = useState("");
@@ -281,6 +273,7 @@ export function UsersClient() {
       const json = await res.json().catch(() => null);
       if (!res.ok) throw new Error(json?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
       setRows(json.users ?? []);
+      setServerPopover(null);
       if (resetPage) setPage(1);
       // prune selection after refresh
       setSelected((m) => {
@@ -347,38 +340,53 @@ export function UsersClient() {
     };
   }, [edit.open]);
 
-  function ensureServerPopoverVisible(popKey: string) {
-    requestAnimationFrame(() => {
-      const pop = document.querySelector(`[data-server-pop-key="${popKey}"]`) as HTMLElement | null;
-      if (!pop) return;
-      const popRect = pop.getBoundingClientRect();
+  function getServerPopoverPosition(button: HTMLButtonElement, placementOverride?: "up" | "down") {
+    const rect = button.getBoundingClientRect();
+    const minLeft = SERVER_POPOVER_WIDTH / 2 + 8;
+    const maxLeft = window.innerWidth - SERVER_POPOVER_WIDTH / 2 - 8;
+    const left = Math.min(Math.max(rect.left + rect.width / 2, minLeft), Math.max(minLeft, maxLeft));
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    const placement =
+      placementOverride ??
+      (spaceBelow < SERVER_POPOVER_ESTIMATED_HEIGHT + SERVER_POPOVER_GAP && spaceAbove >= SERVER_POPOVER_ESTIMATED_HEIGHT + SERVER_POPOVER_GAP ? "up" : "down");
+    const top =
+      placement === "up"
+        ? Math.max(8, rect.top - SERVER_POPOVER_GAP - SERVER_POPOVER_ESTIMATED_HEIGHT)
+        : Math.min(rect.bottom + SERVER_POPOVER_GAP, Math.max(8, window.innerHeight - SERVER_POPOVER_ESTIMATED_HEIGHT - 8));
 
-      const scroller = findScrollableParent(pop) || usersTableWrapRef.current;
-      if (scroller) {
-        const sRect = scroller.getBoundingClientRect();
-        const overflow = popRect.bottom - sRect.bottom;
-        if (overflow > 0) {
-          scroller.scrollBy({ top: overflow + 10, behavior: "smooth" });
-          return;
-        }
-      }
+    return { left, top, placement };
+  }
 
-      const viewportOverflow = popRect.bottom - window.innerHeight;
-      if (viewportOverflow > 0) {
-        window.scrollBy({ top: viewportOverflow + 10, behavior: "smooth" });
-      }
-    });
+  function openServerPopover(userId: string, button: HTMLButtonElement) {
+    if (serverPopover?.userId === userId) {
+      setServerPopover(null);
+      return;
+    }
+
+    const current = getServerPopoverPosition(button);
+    const rect = button.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+
+    if (spaceBelow < SERVER_POPOVER_ESTIMATED_HEIGHT + SERVER_POPOVER_GAP && spaceAbove < SERVER_POPOVER_ESTIMATED_HEIGHT + SERVER_POPOVER_GAP) {
+      button.scrollIntoView({ block: "center", inline: "nearest", behavior: "auto" });
+      requestAnimationFrame(() => setServerPopover({ userId, ...getServerPopoverPosition(button, "down") }));
+      return;
+    }
+
+    setServerPopover({ userId, ...current });
   }
 
   useEffect(() => {
     function onDocMouseDown(e: MouseEvent) {
-      if (!openServerDetailUserId) return;
+      if (!serverPopover) return;
       const target = e.target as HTMLElement | null;
       if (target?.closest?.("[data-server-popover-root='1']")) return;
-      setOpenServerDetailUserId(null);
+      setServerPopover(null);
     }
     function onEsc(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpenServerDetailUserId(null);
+      if (e.key === "Escape") setServerPopover(null);
     }
     document.addEventListener("mousedown", onDocMouseDown);
     document.addEventListener("keydown", onEsc);
@@ -386,7 +394,7 @@ export function UsersClient() {
       document.removeEventListener("mousedown", onDocMouseDown);
       document.removeEventListener("keydown", onEsc);
     };
-  }, [openServerDetailUserId]);
+  }, [serverPopover]);
 
   async function openImportModal() {
     setImportOpen(true);
@@ -602,7 +610,7 @@ export function UsersClient() {
       {error ? <pre className="text-xs text-red-600 whitespace-pre-wrap">{error}</pre> : null}
       {loading ? <div className="text-sm text-gray-500">加载中…</div> : null}
 
-      <div ref={usersTableWrapRef} className="overflow-x-auto overflow-y-visible bg-white border border-[#eaeaea] rounded-2xl shadow-sm">
+      <div className="overflow-x-auto overflow-y-visible bg-white border border-[#eaeaea] rounded-2xl shadow-sm">
         <table className="min-w-[1200px] w-full text-sm">
           <thead className="text-left text-[#666] border-y border-[#eaeaea] bg-[#f8f9fa]">
             <tr>
@@ -690,23 +698,25 @@ export function UsersClient() {
                 <td className="py-2 px-3">{dash(r.planName)}</td>
                 <td className="py-2 px-3">
                   {r.servers?.length ? (
-                    <div className="relative inline-block" data-server-popover-root="1">
+                    <div className="inline-block" data-server-popover-root="1">
                       <button
                         type="button"
                         className={
                           "inline-flex items-center rounded border px-2.5 py-1 text-sm " +
                           (r.serverHasConflict ? "border-amber-300 text-amber-700 bg-amber-50" : "border-gray-300 text-gray-800")
                         }
-                        onClick={() => {
-                          const next = openServerDetailUserId === r.id ? null : r.id;
-                          setOpenServerDetailUserId(next);
-                          if (next) ensureServerPopoverVisible(next);
-                        }}
+                        onClick={(e) => openServerPopover(r.id, e.currentTarget)}
+                        aria-haspopup="dialog"
+                        aria-expanded={serverPopover?.userId === r.id}
                       >
                         {serverBadgeText(r)}
                       </button>
-                      {openServerDetailUserId === r.id ? (
-                        <div data-server-pop-key={r.id} className="absolute left-0 top-full z-20 mt-2 w-[320px] rounded-xl border bg-white p-3 shadow-xl">
+                      {serverPopover && serverPopover.userId === r.id ? (
+                        <div
+                          data-server-pop-key={r.id}
+                          className="fixed z-50 w-[320px] -translate-x-1/2 rounded-xl border bg-white p-3 shadow-xl"
+                          style={{ left: serverPopover.left, top: serverPopover.top }}
+                        >
                           <div className="space-y-2 max-h-[360px] overflow-auto">
                             {r.servers.map((sv) => (
                               <div key={sv.embyServerId} className="border-b last:border-b-0 pb-2 last:pb-0">
