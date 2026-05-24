@@ -89,6 +89,9 @@ export function PortalClient() {
   const isExpired = !!data?.dashboard.subscriptionEndAt && new Date(data.dashboard.subscriptionEndAt).getTime() < Date.now();
   const isDue = remainingDays <= 0;
   const nearExpiry = remainingDays <= 30;
+  const metricCardClass = "min-w-0 rounded-2xl border border-transparent bg-[#f8f9fa] p-4 sm:p-6 min-h-[116px] sm:min-h-[132px] flex flex-col justify-center";
+  const metricLabelClass = "text-sm text-gray-500";
+  const metricValueClass = "min-w-0 text-[clamp(1.25rem,5.6vw,1.5rem)] sm:text-2xl font-bold leading-tight";
 
   return (
     <div className="space-y-5">
@@ -105,26 +108,30 @@ export function PortalClient() {
       {error ? <div className="text-sm text-red-600">{error}</div> : null}
       {loading ? <div className="text-sm text-gray-500">加载中…</div> : null}
 
-      <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-5">
-        <div className="rounded-2xl border border-transparent bg-[#f8f9fa] p-6">
-          <div className="text-sm text-gray-500">账户余额</div>
-          <div className="text-2xl font-bold text-[#222] mt-2">{(data?.dashboard.balanceYuan ?? 0).toFixed(2)} <span className="text-sm font-normal">元</span></div>
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-5">
+        <div className={metricCardClass}>
+          <div className={metricLabelClass}>账户余额</div>
+          <div className={`${metricValueClass} mt-2 text-[#222] whitespace-nowrap`}>
+            {(data?.dashboard.balanceYuan ?? 0).toFixed(2)} <span className="text-sm font-normal">元</span>
+          </div>
         </div>
-        <div className="rounded-2xl border border-transparent bg-[#f8f9fa] p-6">
-          <div className="text-sm text-gray-500">订阅到期日</div>
-          <div className="mt-2 flex items-center gap-2">
-            <div className={`text-2xl font-bold ${nearExpiry ? "text-[#e3001b]" : "text-[#222]"}`}>{fmtDateYmd(data?.dashboard.subscriptionEndAt)}</div>
+        <div className={metricCardClass}>
+          <div className={metricLabelClass}>订阅到期日</div>
+          <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+            <div className={`${metricValueClass} whitespace-nowrap ${nearExpiry ? "text-[#e3001b]" : "text-[#222]"}`}>{fmtDateYmd(data?.dashboard.subscriptionEndAt)}</div>
             {isExpired ? <div className="inline-flex items-center rounded border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-medium text-red-600">已过期</div> : null}
           </div>
         </div>
-        <div className="rounded-2xl border border-transparent bg-[#f8f9fa] p-6">
-          <div className="text-sm text-gray-500">订阅计划</div>
-          <div className="text-2xl font-bold text-[#222] mt-2">{data?.dashboard.subscriptionPlan ?? "无订阅"}</div>
+        <div className={metricCardClass}>
+          <div className={metricLabelClass}>订阅计划</div>
+          <div className={`${metricValueClass} mt-2 text-[#222] break-words [overflow-wrap:anywhere]`}>{data?.dashboard.subscriptionPlan ?? "无订阅"}</div>
         </div>
-        <div className="relative rounded-2xl border p-6 bg-white border-[#e3001b] shadow-[0_8px_24px_rgba(227,0,27,0.08)]">
+        <div className="relative flex min-h-[116px] min-w-0 flex-col justify-center rounded-2xl border border-[#e3001b] bg-white p-4 shadow-[0_8px_24px_rgba(227,0,27,0.08)] sm:min-h-[132px] sm:p-6">
           {nearExpiry ? <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#e3001b] text-white text-xs px-3 py-1 rounded-full">{isDue ? "到期" : "即将到期"}</div> : null}
-          <div className="text-sm text-gray-500">剩余时间</div>
-          <div className="text-2xl font-bold text-[#e3001b] mt-2">{data?.dashboard.remainingDays ?? 0} <span className="text-sm font-normal">天</span></div>
+          <div className={metricLabelClass}>剩余时间</div>
+          <div className={`${metricValueClass} mt-2 text-[#e3001b] break-words [overflow-wrap:anywhere]`}>
+            {data?.dashboard.remainingDays ?? 0} <span className="text-sm font-normal">天</span>
+          </div>
         </div>
       </div>
 
