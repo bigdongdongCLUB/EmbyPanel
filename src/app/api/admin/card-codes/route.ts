@@ -42,6 +42,17 @@ function cycleDays(payCycle?: string) {
   }
 }
 
+function shanghaiMonthRange(now = new Date()) {
+  const shanghaiOffsetMs = 8 * 60 * 60 * 1000;
+  const shanghaiNow = new Date(now.getTime() + shanghaiOffsetMs);
+  const year = shanghaiNow.getUTCFullYear();
+  const month = shanghaiNow.getUTCMonth();
+  return {
+    start: new Date(Date.UTC(year, month, 1) - shanghaiOffsetMs),
+    end: new Date(Date.UTC(year, month + 1, 1) - shanghaiOffsetMs),
+  };
+}
+
 export async function GET(req: Request) {
   try {
     const auth = await requireAdmin();
@@ -66,6 +77,7 @@ export async function GET(req: Request) {
     };
 
     const plans = await prisma.plan.findMany({ orderBy: { createdAt: "desc" }, select: { id: true, name: true } });
+    const monthRange = shanghaiMonthRange();
 
     const cardCodeModel: any = (prisma as any).cardCode;
     if (!cardCodeModel) {
@@ -82,8 +94,8 @@ export async function GET(req: Request) {
       const totalRes = await prisma.$queryRaw<any[]>`SELECT COUNT(*)::int as c FROM "CardCode"`;
       const usedRes = await prisma.$queryRaw<any[]>`SELECT COUNT(*)::int as c FROM "CardCode" WHERE "status"='USED'`;
       const unusedRes = await prisma.$queryRaw<any[]>`SELECT COUNT(*)::int as c FROM "CardCode" WHERE "status"='UNUSED'`;
-      const balanceRes = await prisma.$queryRaw<any[]>`SELECT COUNT(*)::int as c FROM "CardCode" WHERE "type"='BALANCE'`;
-      const subRes = await prisma.$queryRaw<any[]>`SELECT COUNT(*)::int as c FROM "CardCode" WHERE "type"='SUBSCRIPTION'`;
+      const balanceMonthUsedRes = await prisma.$queryRaw<any[]>`SELECT COUNT(*)::int as c FROM "CardCode" WHERE "type"='BALANCE' AND "status"='USED' AND "usedAt" >= ${monthRange.start} AND "usedAt" < ${monthRange.end}`;
+      const subMonthUsedRes = await prisma.$queryRaw<any[]>`SELECT COUNT(*)::int as c FROM "CardCode" WHERE "type"='SUBSCRIPTION' AND "status"='USED' AND "usedAt" >= ${monthRange.start} AND "usedAt" < ${monthRange.end}`;
 
       return NextResponse.json({
         ok: true,
@@ -91,8 +103,8 @@ export async function GET(req: Request) {
           total: Number(totalRes?.[0]?.c ?? 0),
           used: Number(usedRes?.[0]?.c ?? 0),
           unused: Number(unusedRes?.[0]?.c ?? 0),
-          balanceTotal: Number(balanceRes?.[0]?.c ?? 0),
-          subTotal: Number(subRes?.[0]?.c ?? 0),
+          balanceMonthUsed: Number(balanceMonthUsedRes?.[0]?.c ?? 0),
+          subMonthUsed: Number(subMonthUsedRes?.[0]?.c ?? 0),
         },
         rows: rows.map((r) => ({
           id: r.id,
@@ -112,7 +124,7 @@ export async function GET(req: Request) {
       });
     }
 
-    const [rows, total, used, unused, balanceTotal, subTotal] = await Promise.all([
+    const [rows, total, used, unused, balanceMonthUsed, subMonthUsed] = await Promise.all([
       cardCodeModel.findMany({
         where,
         orderBy: { createdAt: "desc" },
@@ -135,11 +147,11 @@ export async function GET(req: Request) {
       cardCodeModel.count(),
       cardCodeModel.count({ where: { status: "USED" } }),
       cardCodeModel.count({ where: { status: "UNUSED" } }),
-      cardCodeModel.count({ where: { type: "BALANCE" } }),
-      cardCodeModel.count({ where: { type: "SUBSCRIPTION" } }),
+      cardCodeModel.count({ where: { type: "BALANCE", status: "USED", usedAt: { gte: monthRange.start, lt: monthRange.end } } }),
+      cardCodeModel.count({ where: { type: "SUBSCRIPTION", status: "USED", usedAt: { gte: monthRange.start, lt: monthRange.end } } }),
     ]);
 
-    return NextResponse.json({ ok: true, summary: { total, used, unused, balanceTotal, subTotal }, rows, plans });
+    return NextResponse.json({ ok: true, summary: { total, used, unused, balanceMonthUsed, subMonthUsed }, rows, plans });
   } catch (e: any) {
     return NextResponse.json({ error: "card_codes_query_failed", message: String(e?.message ?? e) }, { status: 500 });
   }
