@@ -26,6 +26,37 @@ function anomalyTypeLabel(type?: string | null) {
   return type === "CROSS_REGION_MULTI_DEVICE" ? "异地多设备" : type === "SIMULTANEOUS_MULTI_DEVICE" ? "同时多设备" : null;
 }
 
+function buildAnomalyDetail(anomaly?: { detectedAt: Date; evidenceJson: unknown } | null) {
+  if (!anomaly) return null;
+  const evidence = (anomaly.evidenceJson && typeof anomaly.evidenceJson === "object" ? anomaly.evidenceJson : {}) as any;
+  const sessions = Array.isArray(evidence.sessions)
+    ? evidence.sessions.map((session: any) => ({
+        device: String(session?.device || "").trim(),
+        client: String(session?.client || "").trim(),
+        ip: String(session?.ip || "").trim(),
+        nowPlaying: String(session?.nowPlaying || "").trim(),
+      }))
+    : [];
+  const sessionIps = sessions.length
+    ? sessions.map((session: { ip: string }) => session.ip).filter(Boolean)
+    : [];
+  const ips = Array.from(
+    new Set(
+      (Array.isArray(evidence.ips) ? evidence.ips : sessionIps)
+        .map((ip: unknown) => String(ip || "").trim())
+        .filter(Boolean)
+    )
+  );
+  const description = String(evidence.description || evidence.excerpt || "暂无说明").trim();
+
+  return {
+    ips,
+    description: description || "暂无说明",
+    sessions,
+    detectedAt: anomaly.detectedAt.toISOString(),
+  };
+}
+
 async function fetchItemCounts(baseUrl: string, apiKey: string) {
   try {
     const u = new URL(normalizeBaseUrl(baseUrl) + "/Items/Counts");
@@ -178,6 +209,9 @@ export async function GET() {
       const penaltyUnlockAt = !!link?.disabled && hasActiveAnomalyPenalty && pendingPenalty?.unlockAt
         ? String(pendingPenalty.unlockAt)
         : null;
+      const anomalyDetail = !!link?.disabled && hasActiveAnomalyPenalty
+        ? buildAnomalyDetail(recentAnomaly)
+        : null;
       const onlineNow = !!String(version || "").trim() || s.lastHealthOk === true;
       return {
         id: s.id,
@@ -187,6 +221,7 @@ export async function GET() {
         banned: !!link?.disabled,
         banTypeLabel,
         penaltyUnlockAt,
+        anomalyDetail,
         version,
         baseUrl: s.externalUrl || s.baseUrl,
         backupUrl: (s as any).backupUrl || null,

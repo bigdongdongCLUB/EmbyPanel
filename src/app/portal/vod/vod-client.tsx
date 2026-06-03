@@ -600,20 +600,25 @@ export function VodClient() {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-[#eaeaea] overflow-x-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
-        {TABS.map((tab) => (
-          <button
-            key={tab.key}
-            className={`flex items-center gap-1.5 px-4 py-3 text-[15px] whitespace-nowrap border-b-2 -mb-px rounded-t-lg transition-all ${
-              activeTab === tab.key && !searchQuery
-                ? "border-[#f3d4d8] bg-[#fff7f8] text-[#e3001b] font-bold shadow-[0_4px_12px_rgba(227,0,27,0.10)]"
-                : "border-transparent text-[#888] hover:text-[#222] hover:bg-[#fafafa]"
-            }`}
-            onClick={() => { setActiveTab(tab.key); clearSearch(); setCurrentPage(1); }}
-          >
-            <span>{tab.icon}</span>{tab.label}
-          </button>
-        ))}
+      <div
+        className="overflow-x-auto overflow-y-hidden overscroll-x-contain border-b border-[#eaeaea] pb-1 [scrollbar-width:thin] [scrollbar-color:#d1d5db_transparent]"
+        style={{ touchAction: "pan-x" }}
+      >
+        <div className="flex min-w-max">
+          {TABS.map((tab) => (
+            <button
+              key={tab.key}
+              className={`flex items-center gap-1.5 px-4 py-3 text-[15px] whitespace-nowrap border-b-2 -mb-px rounded-t-lg transition-all ${
+                activeTab === tab.key && !searchQuery
+                  ? "border-[#f3d4d8] bg-[#fff7f8] text-[#e3001b] font-bold shadow-[0_4px_12px_rgba(227,0,27,0.10)]"
+                  : "border-transparent text-[#888] hover:text-[#222] hover:bg-[#fafafa]"
+              }`}
+              onClick={() => { setActiveTab(tab.key); clearSearch(); setCurrentPage(1); }}
+            >
+              <span>{tab.icon}</span>{tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Grid */}
