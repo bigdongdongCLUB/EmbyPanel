@@ -222,10 +222,11 @@ export function PortalEmbyServicesClient() {
               {canShowAnomalyDetail ? (
                 <button
                   type="button"
-                  className="absolute -top-3 left-1/2 min-w-max -translate-x-1/2 whitespace-nowrap rounded-full bg-[#e3001b] px-4 py-1 text-xs font-bold tracking-wide text-white shadow-sm transition hover:bg-[#c90018] focus:outline-none focus:ring-2 focus:ring-[#e3001b]/25"
+                  className="absolute -top-3 left-1/2 inline-flex min-w-max -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-full bg-[#e3001b] px-4 py-1 text-xs font-bold tracking-wide text-white shadow-sm transition hover:bg-[#c90018] focus:outline-none focus:ring-2 focus:ring-[#e3001b]/25"
                   onClick={() => setAnomalyDialog({ serverName: s.name, detail: s.anomalyDetail! })}
                 >
-                  状态：{stateText}
+                  <span>状态：{stateText}</span>
+                  <UiImage src="/icons/exclamation.svg" alt="点击查看详情" className="h-3.5 w-3.5 shrink-0 brightness-0 invert" />
                 </button>
               ) : (
                 <div className="absolute -top-3 left-1/2 min-w-max -translate-x-1/2 whitespace-nowrap bg-[#e3001b] text-white px-4 py-1 rounded-full text-xs font-bold tracking-wide">状态：{stateText}</div>
