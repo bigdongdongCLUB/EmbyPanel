@@ -5,14 +5,17 @@ import { embyFetchUsers } from "@/lib/emby";
 import { EXPIRING_SOON_DAYS, isSubscriptionExpiringSoon } from "@/lib/subscription-status";
 
 const DASHBOARD_ACTIVE30D_CACHE_KEY = "admin_dashboard_active30d_snapshot";
-const DASHBOARD_USER_TREND_CACHE_KEY = "admin_dashboard_user_trend_30d_snapshot";
+// v4: both bars use the same Emby LastActivityDate snapshot family.
+const DASHBOARD_USER_TREND_CACHE_KEY = "admin_dashboard_user_trend_30d_snapshot_v4";
 const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000;
 
 export type UserTrendPoint = {
   date: string;
   label: string;
+  // Distinct users active on this completed day.
   activeUsers: number;
-  totalUsers: number;
+  // Same source as the top "all Emby servers active in 30 days" snapshot.
+  active30dUsers: number;
 };
 
 export type UserTrendSeries = {
@@ -26,13 +29,14 @@ export type DashboardStats = {
   embyActive30dTotal: number;
   expiringSoonCount: number;
   expiringSoonDays: number;
-  perServer: Array<{ id: string; name: string; active30d: number; totalUsers: number; ok: boolean; error?: string }>;
+  perServer: Array<{ id: string; name: string; active30d: number; dailyActive: number; totalUsers: number; ok: boolean; error?: string }>;
   activeSnapshotAt: string | null;
   userTrend30d: UserTrendSeries[];
 };
 
 type ActiveSnapshot = {
   embyActive30dTotal: number;
+  embyDailyActiveTotal: number;
   perServer: DashboardStats["perServer"];
   snapshotAt: string;
 };
@@ -45,6 +49,8 @@ type UserTrendSnapshot = {
 export async function buildActive30dSnapshot(): Promise<ActiveSnapshot> {
   const now = new Date();
   const since = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const todayStart = startOfShanghaiDay(now);
+  const latestCompleteDayStart = addDays(todayStart, -1);
   const servers = await prisma.embyServer.findMany({
     where: { enabled: true },
     orderBy: { createdAt: "asc" },
@@ -60,6 +66,7 @@ export async function buildActive30dSnapshot(): Promise<ActiveSnapshot> {
   });
 
   let embyActive30dTotal = 0;
+  let embyDailyActiveTotal = 0;
   const perServer: DashboardStats["perServer"] = [];
 
   for (const s of servers) {
@@ -76,16 +83,25 @@ export async function buildActive30dSnapshot(): Promise<ActiveSnapshot> {
         if (Number.isNaN(d.getTime())) return false;
         return d >= since;
       }).length;
+      const dailyActive = res.users.filter((u) => {
+        const last = u.LastActivityDate;
+        if (!last) return false;
+        const d = new Date(last);
+        if (Number.isNaN(d.getTime())) return false;
+        return d >= latestCompleteDayStart && d < todayStart;
+      }).length;
 
       embyActive30dTotal += active30d;
-      perServer.push({ id: s.id, name: s.name, active30d, totalUsers, ok: true });
+      embyDailyActiveTotal += dailyActive;
+      perServer.push({ id: s.id, name: s.name, active30d, dailyActive, totalUsers, ok: true });
     } catch (e: unknown) {
-      perServer.push({ id: s.id, name: s.name, active30d: 0, totalUsers: 0, ok: false, error: e instanceof Error ? e.message : String(e) });
+      perServer.push({ id: s.id, name: s.name, active30d: 0, dailyActive: 0, totalUsers: 0, ok: false, error: e instanceof Error ? e.message : String(e) });
     }
   }
 
   return {
     embyActive30dTotal,
+    embyDailyActiveTotal,
     perServer,
     snapshotAt: now.toISOString(),
   };
@@ -95,10 +111,12 @@ export async function refreshActive30dSnapshot() {
   const snap = await buildActive30dSnapshot();
   const valueJson: Prisma.InputJsonObject = {
     embyActive30dTotal: snap.embyActive30dTotal,
+    embyDailyActiveTotal: snap.embyDailyActiveTotal,
     perServer: snap.perServer.map((server) => ({
       id: server.id,
       name: server.name,
       active30d: server.active30d,
+      dailyActive: server.dailyActive,
       totalUsers: server.totalUsers,
       ok: server.ok,
       ...(server.error ? { error: server.error } : {}),
@@ -110,7 +128,7 @@ export async function refreshActive30dSnapshot() {
     create: { key: DASHBOARD_ACTIVE30D_CACHE_KEY, valueJson },
     update: { valueJson },
   });
-  await refreshUserTrend30dSnapshot();
+  await refreshUserTrend30dSnapshot(snap);
   return snap;
 }
 
@@ -124,16 +142,20 @@ async function readActive30dSnapshot(): Promise<ActiveSnapshot | null> {
   if (!isRecord(v)) return null;
   if (!Array.isArray(v.perServer)) return null;
   if (typeof v.embyActive30dTotal !== "number") return null;
+  if (typeof v.embyDailyActiveTotal !== "number") return null;
+  if (!v.perServer.every((server) => isRecord(server) && "dailyActive" in server)) return null;
   const perServer = v.perServer.filter(isRecord).map((server) => ({
     id: typeof server.id === "string" ? server.id : "",
     name: typeof server.name === "string" ? server.name : "",
     active30d: typeof server.active30d === "number" ? server.active30d : 0,
+    dailyActive: typeof server.dailyActive === "number" ? server.dailyActive : 0,
     totalUsers: typeof server.totalUsers === "number" ? server.totalUsers : 0,
     ok: Boolean(server.ok),
     ...(typeof server.error === "string" ? { error: server.error } : {}),
   }));
   return {
     embyActive30dTotal: Number(v.embyActive30dTotal || 0),
+    embyDailyActiveTotal: v.embyDailyActiveTotal,
     perServer,
     snapshotAt: typeof v.snapshotAt === "string" ? v.snapshotAt : null,
   } as ActiveSnapshot;
@@ -147,7 +169,7 @@ function serializeUserTrendSeries(series: UserTrendSeries[]): Prisma.InputJsonAr
       date: point.date,
       label: point.label,
       activeUsers: point.activeUsers,
-      totalUsers: point.totalUsers,
+      active30dUsers: point.active30dUsers,
     })),
   }));
 }
@@ -160,7 +182,7 @@ function parseUserTrendSeries(v: unknown): UserTrendSeries[] {
           date: typeof point.date === "string" ? point.date : "",
           label: typeof point.label === "string" ? point.label : "",
           activeUsers: typeof point.activeUsers === "number" ? point.activeUsers : 0,
-          totalUsers: typeof point.totalUsers === "number" ? point.totalUsers : 0,
+          active30dUsers: typeof point.active30dUsers === "number" ? point.active30dUsers : 0,
         }))
       : [];
     return {
@@ -171,10 +193,23 @@ function parseUserTrendSeries(v: unknown): UserTrendSeries[] {
   });
 }
 
+// Old trend snapshots store different red-bar fields. Require the current field
+// so a stale row cannot be served with the red bar silently 0 or wrong semantics.
+function snapshotHasActive30dField(v: unknown): boolean {
+  if (!isRecord(v) || !Array.isArray(v.series)) return false;
+  return v.series.some(
+    (item) =>
+      isRecord(item) &&
+      Array.isArray(item.data) &&
+      item.data.some((point) => isRecord(point) && "active30dUsers" in point)
+  );
+}
+
 async function readUserTrend30dSnapshot(): Promise<UserTrendSnapshot | null> {
   const row = await prisma.appSetting.findUnique({ where: { key: DASHBOARD_USER_TREND_CACHE_KEY } });
   const v: unknown = row?.valueJson;
   if (!isRecord(v)) return null;
+  if (!snapshotHasActive30dField(v)) return null;
   const series = parseUserTrendSeries(v.series);
   if (!series.length) return null;
   const expectedDays = getCompletedTrendDays();
@@ -212,12 +247,6 @@ function formatShanghaiShortDate(input: Date) {
   return `${shanghai.getUTCMonth() + 1}/${shanghai.getUTCDate()}`;
 }
 
-function createActiveMap(days: Array<{ date: string }>) {
-  const map = new Map<string, Set<string>>();
-  for (const day of days) map.set(day.date, new Set());
-  return map;
-}
-
 function getCompletedTrendDays() {
   const todayStart = startOfShanghaiDay(new Date());
   const latestCompleteDayStart = addDays(todayStart, -1);
@@ -232,95 +261,29 @@ function getCompletedTrendDays() {
   });
 }
 
-async function getUserTrend30d(): Promise<UserTrendSeries[]> {
-  const days = getCompletedTrendDays();
-  const firstStart = days[0].start;
-  const lastEnd = days[days.length - 1].end;
+async function getStoredUserTrendSeries(): Promise<UserTrendSeries[]> {
+  const row = await prisma.appSetting.findUnique({ where: { key: DASHBOARD_USER_TREND_CACHE_KEY } });
+  const v: unknown = row?.valueJson;
+  if (!isRecord(v) || !snapshotHasActive30dField(v)) return [];
+  return parseUserTrendSeries(v.series);
+}
 
-  const [users, servers, links, playbackEvents] = await Promise.all([
-    prisma.user.findMany({
-      where: { createdAt: { lt: lastEnd } },
-      select: { id: true, username: true, createdAt: true },
-      orderBy: { createdAt: "asc" },
-    }),
-    prisma.embyServer.findMany({
-      where: { enabled: true },
-      orderBy: { createdAt: "asc" },
-      select: { id: true, name: true },
-    }),
-    prisma.embyUserLink.findMany({
-      select: {
-        userId: true,
-        embyServerId: true,
-        embyUserId: true,
-        createdAt: true,
-        user: { select: { username: true } },
-      },
-      orderBy: { createdAt: "asc" },
-    }),
-    prisma.playbackEvent.findMany({
-      where: { occurredAt: { gte: firstStart, lt: lastEnd } },
-      select: { embyServerId: true, embyUserId: true, userName: true, occurredAt: true },
-    }),
-  ]);
-
-  const userIdByServerEmbyId = new Map<string, string>();
-  const userIdByUsername = new Map<string, string>();
-  const linksByServer = new Map<string, typeof links>();
-  for (const user of users) userIdByUsername.set(user.username.toLowerCase(), user.id);
-  for (const link of links) {
-    userIdByServerEmbyId.set(`${link.embyServerId}:${link.embyUserId}`, link.userId);
-    userIdByUsername.set(link.user.username.toLowerCase(), link.userId);
-    const current = linksByServer.get(link.embyServerId) ?? [];
-    current.push(link);
-    linksByServer.set(link.embyServerId, current);
-  }
-
-  const allActiveByDate = createActiveMap(days);
-  const activeByServerDate = new Map<string, Map<string, Set<string>>>();
-  for (const server of servers) activeByServerDate.set(server.id, createActiveMap(days));
-
-  for (const event of playbackEvents) {
-    const userId =
-      (event.embyUserId ? userIdByServerEmbyId.get(`${event.embyServerId}:${event.embyUserId}`) : null) ??
-      (event.userName ? userIdByUsername.get(event.userName.toLowerCase()) : null);
-    if (!userId) continue;
-    const date = formatShanghaiDateKey(event.occurredAt);
-    allActiveByDate.get(date)?.add(userId);
-    activeByServerDate.get(event.embyServerId)?.get(date)?.add(userId);
-  }
-
-  let createdIndex = 0;
-  const allData = days.map((day) => {
-    while (createdIndex < users.length && users[createdIndex].createdAt < day.end) {
-      createdIndex += 1;
-    }
-    return {
-      date: day.date,
-      label: day.label,
-      activeUsers: allActiveByDate.get(day.date)?.size ?? 0,
-      totalUsers: createdIndex,
-    };
-  });
+function createSnapshotTrendSkeleton(days: ReturnType<typeof getCompletedTrendDays>, active: ActiveSnapshot): UserTrendSeries[] {
+  const allData = days.map((day) => ({
+    date: day.date,
+    label: day.label,
+    activeUsers: 0,
+    active30dUsers: 0,
+  }));
 
   const series: UserTrendSeries[] = [{ id: "all", name: "全部服务器", data: allData }];
-  for (const server of servers) {
-    const serverLinks = linksByServer.get(server.id) ?? [];
-    const serverActiveByDate = activeByServerDate.get(server.id) ?? createActiveMap(days);
-    let linkIndex = 0;
-    const seenUserIds = new Set<string>();
-    const data = days.map((day) => {
-      while (linkIndex < serverLinks.length && serverLinks[linkIndex].createdAt < day.end) {
-        seenUserIds.add(serverLinks[linkIndex].userId);
-        linkIndex += 1;
-      }
-      return {
-        date: day.date,
-        label: day.label,
-        activeUsers: serverActiveByDate.get(day.date)?.size ?? 0,
-        totalUsers: seenUserIds.size,
-      };
-    });
+  for (const server of active.perServer) {
+    const data = days.map((day) => ({
+      date: day.date,
+      label: day.label,
+      activeUsers: 0,
+      active30dUsers: 0,
+    }));
     series.push({ id: server.id, name: server.name, data });
   }
 
@@ -328,8 +291,44 @@ async function getUserTrend30d(): Promise<UserTrendSeries[]> {
 }
 
 
-export async function refreshUserTrend30dSnapshot(): Promise<UserTrendSnapshot> {
-  const series = await getUserTrend30d();
+export async function refreshUserTrend30dSnapshot(activeSnapshot?: ActiveSnapshot): Promise<UserTrendSnapshot> {
+  const days = getCompletedTrendDays();
+  const latestDay = days[days.length - 1];
+  const [previousSeries, active] = await Promise.all([
+    getStoredUserTrendSeries(),
+    activeSnapshot ? Promise.resolve(activeSnapshot) : buildActive30dSnapshot(),
+  ]);
+  const skeleton = createSnapshotTrendSkeleton(days, active);
+  const previousDailyBySeriesAndDate = new Map<string, number>();
+  const previousActive30dBySeriesAndDate = new Map<string, number>();
+  for (const series of previousSeries) {
+    for (const point of series.data) {
+      previousDailyBySeriesAndDate.set(`${series.id}:${point.date}`, point.activeUsers);
+      previousActive30dBySeriesAndDate.set(`${series.id}:${point.date}`, point.active30dUsers);
+    }
+  }
+  const dailyActiveBySeriesId = new Map<string, number>([
+    ["all", active.embyDailyActiveTotal],
+    ...active.perServer.map((server) => [server.id, server.ok ? server.dailyActive : 0] as const),
+  ]);
+  const active30dBySeriesId = new Map<string, number>([
+    ["all", active.embyActive30dTotal],
+    ...active.perServer.map((server) => [server.id, server.ok ? server.active30d : 0] as const),
+  ]);
+  const series = skeleton.map((item) => ({
+    ...item,
+    data: item.data.map((point) => ({
+      ...point,
+      activeUsers:
+        point.date === latestDay.date
+          ? dailyActiveBySeriesId.get(item.id) ?? 0
+          : previousDailyBySeriesAndDate.get(`${item.id}:${point.date}`) ?? 0,
+      active30dUsers:
+        point.date === latestDay.date
+          ? active30dBySeriesId.get(item.id) ?? 0
+          : previousActive30dBySeriesAndDate.get(`${item.id}:${point.date}`) ?? 0,
+    })),
+  }));
   const snap: UserTrendSnapshot = { series, snapshotAt: new Date().toISOString() };
   const valueJson: Prisma.InputJsonObject = {
     series: serializeUserTrendSeries(series),
@@ -365,7 +364,7 @@ export async function getDashboardStats(expiringSoonDays = EXPIRING_SOON_DAYS): 
   const expiringSoonCount = expiringUsers.filter((u) => isSubscriptionExpiringSoon(u.subscriptions[0]?.endAt, now, expiringSoonDays)).length;
 
   const active = cached ?? (await refreshActive30dSnapshot());
-  const userTrend = userTrendCached ?? (await readUserTrend30dSnapshot()) ?? (await refreshUserTrend30dSnapshot());
+  const userTrend = userTrendCached ?? (await readUserTrend30dSnapshot()) ?? (await refreshUserTrend30dSnapshot(active));
 
   return {
     panelUserCount,
