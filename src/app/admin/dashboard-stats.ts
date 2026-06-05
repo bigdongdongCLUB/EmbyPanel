@@ -38,7 +38,7 @@ type ActiveSnapshot = {
   embyActive30dTotal: number;
   embyDailyActiveTotal: number;
   perServer: DashboardStats["perServer"];
-  snapshotAt: string;
+  snapshotAt: string | null;
 };
 
 type UserTrendSnapshot = {
@@ -261,6 +261,13 @@ function getCompletedTrendDays() {
   });
 }
 
+function createEmptyUserTrendSnapshot(): UserTrendSnapshot {
+  return {
+    series: [],
+    snapshotAt: "",
+  };
+}
+
 async function getStoredUserTrendSeries(): Promise<UserTrendSeries[]> {
   const row = await prisma.appSetting.findUnique({ where: { key: DASHBOARD_USER_TREND_CACHE_KEY } });
   const v: unknown = row?.valueJson;
@@ -363,8 +370,16 @@ export async function getDashboardStats(expiringSoonDays = EXPIRING_SOON_DAYS): 
   ]);
   const expiringSoonCount = expiringUsers.filter((u) => isSubscriptionExpiringSoon(u.subscriptions[0]?.endAt, now, expiringSoonDays)).length;
 
-  const active = cached ?? (await refreshActive30dSnapshot());
-  const userTrend = userTrendCached ?? (await readUserTrend30dSnapshot()) ?? (await refreshUserTrend30dSnapshot(active));
+  // Dashboard reads must not rebuild yesterday's LastActivityDate snapshot on page load.
+  // If a cache is missing or stale, wait for the 01:00 scheduled job (or explicit job run)
+  // so daily active and 30-day active stay on the same snapshot-time semantics.
+  const active = cached ?? {
+    embyActive30dTotal: 0,
+    embyDailyActiveTotal: 0,
+    perServer: [],
+    snapshotAt: null,
+  };
+  const userTrend = userTrendCached ?? createEmptyUserTrendSnapshot();
 
   return {
     panelUserCount,
