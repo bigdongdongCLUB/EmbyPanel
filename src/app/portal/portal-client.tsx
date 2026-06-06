@@ -37,6 +37,7 @@ export function PortalClient() {
   const [redeeming, setRedeeming] = useState(false);
   const [noticeIndex, setNoticeIndex] = useState(0);
 
+  const initialLoading = loading && data === null;
   const notices = useMemo(() => data?.announcements ?? [], [data]);
   const currentNoticeHtml = useMemo(() => renderMarkdownLite(notices[noticeIndex]?.content ?? "暂无公告"), [notices, noticeIndex]);
 
@@ -85,6 +86,15 @@ export function PortalClient() {
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [redeeming]);
 
+  useEffect(() => {
+    if (!initialLoading) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [initialLoading]);
+
   const remainingDays = data?.dashboard.remainingDays ?? 0;
   const isExpired = !!data?.dashboard.subscriptionEndAt && new Date(data.dashboard.subscriptionEndAt).getTime() < Date.now();
   const isDue = remainingDays <= 0;
@@ -95,6 +105,24 @@ export function PortalClient() {
 
   return (
     <div className="space-y-5">
+      {initialLoading ? (
+        <div
+          className="fixed inset-0 z-[100] flex touch-none select-none items-center justify-center bg-white/35 px-4 backdrop-blur-md"
+          role="dialog"
+          aria-modal="true"
+          aria-label="数据加载中"
+        >
+          <div className="w-full max-w-[280px] rounded-2xl border border-white/80 bg-white/95 px-7 py-8 text-center shadow-[0_24px_70px_rgba(15,23,42,0.22)]">
+            <div className="relative mx-auto h-12 w-12">
+              <div className="absolute inset-0 rounded-full border-4 border-[#f2d8dc]" />
+              <div className="absolute inset-0 animate-spin rounded-full border-4 border-transparent border-t-[#e3001b]" />
+            </div>
+            <div className="mt-5 text-lg font-bold text-[#222]">数据加载中</div>
+            <div className="mt-2 text-sm text-[#888]">正在获取您的账户与订阅信息，请稍候。</div>
+          </div>
+        </div>
+      ) : null}
+
       {redeeming ? (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/45 px-4">
           <div className="w-full max-w-xs rounded-2xl border border-gray-100 bg-white p-6 text-center shadow-xl">
@@ -106,7 +134,7 @@ export function PortalClient() {
       ) : null}
 
       {error ? <div className="text-sm text-red-600">{error}</div> : null}
-      {loading ? <div className="text-sm text-gray-500">加载中…</div> : null}
+      {loading && data ? <div className="text-sm text-gray-500">加载中…</div> : null}
 
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-5">
         <div className={metricCardClass}>
