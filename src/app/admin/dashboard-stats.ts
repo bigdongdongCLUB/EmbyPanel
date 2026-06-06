@@ -212,13 +212,6 @@ async function readUserTrend30dSnapshot(): Promise<UserTrendSnapshot | null> {
   if (!snapshotHasActive30dField(v)) return null;
   const series = parseUserTrendSeries(v.series);
   if (!series.length) return null;
-  const expectedDays = getCompletedTrendDays();
-  const expectedFirst = expectedDays[0]?.date;
-  const expectedLast = expectedDays[expectedDays.length - 1]?.date;
-  const allSeries = series.find((item) => item.id === "all") ?? series[0];
-  const first = allSeries?.data[0]?.date;
-  const last = allSeries?.data[allSeries.data.length - 1]?.date;
-  if (first !== expectedFirst || last !== expectedLast) return null;
   return {
     series,
     snapshotAt: typeof v.snapshotAt === "string" ? v.snapshotAt : "",
@@ -371,7 +364,7 @@ export async function getDashboardStats(expiringSoonDays = EXPIRING_SOON_DAYS): 
   const expiringSoonCount = expiringUsers.filter((u) => isSubscriptionExpiringSoon(u.subscriptions[0]?.endAt, now, expiringSoonDays)).length;
 
   // Dashboard reads must not rebuild yesterday's LastActivityDate snapshot on page load.
-  // If a cache is missing or stale, wait for the 01:00 scheduled job (or explicit job run)
+  // If a cache is missing, wait for the 00:00 scheduled job (or explicit job run)
   // so daily active and 30-day active stay on the same snapshot-time semantics.
   const active = cached ?? {
     embyActive30dTotal: 0,

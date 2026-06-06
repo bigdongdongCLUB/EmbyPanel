@@ -96,7 +96,7 @@ async function ensureRepeatable(queue) {
     { kind: "dashboard-active30d" },
     {
       jobId: "repeat:dashboard-active30d",
-      repeat: { pattern: "0 1 * * *", tz: "Asia/Shanghai" },
+      repeat: { pattern: "0 0 * * *", tz: "Asia/Shanghai" },
       removeOnComplete: true,
       removeOnFail: 1000,
     }
@@ -220,7 +220,19 @@ async function main() {
     console.error("[worker] job failed", { jobId: job?.id, err: String(err?.message ?? err) });
   });
 
-  // Keep process alive
+  const keepAlive = setInterval(() => {}, 60 * 60 * 1000);
+  const shutdown = async (signal) => {
+    console.log(`[worker] shutting down: ${signal}`);
+    clearInterval(keepAlive);
+    await worker.close();
+    await queue.close();
+    await connection.quit();
+    process.exit(0);
+  };
+  process.once("SIGINT", () => void shutdown("SIGINT"));
+  process.once("SIGTERM", () => void shutdown("SIGTERM"));
+
+  // Keep the standalone test worker alive even when Redis sockets are idle.
   console.log("[worker] started");
 }
 
