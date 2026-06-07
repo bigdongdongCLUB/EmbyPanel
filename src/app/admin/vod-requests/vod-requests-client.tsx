@@ -103,6 +103,30 @@ function userLabel(user: { username: string; email: string | null }) {
   return user.username || user.email || "-";
 }
 
+async function copyTextSafe(text: string) {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {}
+
+  try {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.style.position = "fixed";
+    textarea.style.left = "-9999px";
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    const copied = document.execCommand("copy");
+    document.body.removeChild(textarea);
+    return copied;
+  } catch {
+    return false;
+  }
+}
+
 export function VodRequestsAdminClient() {
   const [q, setQ] = useState("");
   const [bizStatus, setBizStatus] = useState("");
@@ -120,7 +144,9 @@ export function VodRequestsAdminClient() {
   const [noteTooltipId, setNoteTooltipId] = useState<string | null>(null);
   const [noteDialog, setNoteDialog] = useState<{ open: boolean; text: string }>({ open: false, text: "" });
   const [openMoreId, setOpenMoreId] = useState<string | null>(null);
+  const [copiedTitleId, setCopiedTitleId] = useState<string | null>(null);
   const saveTimerRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const copiedTitleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   async function refresh(nextPage = page, nextPageSize = pageSize) {
     setLoading(true);
@@ -169,6 +195,7 @@ export function VodRequestsAdminClient() {
       for (const k of Object.keys(timers)) {
         clearTimeout(timers[k]);
       }
+      if (copiedTitleTimerRef.current) clearTimeout(copiedTitleTimerRef.current);
     };
   }, []);
 
@@ -224,6 +251,17 @@ export function VodRequestsAdminClient() {
         await patchRow(id, { adminNote: value.slice(0, 40) });
       } catch {}
     }, 300);
+  }
+
+  async function copyMediaTitle(row: Pick<Row, "id" | "title">) {
+    const copied = await copyTextSafe(row.title);
+    if (!copied) {
+      alert("复制失败，请手动复制");
+      return;
+    }
+    setCopiedTitleId(row.id);
+    if (copiedTitleTimerRef.current) clearTimeout(copiedTitleTimerRef.current);
+    copiedTitleTimerRef.current = setTimeout(() => setCopiedTitleId(null), 1600);
   }
 
   function getActionMenuPosition(button: HTMLButtonElement, placementOverride?: "up" | "down") {
@@ -414,6 +452,24 @@ export function VodRequestsAdminClient() {
                           ) : (
                             <div className="min-w-0 truncate font-medium text-gray-800">{r.title}</div>
                           )}
+                          <button
+                            type="button"
+                            className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded transition ${
+                              copiedTitleId === r.id ? "bg-green-50 text-green-600" : "text-gray-400 hover:bg-[#f4f5f7] hover:text-[#e3001b]"
+                            }`}
+                            onClick={() => void copyMediaTitle(r)}
+                            title={copiedTitleId === r.id ? "已复制媒体名称" : "复制媒体名称"}
+                            aria-label={copiedTitleId === r.id ? "已复制媒体名称" : "复制媒体名称"}
+                          >
+                            {copiedTitleId === r.id ? (
+                              <span className="text-xs font-bold">✓</span>
+                            ) : (
+                              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-none stroke-current" aria-hidden="true">
+                                <rect x="8" y="8" width="11" height="11" rx="2" strokeWidth="1.8" />
+                                <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" strokeWidth="1.8" strokeLinecap="round" />
+                              </svg>
+                            )}
+                          </button>
                         </div>
                         <div className="text-xs text-gray-500 truncate">{r.titleOriginal || "-"}</div>
                         <div className="flex items-center gap-1 mt-1">
