@@ -12,6 +12,10 @@ function EyeIcon({ off }: { off?: boolean }) {
   return <UiImage src={off ? "/icons/invisible.svg" : "/icons/visible.svg"} alt={off ? "隐藏密码" : "显示密码"} className="h-4 w-4 opacity-70" />;
 }
 
+function isEmailLike(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
 export default function LoginPage() {
   const [mode, setMode] = useState<Mode>("login");
 
@@ -136,12 +140,17 @@ export default function LoginPage() {
   async function doLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoginError(null);
+    const fd = new FormData(e.currentTarget);
+    const u = String(fd.get("username") || loginUsername || "").trim();
+    const p = String(fd.get("password") || loginPassword || "");
+
+    if (isEmailLike(u)) {
+      setLoginError("仅支持用户名登录");
+      return;
+    }
+
     setLoginLoading(true);
     try {
-      const fd = new FormData(e.currentTarget);
-      const u = String(fd.get("username") || loginUsername || "").trim();
-      const p = String(fd.get("password") || loginPassword || "");
-
       const res = await signIn("credentials", {
         username: u,
         password: p,
@@ -256,7 +265,10 @@ export default function LoginPage() {
                 className="w-full text-sm outline-none"
                 placeholder="用户名"
                 value={loginUsername}
-                onChange={(e) => setLoginUsername(e.target.value)}
+                onChange={(e) => {
+                  setLoginUsername(e.target.value);
+                  if (loginError) setLoginError(null);
+                }}
                 autoComplete="username"
                 required
               />
