@@ -40,9 +40,11 @@ export function AdminSidebarClient({
 }) {
   return (
     <aside className={(collapsed ? "w-16" : "w-60") + " fixed inset-y-0 left-0 bg-white text-gray-700 border-r border-gray-200 flex flex-col z-30 " + (className || "")}>
-      <div className="h-16 flex items-center px-5 border-b border-gray-200">
-        <Link href="/admin" className="flex items-center gap-3 min-w-0">
-          <UiImage src={siteLogoDataUrl || "/logo.png"} alt="logo" className="h-8 w-8 rounded-full object-cover shrink-0" />
+      <div className={`h-16 flex items-center border-b border-gray-200 ${collapsed ? "justify-center px-0" : "px-5"}`}>
+        <Link href="/admin" className={`flex min-w-0 items-center ${collapsed ? "justify-center" : "gap-3"}`}>
+          <span className="flex h-8 w-8 aspect-square shrink-0 items-center justify-center overflow-hidden rounded-full">
+            <UiImage src={siteLogoDataUrl || "/logo.png"} alt="logo" className="h-full w-full object-cover" />
+          </span>
           {!collapsed ? <span className="font-semibold text-[18px] tracking-wide leading-none text-[#111] truncate">{siteName || "EmbyPanel"}</span> : null}
         </Link>
       </div>
