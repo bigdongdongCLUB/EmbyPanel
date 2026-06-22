@@ -1,19 +1,5 @@
 import { normalizeBaseUrl } from "@/lib/emby";
 
-async function tryRequest(reqs: Array<() => Promise<Response>>) {
-  let last: any = null;
-  for (const fn of reqs) {
-    try {
-      const res = await fn();
-      if (res.ok) return res;
-      last = res;
-    } catch (e) {
-      last = e;
-    }
-  }
-  throw last;
-}
-
 export async function embyFetchUserPolicy(baseUrl: string, apiKey: string, embyUserId: string) {
   // Some Emby deployments do not support GET /Users/{id}/Policy (404),
   // but the policy is available on GET /Users/{id} as a field.
@@ -52,21 +38,19 @@ export async function embySetUserPolicy(baseUrl: string, apiKey: string, embyUse
   const url = new URL(normalizeBaseUrl(baseUrl) + `/Users/${encodeURIComponent(embyUserId)}/Policy`);
   url.searchParams.set("api_key", apiKey);
 
-  const res = await tryRequest([
-    () =>
-      fetch(url.toString(), {
-        method: "POST",
-        headers: { "content-type": "application/json", Accept: "application/json" },
-        body: JSON.stringify(policy ?? {}),
-      }),
-  ]);
-
-  if (!res.ok) {
+  try {
+    const res = await fetch(url.toString(), {
+      method: "POST",
+      headers: { "content-type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(policy ?? {}),
+    });
     const body = await res.text().catch(() => "");
-    return { ok: false as const, status: res.status, body };
+    if (!res.ok) return { ok: false as const, status: res.status, body };
+    return { ok: true as const, status: res.status };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { ok: false as const, status: 0, body: message || "fetch_failed" };
   }
-
-  return { ok: true as const, status: res.status };
 }
 
 export async function embyClonePolicyFromTemplate(baseUrl: string, apiKey: string, templateEmbyUserId: string, targetEmbyUserId: string) {
@@ -100,4 +84,48 @@ export async function embyClearSimultaneousStreamLimit(baseUrl: string, apiKey: 
   nextPolicy.SimultaneousStreamLimit = 0;
 
   return embySetUserPolicy(baseUrl, apiKey, embyUserId, nextPolicy);
+}
+
+export async function embySetMediaPlaybackEnabled(baseUrl: string, apiKey: string, embyUserId: string, enabled: boolean) {
+  const cur = await embyFetchUserPolicy(baseUrl, apiKey, embyUserId);
+  if (!cur.ok) return cur;
+
+  const currentPolicy =
+    typeof cur.policy === "object" && cur.policy && !Array.isArray(cur.policy)
+      ? (cur.policy as Record<string, unknown>)
+      : {};
+  // Emby treats an omitted EnableMediaPlayback value as enabled. Save that
+  // effective value so a temporary penalty can restore the original policy.
+  const previousEnableMediaPlayback =
+    typeof currentPolicy.EnableMediaPlayback === "boolean" ? currentPolicy.EnableMediaPlayback : true;
+  const nextPolicy: Record<string, unknown> = { ...currentPolicy, EnableMediaPlayback: enabled };
+  const result = await embySetUserPolicy(baseUrl, apiKey, embyUserId, nextPolicy);
+
+  return { ...result, previousEnableMediaPlayback };
+}
+
+export async function embySetAccountPlaybackAccess(
+  baseUrl: string,
+  apiKey: string,
+  embyUserId: string,
+  options: { disabled: boolean; mediaPlaybackEnabled: boolean }
+) {
+  const cur = await embyFetchUserPolicy(baseUrl, apiKey, embyUserId);
+  if (!cur.ok) return cur;
+
+  const currentPolicy =
+    typeof cur.policy === "object" && cur.policy && !Array.isArray(cur.policy)
+      ? (cur.policy as Record<string, unknown>)
+      : {};
+  const previousIsDisabled = typeof currentPolicy.IsDisabled === "boolean" ? currentPolicy.IsDisabled : false;
+  const previousEnableMediaPlayback =
+    typeof currentPolicy.EnableMediaPlayback === "boolean" ? currentPolicy.EnableMediaPlayback : true;
+  const nextPolicy: Record<string, unknown> = {
+    ...currentPolicy,
+    IsDisabled: options.disabled,
+    EnableMediaPlayback: options.mediaPlaybackEnabled,
+  };
+  const result = await embySetUserPolicy(baseUrl, apiKey, embyUserId, nextPolicy);
+
+  return { ...result, previousIsDisabled, previousEnableMediaPlayback };
 }

@@ -5,8 +5,8 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
 import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
-import { embyFetchSessions, embyLogoutSession, embyRevokeAllUserTokens, embyStopSessionPlayback } from "@/lib/emby-sessions";
-import { embySetUserDisabled } from "@/lib/emby-provision";
+import { embyFetchSessions, embyStopSessionPlayback } from "@/lib/emby-sessions";
+import { embySetAccountPlaybackAccess } from "@/lib/emby-user-policy";
 
 const PENALTY_STATE_KEY = "anomaly_penalty_state";
 const PENALTY_RECORDS_KEY = "anomaly_penalty_records";
@@ -174,7 +174,9 @@ export async function POST(req: Request) {
     let penaltyRecords = await loadPenaltyRecords();
 
     const pendingPenaltyKeys = new Set(
-      penaltyRecords.filter((r) => r && r.status === "PENDING").map((r) => stateKey(String(r.embyServerId ?? ""), String(r.userId ?? "")))
+      penaltyRecords
+        .filter((r) => r && ["PENDING", "FAILED_UNBAN"].includes(String(r.status ?? "")))
+        .map((r) => stateKey(String(r.embyServerId ?? ""), String(r.userId ?? "")))
     );
 
     let warnings = 0;
@@ -318,10 +320,13 @@ export async function POST(req: Request) {
           const penaltyMinutes = penaltyConfig.durationMinutes * penaltyMultiplier;
           const unlockAt = new Date(now.getTime() + penaltyMinutes * 60 * 1000);
           const recId = `penalty_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-          let disabledOk = false;
-          let disableError: string | null = null;
+          let accountBlockedOk = false;
+          let accountBlockError: string | null = null;
+          let previousIsDisabled = false;
+          let previousEnableMediaPlayback = true;
 
-          // 先立刻停止该用户所有正在播放的会话，再执行禁用
+          // Stop active streams, disable the account, and block new playback.
+          // Authentication tokens and non-playing sessions remain untouched.
           const playingSessionIds = sessions.map((s: any) => String(s?.Id ?? "").trim()).filter(Boolean);
           let stoppedSessions = 0;
           const stopErrors: string[] = [];
@@ -336,39 +341,32 @@ export async function POST(req: Request) {
           }
 
           try {
-            const r = await embySetUserDisabled(server.baseUrl, apiKey, embyUserId, true);
-            disabledOk = !!r?.ok;
-            if (!disabledOk) disableError = String((r as any)?.body || `HTTP ${(r as any)?.status || "?"}`);
+            const r = await embySetAccountPlaybackAccess(server.baseUrl, apiKey, embyUserId, {
+              disabled: true,
+              mediaPlaybackEnabled: false,
+            });
+            if (r.ok) {
+              accountBlockedOk = true;
+              previousIsDisabled = r.previousIsDisabled;
+              previousEnableMediaPlayback = r.previousEnableMediaPlayback;
+            } else {
+              accountBlockError = String(r.body || `HTTP ${r.status || "?"}`);
+            }
           } catch (e: any) {
-            disableError = String(e?.message ?? e);
+            accountBlockError = String(e?.message ?? e);
           }
 
-          if (disabledOk) {
-            // 禁用成功后立刻踢下线/注销该用户所有会话（包括未播放会话）
-            const allUserSessionIds = (sessionsRes.sessions ?? [])
-              .filter((x: any) => String(x?.UserId ?? "").trim() === embyUserId)
-              .map((x: any) => String(x?.Id ?? "").trim())
-              .filter(Boolean);
-            let loggedOutSessions = 0;
-            const logoutErrors: string[] = [];
-            for (const sid of allUserSessionIds) {
-              try {
-                const lr = await embyLogoutSession(server.baseUrl, apiKey, sid);
-                if (lr.ok) loggedOutSessions += 1;
-                else logoutErrors.push(`${sid}: ${lr.body || `HTTP ${lr.status}`}`);
-              } catch (e: any) {
-                logoutErrors.push(`${sid}: ${String(e?.message ?? e)}`);
-              }
-            }
-
+          if (accountBlockedOk) {
             await prisma.embyUserLink.updateMany({ where: { id: link.id }, data: { disabled: true } });
-
-            // 撤销用户所有 AccessToken/设备登录（彻底踢下线，解决第三方播放器缓存绕过）
-            const revokeResult = await embyRevokeAllUserTokens(server.baseUrl, apiKey, embyUserId);
-
             penaltiesApplied += 1;
             pendingPenaltyKeys.add(key);
-            penaltyState[key] = { ...penaltyState[key], consecutive: 0, penaltyActive: true, lastPenaltyAt: now.toISOString() };
+            penaltyState[key] = {
+              ...penaltyState[key],
+              detectionTimes: [],
+              consecutive: 0,
+              penaltyActive: true,
+              lastPenaltyAt: now.toISOString(),
+            };
             penaltyRecords.push({
               id: recId,
               userId: link.userId,
@@ -383,14 +381,13 @@ export async function POST(req: Request) {
               penaltyMultiplier,
               penaltyDurationMinutes: penaltyMinutes,
               stackWindowDays: PENALTY_STACK_WINDOW_DAYS,
+              penaltyMode: "ACCOUNT_AND_MEDIA_PLAYBACK",
+              previousIsDisabled,
+              previousEnableMediaPlayback,
               stoppedSessions,
-              loggedOutSessions,
               anomalyType,
               anomalyTypeLabel: anomalyTypeLabel(anomalyType),
-              revokedTokens: revokeResult.revokedCount ?? 0,
               stopErrors: stopErrors.length ? stopErrors.slice(0, 5) : undefined,
-              logoutErrors: logoutErrors.length ? logoutErrors.slice(0, 5) : undefined,
-              revokeErrors: revokeResult.errors?.length ? revokeResult.errors : undefined,
               reason: `30 分钟内累计 2 次检测命中异常并发播放，按1周内第${penaltyMultiplier}次处罚封禁${penaltyMinutes}分钟（基础${penaltyConfig.durationMinutes}分钟，倍率x${penaltyMultiplier}）`,
             });
           } else {
@@ -409,12 +406,13 @@ export async function POST(req: Request) {
               penaltyMultiplier,
               penaltyDurationMinutes: penaltyMinutes,
               stackWindowDays: PENALTY_STACK_WINDOW_DAYS,
+              penaltyMode: "ACCOUNT_AND_MEDIA_PLAYBACK",
               anomalyType,
               anomalyTypeLabel: anomalyTypeLabel(anomalyType),
               stoppedSessions,
               stopErrors: stopErrors.length ? stopErrors.slice(0, 5) : undefined,
-              error: disableError || "disable_failed",
-              reason: `30 分钟内累计 2 次检测命中异常并发播放，计划按x${penaltyMultiplier}封禁${penaltyMinutes}分钟，但封禁失败`,
+              error: accountBlockError || "block_account_and_media_playback_failed",
+              reason: `30 分钟内累计 2 次检测命中异常并发播放，计划按x${penaltyMultiplier}封禁${penaltyMinutes}分钟，但账号禁用或播放权限关闭失败`,
             });
           }
         }

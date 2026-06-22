@@ -6,7 +6,11 @@ import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
 import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
 import { embySetUserDisabled } from "@/lib/emby-provision";
-import { embyClearSimultaneousStreamLimit } from "@/lib/emby-user-policy";
+import {
+  embyClearSimultaneousStreamLimit,
+  embySetAccountPlaybackAccess,
+  embySetMediaPlaybackEnabled,
+} from "@/lib/emby-user-policy";
 
 const PENALTY_STATE_KEY = "anomaly_penalty_state";
 const PENALTY_RECORDS_KEY = "anomaly_penalty_records";
@@ -68,11 +72,14 @@ export async function POST(req: Request) {
   let failed = 0;
 
   for (const r of records) {
-    if (!r || r.status !== "PENDING") continue;
+    if (!r || !["PENDING", "FAILED_UNBAN"].includes(String(r.status ?? ""))) continue;
     const unlockAt = new Date(String(r.unlockAt || ""));
     if (!Number.isFinite(unlockAt.getTime()) || unlockAt > now) continue;
 
     dueCount += 1;
+    const isMediaPlaybackPenalty = r.penaltyMode === "MEDIA_PLAYBACK";
+    const isAccountPlaybackPenalty = r.penaltyMode === "ACCOUNT_AND_MEDIA_PLAYBACK";
+    const isPlaybackPolicyPenalty = isMediaPlaybackPenalty || isAccountPlaybackPenalty;
 
     const user = await prisma.user.findUnique({
       where: { id: String(r.userId) },
@@ -88,12 +95,14 @@ export async function POST(req: Request) {
     });
 
     const eligible = !!user?.enabled && !!user?.subscriptions?.length;
-    if (!eligible) {
+    if (!eligible && !isPlaybackPolicyPenalty) {
       r.status = "SKIPPED_NOT_ELIGIBLE";
       r.unbannedAt = now.toISOString();
       skipped += 1;
       const k = stateKey(String(r.embyServerId || ""), String(r.userId || ""));
-      if (state[k]) state[k] = { ...state[k], penaltyActive: false, consecutive: 0, lastUnbanAt: now.toISOString() };
+      if (state[k]) {
+        state[k] = { ...state[k], detectionTimes: [], penaltyActive: false, consecutive: 0, lastUnbanAt: now.toISOString() };
+      }
       continue;
     }
 
@@ -110,32 +119,70 @@ export async function POST(req: Request) {
 
     try {
       const apiKey = getEmbyApiKeyForServer(server as any);
-      const rs = await embySetUserDisabled(server.baseUrl, apiKey, String(r.embyUserId), false);
-      if (!rs?.ok) {
-        r.status = "FAILED_UNBAN";
-        r.lastError = String((rs as any)?.body || `HTTP ${(rs as any)?.status || "?"}`);
-        failed += 1;
-        continue;
+      let unbanWarn: string | undefined;
+
+      if (isAccountPlaybackPenalty) {
+        const restorePlayback = typeof r.previousEnableMediaPlayback === "boolean" ? r.previousEnableMediaPlayback : true;
+        const restoreDisabled = eligible
+          ? (typeof r.previousIsDisabled === "boolean" ? r.previousIsDisabled : false)
+          : true;
+        const rs = await embySetAccountPlaybackAccess(server.baseUrl, apiKey, String(r.embyUserId), {
+          disabled: restoreDisabled,
+          mediaPlaybackEnabled: restorePlayback,
+        });
+        if (!rs.ok) {
+          r.status = "FAILED_UNBAN";
+          r.lastError = String(rs.body || `HTTP ${rs.status || "?"}`);
+          failed += 1;
+          continue;
+        }
+        await prisma.embyUserLink.updateMany({
+          where: { userId: String(r.userId), embyServerId: String(r.embyServerId), embyUserId: String(r.embyUserId) },
+          data: { disabled: restoreDisabled },
+        });
+        r.accountDisabledRestoredTo = restoreDisabled;
+        r.mediaPlaybackRestoredTo = restorePlayback;
+      } else if (isMediaPlaybackPenalty) {
+        const restoreEnabled = typeof r.previousEnableMediaPlayback === "boolean" ? r.previousEnableMediaPlayback : true;
+        const rs = await embySetMediaPlaybackEnabled(server.baseUrl, apiKey, String(r.embyUserId), restoreEnabled);
+        if (!rs?.ok) {
+          r.status = "FAILED_UNBAN";
+          r.lastError = String(rs.body || `HTTP ${rs.status || "?"}`);
+          failed += 1;
+          continue;
+        }
+        r.mediaPlaybackRestoredTo = restoreEnabled;
+      } else {
+        // Compatibility path for penalties created before playback-only blocking.
+        const rs = await embySetUserDisabled(server.baseUrl, apiKey, String(r.embyUserId), false);
+        if (!rs?.ok) {
+          r.status = "FAILED_UNBAN";
+          r.lastError = String(rs.body || `HTTP ${rs.status || "?"}`);
+          failed += 1;
+          continue;
+        }
+
+        const clearLimit = await embyClearSimultaneousStreamLimit(server.baseUrl, apiKey, String(r.embyUserId));
+        if (!clearLimit.ok) {
+          unbanWarn = `clear_stream_limit_failed: ${String(clearLimit.body || `HTTP ${clearLimit.status || "?"}`)}`;
+        }
+
+        await prisma.embyUserLink.updateMany({
+          where: { userId: String(r.userId), embyServerId: String(r.embyServerId), embyUserId: String(r.embyUserId) },
+          data: { disabled: false },
+        });
       }
-
-      // 解封后清理历史遗留的并发限制（旧方案可能将其设置为1）
-      const clearLimit = await embyClearSimultaneousStreamLimit(server.baseUrl, apiKey, String(r.embyUserId));
-
-      await prisma.embyUserLink.updateMany({
-        where: { userId: String(r.userId), embyServerId: String(r.embyServerId), embyUserId: String(r.embyUserId) },
-        data: { disabled: false },
-      });
 
       r.status = "UNBANNED";
       r.unbannedAt = now.toISOString();
-      if (!(clearLimit as any)?.ok) {
-        r.unbanWarn = `clear_stream_limit_failed: ${String((clearLimit as any)?.body || `HTTP ${(clearLimit as any)?.status || "?"}`)}`;
-      } else {
-        delete r.unbanWarn;
-      }
+      if (unbanWarn) r.unbanWarn = unbanWarn;
+      else delete r.unbanWarn;
+      delete r.lastError;
       unbanned += 1;
       const k = stateKey(String(r.embyServerId || ""), String(r.userId || ""));
-      if (state[k]) state[k] = { ...state[k], penaltyActive: false, consecutive: 0, lastUnbanAt: now.toISOString() };
+      if (state[k]) {
+        state[k] = { ...state[k], detectionTimes: [], penaltyActive: false, consecutive: 0, lastUnbanAt: now.toISOString() };
+      }
     } catch (e: any) {
       r.status = "FAILED_UNBAN";
       r.lastError = String(e?.message ?? e);

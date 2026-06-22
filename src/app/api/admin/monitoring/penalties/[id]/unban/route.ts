@@ -6,7 +6,11 @@ import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
 import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
 import { embySetUserDisabled } from "@/lib/emby-provision";
-import { embyClearSimultaneousStreamLimit } from "@/lib/emby-user-policy";
+import {
+  embyClearSimultaneousStreamLimit,
+  embySetAccountPlaybackAccess,
+  embySetMediaPlaybackEnabled,
+} from "@/lib/emby-user-policy";
 
 const PENALTY_STATE_KEY = "anomaly_penalty_state";
 const PENALTY_RECORDS_KEY = "anomaly_penalty_records";
@@ -76,20 +80,62 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
 
   try {
     const apiKey = getEmbyApiKeyForServer(server as any);
-    const rs = await embySetUserDisabled(server.baseUrl, apiKey, embyUserId, false);
-    if (!rs?.ok) {
-      return NextResponse.json(
-        { error: "manual_unban_failed", message: String((rs as any)?.body || `HTTP ${(rs as any)?.status || "?"}`) },
-        { status: 502 }
-      );
+    const isMediaPlaybackPenalty = record.penaltyMode === "MEDIA_PLAYBACK";
+    const isAccountPlaybackPenalty = record.penaltyMode === "ACCOUNT_AND_MEDIA_PLAYBACK";
+    let unbanWarn: string | undefined;
+    let mediaPlaybackRestoredTo: boolean | undefined;
+    let accountDisabledRestoredTo: boolean | undefined;
+
+    if (isAccountPlaybackPenalty) {
+      const restorePlayback =
+        typeof record.previousEnableMediaPlayback === "boolean" ? record.previousEnableMediaPlayback : true;
+      const restoreDisabled = typeof record.previousIsDisabled === "boolean" ? record.previousIsDisabled : false;
+      const rs = await embySetAccountPlaybackAccess(server.baseUrl, apiKey, embyUserId, {
+        disabled: restoreDisabled,
+        mediaPlaybackEnabled: restorePlayback,
+      });
+      if (!rs.ok) {
+        return NextResponse.json(
+          { error: "manual_unban_failed", message: String(rs.body || `HTTP ${rs.status || "?"}`) },
+          { status: 502 }
+        );
+      }
+      await prisma.embyUserLink.updateMany({
+        where: { userId, embyServerId, embyUserId },
+        data: { disabled: restoreDisabled },
+      });
+      accountDisabledRestoredTo = restoreDisabled;
+      mediaPlaybackRestoredTo = restorePlayback;
+    } else if (isMediaPlaybackPenalty) {
+      const restoreEnabled = typeof record.previousEnableMediaPlayback === "boolean" ? record.previousEnableMediaPlayback : true;
+      const rs = await embySetMediaPlaybackEnabled(server.baseUrl, apiKey, embyUserId, restoreEnabled);
+      if (!rs?.ok) {
+        return NextResponse.json(
+          { error: "manual_unban_failed", message: String(rs.body || `HTTP ${rs.status || "?"}`) },
+          { status: 502 }
+        );
+      }
+      mediaPlaybackRestoredTo = restoreEnabled;
+    } else {
+      // Compatibility path for penalties that disabled the complete account.
+      const rs = await embySetUserDisabled(server.baseUrl, apiKey, embyUserId, false);
+      if (!rs?.ok) {
+        return NextResponse.json(
+          { error: "manual_unban_failed", message: String(rs.body || `HTTP ${rs.status || "?"}`) },
+          { status: 502 }
+        );
+      }
+
+      const clearLimit = await embyClearSimultaneousStreamLimit(server.baseUrl, apiKey, embyUserId);
+      if (!clearLimit?.ok) {
+        unbanWarn = `clear_stream_limit_failed: ${String(clearLimit.body || `HTTP ${clearLimit.status || "?"}`)}`;
+      }
+
+      await prisma.embyUserLink.updateMany({
+        where: { userId, embyServerId, embyUserId },
+        data: { disabled: false },
+      });
     }
-
-    const clearLimit = await embyClearSimultaneousStreamLimit(server.baseUrl, apiKey, embyUserId);
-
-    await prisma.embyUserLink.updateMany({
-      where: { userId, embyServerId, embyUserId },
-      data: { disabled: false },
-    });
 
     const nowIso = new Date().toISOString();
     records[index] = {
@@ -98,15 +144,16 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
       unbannedAt: nowIso,
       unbanSource: "MANUAL",
       lastError: undefined,
-      ...(clearLimit?.ok
-        ? { unbanWarn: undefined }
-        : { unbanWarn: `clear_stream_limit_failed: ${String((clearLimit as any)?.body || `HTTP ${(clearLimit as any)?.status || "?"}`)}` }),
+      unbanWarn,
+      mediaPlaybackRestoredTo,
+      accountDisabledRestoredTo,
     };
 
     const k = stateKey(embyServerId, userId);
     if (state[k]) {
       state[k] = {
         ...state[k],
+        detectionTimes: [],
         penaltyActive: false,
         consecutive: 0,
         lastUnbanAt: nowIso,

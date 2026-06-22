@@ -174,7 +174,7 @@ export async function GET() {
 
   const pendingPenaltyByServer = new Map<string, any>();
   for (const r of penaltyRecords) {
-    if (r?.userId !== user.id || r?.status !== "PENDING" || !r?.embyServerId) continue;
+    if (r?.userId !== user.id || !["PENDING", "FAILED_UNBAN"].includes(String(r?.status ?? "")) || !r?.embyServerId) continue;
     const prev = pendingPenaltyByServer.get(r.embyServerId);
     if (!prev || String(r?.disabledAt || "") > String(prev?.disabledAt || "")) {
       pendingPenaltyByServer.set(r.embyServerId, r);
@@ -203,13 +203,13 @@ export async function GET() {
       // 仅当当前存在“异常监控处罚”的待解封记录时，才显示具体异常类型。
       // 订阅到期封禁、管理员手动改到期导致的禁用等其他情况，只显示“封禁中”。
       const hasActiveAnomalyPenalty = !!pendingPenalty;
-      const banTypeLabel = !!link?.disabled && hasActiveAnomalyPenalty
+      const banTypeLabel = hasActiveAnomalyPenalty
         ? (pendingPenalty?.anomalyTypeLabel || anomalyTypeLabel(pendingPenalty?.anomalyType) || anomalyTypeLabel(fallbackType))
         : null;
-      const penaltyUnlockAt = !!link?.disabled && hasActiveAnomalyPenalty && pendingPenalty?.unlockAt
+      const penaltyUnlockAt = hasActiveAnomalyPenalty && pendingPenalty?.unlockAt
         ? String(pendingPenalty.unlockAt)
         : null;
-      const anomalyDetail = !!link?.disabled && hasActiveAnomalyPenalty
+      const anomalyDetail = hasActiveAnomalyPenalty
         ? buildAnomalyDetail(recentAnomaly)
         : null;
       const onlineNow = !!String(version || "").trim() || s.lastHealthOk === true;
@@ -218,7 +218,7 @@ export async function GET() {
         name: s.name,
         enabled: s.enabled,
         online: onlineNow,
-        banned: !!link?.disabled,
+        banned: !!link?.disabled || hasActiveAnomalyPenalty,
         banTypeLabel,
         penaltyUnlockAt,
         anomalyDetail,

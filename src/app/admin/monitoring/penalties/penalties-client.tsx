@@ -14,6 +14,9 @@ type PenaltyRecord = {
   unlockAt: string;
   status: string;
   lastError?: string;
+  error?: string;
+  reason?: string;
+  penaltyMode?: string;
 };
 
 function formatDateTimeShanghai(v?: string) {
@@ -199,7 +202,9 @@ export function MonitoringPenaltiesClient() {
                     : r.status === "FAILED_UNBAN"
                     ? "解禁失败"
                     : r.status === "FAILED_DISABLE"
-                    ? "封禁失败"
+                    ? r.penaltyMode === "MEDIA_PLAYBACK" || r.reason?.includes("暂停播放")
+                      ? "暂停播放失败"
+                      : "封禁失败"
                     : r.status;
                 return (
                   <tr key={r.id} className="border-b last:border-b-0">
