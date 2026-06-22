@@ -108,13 +108,13 @@ async function savePenaltyRecords(records: any[]) {
 
 function isAppliedPenaltyRecordInWindow(params: {
   record: any;
-  embyServerId: string;
+  embyServerId?: string;
   userId: string;
   now: Date;
 }) {
   const { record, embyServerId, userId, now } = params;
   if (!record || typeof record !== "object") return false;
-  if (String(record.embyServerId ?? "") !== embyServerId) return false;
+  if (embyServerId && String(record.embyServerId ?? "") !== embyServerId) return false;
   if (String(record.userId ?? "") !== userId) return false;
   if (String(record.status ?? "") === "FAILED_DISABLE") return false;
 
@@ -316,6 +316,10 @@ export async function POST(req: Request) {
               now,
             })
           ).length;
+          const recentUserPenaltyCount = penaltyRecords.filter((r) =>
+            isAppliedPenaltyRecordInWindow({ record: r, userId: link.userId, now })
+          ).length;
+          const penaltySequence = recentUserPenaltyCount + 1;
           const penaltyMultiplier = Math.max(1, Math.min(PENALTY_STACK_MULTIPLIER_MAX, recentAppliedPenaltyCount + 1));
           const penaltyMinutes = penaltyConfig.durationMinutes * penaltyMultiplier;
           const unlockAt = new Date(now.getTime() + penaltyMinutes * 60 * 1000);
@@ -378,6 +382,7 @@ export async function POST(req: Request) {
               unlockAt: unlockAt.toISOString(),
               status: "PENDING",
               baseDurationMinutes: penaltyConfig.durationMinutes,
+              penaltySequence,
               penaltyMultiplier,
               penaltyDurationMinutes: penaltyMinutes,
               stackWindowDays: PENALTY_STACK_WINDOW_DAYS,
@@ -403,6 +408,7 @@ export async function POST(req: Request) {
               unlockAt: unlockAt.toISOString(),
               status: "FAILED_DISABLE",
               baseDurationMinutes: penaltyConfig.durationMinutes,
+              penaltySequence,
               penaltyMultiplier,
               penaltyDurationMinutes: penaltyMinutes,
               stackWindowDays: PENALTY_STACK_WINDOW_DAYS,

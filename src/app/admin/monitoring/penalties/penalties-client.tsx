@@ -17,6 +17,8 @@ type PenaltyRecord = {
   error?: string;
   reason?: string;
   penaltyMode?: string;
+  penaltySequence?: number;
+  penaltyMultiplier?: number;
 };
 
 function formatDateTimeShanghai(v?: string) {
@@ -190,6 +192,13 @@ export function MonitoringPenaltiesClient() {
                 const isPending = r.status === "PENDING";
                 const isRetryableFailedUnban = r.status === "FAILED_UNBAN";
                 const canManualUnban = isPending || isRetryableFailedUnban;
+                const rawPenaltySequence = Number(r.penaltySequence ?? r.penaltyMultiplier ?? 1);
+                const penaltySequence =
+                  r.status === "FAILED_DISABLE"
+                    ? 0
+                    : Number.isFinite(rawPenaltySequence)
+                      ? Math.max(1, Math.trunc(rawPenaltySequence))
+                      : 1;
                 const statusText =
                   r.status === "UNBANNED"
                     ? "已解禁"
@@ -208,7 +217,14 @@ export function MonitoringPenaltiesClient() {
                     : r.status;
                 return (
                   <tr key={r.id} className="border-b last:border-b-0">
-                    <td className="py-4 px-3 leading-6">{r.username || "-"}</td>
+                    <td className="py-4 px-3 leading-6">
+                      <span>{r.username || "-"}</span>
+                      {penaltySequence > 0 ? (
+                        <span className="ml-1 whitespace-nowrap text-[#e5a400]" aria-label={`7日内第${penaltySequence}次处罚`}>
+                          {"★".repeat(penaltySequence)}
+                        </span>
+                      ) : null}
+                    </td>
                     <td className="py-4 px-3 leading-6">{r.serverName || "-"}</td>
                     <td className="py-4 px-3 text-[13px] text-gray-700 leading-6">{formatDateTimeShanghai(r.disabledAt)}</td>
                     <td className="py-4 px-3 text-[13px] text-gray-700 leading-6">{formatDateTimeShanghai(r.unlockAt)}</td>
