@@ -706,7 +706,7 @@ export function VodClient() {
               <div className="bg-[#fafafa] border border-[#eaeaea] rounded-[12px] px-4 py-3 flex items-center justify-between mb-5">
                 <div className="flex items-baseline gap-2">
                   <span className="text-sm font-bold text-[#222]">今日点播配额</span>
-                  <span className="text-[18px] font-black text-[#e3001b] font-mono">{quota ? `${quota.totalRemaining}/${quota.totalTotal}` : "--/--"}</span>
+                  <span className="text-[18px] font-black text-[#e3001b] font-mono">{quota?.totalTotal ?? "--"}</span>
                 </div>
                 <span className="text-xs text-[#888]">（默认每人每天 {quota?.totalTotal ?? 5} 个额度）</span>
               </div>
