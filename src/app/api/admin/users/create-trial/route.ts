@@ -60,7 +60,7 @@ export async function POST(req: Request) {
   const parsed = Schema.safeParse(json);
   if (!parsed.success) return NextResponse.json({ error: "invalid_payload", issues: parsed.error.issues }, { status: 400 });
 
-  const hours = parsed.data.hours ?? 3;
+  const hours = parsed.data.hours ?? 1;
   const planId = parsed.data.planId;
 
   const plan = await prisma.plan.findUnique({ where: { id: planId }, select: { id: true, name: true } });

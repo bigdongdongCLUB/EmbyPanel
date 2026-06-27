@@ -1665,8 +1665,8 @@ export function UsersClient() {
                 </select>
               </div>
               <div>
-                <label className="text-sm">使用时间（小时，1-168，可空默认3）</label>
-                <input className="mt-1 w-full border rounded px-3 py-2" placeholder="3" value={trialHours} onChange={(e) => setTrialHours(e.target.value)} />
+                <label className="text-sm">使用时间（小时，1-168，可空默认1）</label>
+                <input className="mt-1 w-full border rounded px-3 py-2" placeholder="1" value={trialHours} onChange={(e) => setTrialHours(e.target.value)} />
               </div>
             </div>
 
@@ -1723,7 +1723,7 @@ export function UsersClient() {
                   setTrialLoading(true);
                   setTrialError(null);
                   try {
-                    const hoursNum = trialHours.trim() ? Number(trialHours) : 3;
+                    const hoursNum = trialHours.trim() ? Number(trialHours) : 1;
                     if (!Number.isFinite(hoursNum) || hoursNum < 1 || hoursNum > 168) {
                       throw new Error("试用小时需在 1-168");
                     }
