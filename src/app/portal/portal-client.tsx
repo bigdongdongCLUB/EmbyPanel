@@ -5,6 +5,10 @@ import { renderMarkdownLite } from "@/lib/markdown-lite";
 import { useEffect, useMemo, useState } from "react";
 
 type Data = {
+  profile: {
+    email: string | null;
+    role: string;
+  };
   dashboard: {
     balanceYuan: number;
     subscriptionEndAt: string | null;
@@ -36,6 +40,8 @@ export function PortalClient() {
   const [redeemCode, setRedeemCode] = useState("");
   const [redeeming, setRedeeming] = useState(false);
   const [noticeIndex, setNoticeIndex] = useState(0);
+  const [emailReminderOpen, setEmailReminderOpen] = useState(false);
+  const [emailReminderHandled, setEmailReminderHandled] = useState(false);
 
   const initialLoading = loading && data === null;
   const notices = useMemo(() => data?.announcements ?? [], [data]);
@@ -95,6 +101,16 @@ export function PortalClient() {
     };
   }, [initialLoading]);
 
+  useEffect(() => {
+    if (loading || !data || emailReminderHandled) return;
+    const isRegularUser = data.profile.role === "USER";
+    const hasEmail = !!String(data.profile.email || "").trim();
+    if (isRegularUser && !hasEmail) {
+      setEmailReminderOpen(true);
+      setEmailReminderHandled(true);
+    }
+  }, [data, emailReminderHandled, loading]);
+
   const remainingDays = data?.dashboard.remainingDays ?? 0;
   const isExpired = !!data?.dashboard.subscriptionEndAt && new Date(data.dashboard.subscriptionEndAt).getTime() < Date.now();
   const isDue = remainingDays <= 0;
@@ -129,6 +145,36 @@ export function PortalClient() {
             <div className="mx-auto h-9 w-9 rounded-full border-4 border-gray-200 border-t-[#e3001b] animate-spin" />
             <div className="mt-4 text-base font-semibold text-[#222]">进行中...</div>
             <div className="mt-1 text-xs text-gray-500">正在兑换卡密，请稍候，不要刷新或离开页面。</div>
+          </div>
+        </div>
+      ) : null}
+
+      {emailReminderOpen ? (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/45 px-4" role="dialog" aria-modal="true" aria-label="邮箱设置提醒">
+          <div className="w-full max-w-[420px] rounded-2xl border border-[#f3d5d9] bg-white p-6 shadow-[0_24px_70px_rgba(15,23,42,0.22)]">
+            <div className="text-lg font-bold text-[#222]">邮箱设置提醒</div>
+            <div className="mt-3 text-sm leading-6 text-[#555]">
+              请在个人资料中设置邮箱，以便密码丢失后找回密码
+            </div>
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                type="button"
+                className="rounded-lg border border-[#e5e7eb] bg-white px-4 py-2 text-sm text-[#555] hover:border-[#d1d5db] hover:bg-[#f9fafb]"
+                onClick={() => setEmailReminderOpen(false)}
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                className="rounded-lg bg-[#e3001b] px-4 py-2 text-sm font-semibold text-white hover:bg-[#c20017]"
+                onClick={() => {
+                  setEmailReminderOpen(false);
+                  window.dispatchEvent(new Event("portal:open-profile"));
+                }}
+              >
+                个人资料
+              </button>
+            </div>
           </div>
         </div>
       ) : null}

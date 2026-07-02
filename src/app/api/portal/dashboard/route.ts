@@ -171,12 +171,14 @@ export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const username = (session as any)?.username;
+  const role = (session as any)?.role ?? "USER";
   if (!username) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const user = await prisma.user.findUnique({
     where: { username },
     select: {
       id: true,
+      email: true,
       balanceCents: true,
       subscriptions: {
         where: { status: "ACTIVE" },
@@ -237,6 +239,10 @@ export async function GET() {
 
   return NextResponse.json({
     ok: true,
+    profile: {
+      email: user.email,
+      role,
+    },
     dashboard: {
       balanceYuan: (user.balanceCents ?? 0) / 100,
       subscriptionEndAt: endAt,
