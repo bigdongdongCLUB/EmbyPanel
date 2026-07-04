@@ -19,6 +19,8 @@ function mapProfileErrorMessage(code?: string, fallback?: string) {
       return "两次输入的新密码不一致";
     case "current_password_invalid":
       return "当前密码不正确";
+    case "email_taken":
+      return "该邮箱已被使用";
     default:
       return fallback || code || "操作失败";
   }
@@ -149,7 +151,7 @@ export function PortalProfileModalClient() {
               });
               const json = await res.json().catch(() => null);
               if (!res.ok) {
-                alert(`保存失败: ${mapProfileErrorMessage(json?.error, `HTTP ${res.status}`)}`);
+                alert(`保存失败 ${mapProfileErrorMessage(json?.error, `HTTP ${res.status}`)}`);
                 return;
               }
               setOpen(false);

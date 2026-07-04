@@ -75,7 +75,7 @@ export async function POST(req: Request) {
   const siteName = String(site.siteName || "EmbyPanel");
   const siteUrl = normalizeSiteUrl(req);
   const code = code6();
-  const expiresAt = Date.now() + 10 * 60 * 1000;
+  const expiresAt = Date.now() + 60 * 1000;
   const email = p.data.email.trim().toLowerCase();
   const username = p.data.username?.trim() || email.split("@")[0] || email;
 

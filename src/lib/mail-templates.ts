@@ -24,7 +24,7 @@ export const DEFAULT_MAIL_TEMPLATES: Record<MailTemplateKey, MailTemplate> = {
     <span style="font-size: 24px; font-weight: bold; color: #007bff;">{{verificationCode}}</span>
   </div>
 
-  <p>此验证码将在 10 分钟后过期，请尽快完成验证。</p>
+  <p>此验证码将在 60 秒后过期，请尽快完成验证。</p>
   <p>如果您没有注册此账户，请忽略此邮件。</p>
 </div>`,
   },

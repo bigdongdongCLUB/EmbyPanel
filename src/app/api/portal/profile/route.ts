@@ -3,6 +3,7 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -66,6 +67,16 @@ export async function PATCH(req: Request) {
   if (p.email !== undefined) data.email = p.email;
   if (p.expiryReminderEnabled !== undefined) data.expiryReminderEnabled = p.expiryReminderEnabled;
 
+  if (p.email) {
+    const existingEmailUser = await prisma.user.findFirst({
+      where: { email: p.email, id: { not: me.user.id } },
+      select: { id: true },
+    });
+    if (existingEmailUser) {
+      return NextResponse.json({ error: "email_taken" }, { status: 409 });
+    }
+  }
+
   const wantChangePassword = !!(p.currentPassword || p.newPassword || p.confirmPassword);
   if (wantChangePassword) {
     if (!p.currentPassword || !p.newPassword || !p.confirmPassword) {
@@ -85,6 +96,16 @@ export async function PATCH(req: Request) {
     data.sessionInvalidatedAt = new Date();
   }
 
-  await prisma.user.update({ where: { id: me.user.id }, data });
+  try {
+    await prisma.user.update({ where: { id: me.user.id }, data });
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      const target = Array.isArray(e.meta?.target) ? e.meta.target.map(String) : [];
+      if (target.includes("email")) {
+        return NextResponse.json({ error: "email_taken" }, { status: 409 });
+      }
+    }
+    throw e;
+  }
   return NextResponse.json({ ok: true });
 }

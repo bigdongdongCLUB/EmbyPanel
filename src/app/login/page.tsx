@@ -37,6 +37,7 @@ export default function LoginPage() {
   const [registerLoading, setRegisterLoading] = useState(false);
   const [emailCode, setEmailCode] = useState("");
   const [sendingCode, setSendingCode] = useState(false);
+  const [codeCooldown, setCodeCooldown] = useState(0);
 
   const [openRegistration, setOpenRegistration] = useState(true);
   const [requireEmailVerification, setRequireEmailVerification] = useState(false);
@@ -136,6 +137,14 @@ export default function LoginPage() {
       clearTimeout(timer);
     };
   }, [inviteCode]);
+
+  useEffect(() => {
+    if (codeCooldown <= 0) return;
+    const timer = window.setTimeout(() => {
+      setCodeCooldown((v) => Math.max(0, v - 1));
+    }, 1000);
+    return () => window.clearTimeout(timer);
+  }, [codeCooldown]);
 
   async function doLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -395,7 +404,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   className="text-xs text-[#e3001b] whitespace-nowrap disabled:text-gray-400"
-                  disabled={sendingCode || !email.trim()}
+                  disabled={sendingCode || codeCooldown > 0 || !email.trim()}
                   onClick={async () => {
                     if (!email.trim()) {
                       setRegisterError("请先填写邮箱");
@@ -415,12 +424,13 @@ export default function LoginPage() {
                         return;
                       }
                       alert("验证码已发送，请查收邮箱");
+                      setCodeCooldown(60);
                     } finally {
                       setSendingCode(false);
                     }
                   }}
                 >
-                  {sendingCode ? "发送中" : "发送验证码"}
+                  {sendingCode ? "发送中" : codeCooldown > 0 ? `${codeCooldown}s` : "发送验证码"}
                 </button>
               </div>
             ) : null}
