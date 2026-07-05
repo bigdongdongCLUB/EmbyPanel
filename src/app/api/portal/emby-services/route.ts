@@ -26,7 +26,7 @@ function anomalyTypeLabel(type?: string | null) {
   return type === "CROSS_REGION_MULTI_DEVICE" ? "异地多设备" : type === "SIMULTANEOUS_MULTI_DEVICE" ? "同时多设备" : null;
 }
 
-function buildAnomalyDetail(anomaly?: { detectedAt: Date; evidenceJson: unknown } | null) {
+function buildAnomalyDetail(anomaly?: { detectedAt: Date; evidenceJson: unknown } | null, unlockedAt?: string | null) {
   if (!anomaly) return null;
   const evidence = (anomaly.evidenceJson && typeof anomaly.evidenceJson === "object" ? anomaly.evidenceJson : {}) as any;
   const sessions = Array.isArray(evidence.sessions)
@@ -54,7 +54,40 @@ function buildAnomalyDetail(anomaly?: { detectedAt: Date; evidenceJson: unknown 
     description: description || "暂无说明",
     sessions,
     detectedAt: anomaly.detectedAt.toISOString(),
+    unlockedAt: unlockedAt ?? null,
   };
+}
+
+function isSimultaneousPenalty(record: any) {
+  return String(record?.anomalyType || "") === "SIMULTANEOUS_MULTI_DEVICE" || String(record?.anomalyTypeLabel || "") === "同时多设备";
+}
+
+function isAppliedPenaltyRecord(record: any, userId: string, embyServerId: string, cutoffMs: number) {
+  if (!record || typeof record !== "object") return false;
+  if (String(record.userId ?? "") !== userId) return false;
+  if (String(record.embyServerId ?? "") !== embyServerId) return false;
+  if (String(record.status ?? "") === "FAILED_DISABLE") return false;
+  const disabledAtMs = Date.parse(String(record.disabledAt ?? ""));
+  return Number.isFinite(disabledAtMs) && disabledAtMs >= cutoffMs;
+}
+
+function findPenaltyAnomaly(
+  anomalies: Array<{ embyServerId: string; detectedAt: Date; evidenceJson: unknown }>,
+  embyServerId: string,
+  disabledAt?: string | null
+) {
+  const sameServer = anomalies.filter((a) => a.embyServerId === embyServerId);
+  if (!sameServer.length) return null;
+
+  const disabledAtMs = Date.parse(String(disabledAt || ""));
+  if (!Number.isFinite(disabledAtMs)) return sameServer[0] ?? null;
+
+  const beforeOrAt = sameServer.filter((a) => a.detectedAt.getTime() <= disabledAtMs + 5 * 1000);
+  if (beforeOrAt.length) return beforeOrAt[0];
+
+  return sameServer
+    .slice()
+    .sort((a, b) => Math.abs(a.detectedAt.getTime() - disabledAtMs) - Math.abs(b.detectedAt.getTime() - disabledAtMs))[0] ?? null;
 }
 
 async function fetchItemCounts(baseUrl: string, apiKey: string) {
@@ -139,6 +172,9 @@ export async function GET() {
     ...user.embyLinks.map((l) => l.embyServerId),
   ]);
 
+  const recentPenaltyCutoffMs = Date.now() - 7 * 24 * 3600 * 1000;
+  const recentPenaltyCutoff = new Date(recentPenaltyCutoffMs);
+
   const [penaltyRecordsRow, recentAnomalies] = await Promise.all([
     prisma.appSetting.findUnique({ where: { key: PENALTY_RECORDS_KEY } }),
     prisma.anomaly.findMany({
@@ -146,9 +182,10 @@ export async function GET() {
         userId: user.id,
         embyServerId: { in: Array.from(serverIds) },
         type: "MULTI_DEVICE_CONCURRENCY",
+        detectedAt: { gte: recentPenaltyCutoff },
       },
       orderBy: { detectedAt: "desc" },
-      take: 100,
+      take: 300,
       select: { embyServerId: true, detectedAt: true, evidenceJson: true },
     }),
   ]);
@@ -198,6 +235,14 @@ export async function GET() {
       const link = linkMap.get(s.id) ?? null;
       const pendingPenalty = pendingPenaltyByServer.get(s.id) ?? null;
       const recentAnomaly = recentAnomalyByServer.get(s.id) ?? null;
+      const recentPenaltyDetails = penaltyRecords
+        .filter((r) => isAppliedPenaltyRecord(r, user.id, s.id, recentPenaltyCutoffMs) && isSimultaneousPenalty(r))
+        .sort((a, b) => Date.parse(String(b?.disabledAt || "")) - Date.parse(String(a?.disabledAt || "")))
+        .map((r) => {
+          const matchedAnomaly = findPenaltyAnomaly(recentAnomalies, s.id, String(r?.disabledAt || ""));
+          return buildAnomalyDetail(matchedAnomaly, String(r?.unbannedAt || r?.unlockAt || "") || null);
+        })
+        .filter(Boolean);
       const recentEvidence: any = recentAnomaly?.evidenceJson ?? {};
       const fallbackType = recentEvidence?.anomalyType || detectAnomalyTypeFromIps(Array.isArray(recentEvidence?.ips) ? recentEvidence.ips : []);
       // 仅当当前存在“异常监控处罚”的待解封记录时，才显示具体异常类型。
@@ -222,6 +267,7 @@ export async function GET() {
         banTypeLabel,
         penaltyUnlockAt,
         anomalyDetail,
+        recentPenaltyDetails,
         version,
         baseUrl: s.externalUrl || s.baseUrl,
         backupUrl: (s as any).backupUrl || null,

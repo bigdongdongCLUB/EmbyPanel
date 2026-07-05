@@ -18,7 +18,9 @@ type Data = {
       description: string;
       sessions: Array<{ device: string; client: string; ip: string; nowPlaying: string }>;
       detectedAt: string;
+      unlockedAt?: string | null;
     } | null;
+    recentPenaltyDetails?: Array<NonNullable<Data["servers"][number]["anomalyDetail"]>>;
     version: string;
     baseUrl: string;
     externalUrl?: string | null;
@@ -31,7 +33,7 @@ type Data = {
 
 type AnomalyDialog = {
   serverName: string;
-  detail: NonNullable<Data["servers"][number]["anomalyDetail"]>;
+  details: Array<NonNullable<Data["servers"][number]["anomalyDetail"]>>;
 };
 
 function fmtDate(v?: string | null) {
@@ -62,6 +64,11 @@ export function PortalEmbyServicesClient() {
   const [syncingServerId, setSyncingServerId] = useState<string | null>(null);
   const [deletingSubscription, setDeletingSubscription] = useState(false);
   const [anomalyDialog, setAnomalyDialog] = useState<AnomalyDialog | null>(null);
+
+  function openAnomalyDialog(serverName: string, details: Array<NonNullable<Data["servers"][number]["anomalyDetail"]>>) {
+    if (!details.length) return;
+    setAnomalyDialog({ serverName, details });
+  }
 
   async function refresh() {
     setLoading(true);
@@ -105,30 +112,41 @@ export function PortalEmbyServicesClient() {
               <div className="text-lg font-bold text-[#222]">异常监控</div>
               <div className="mt-1 text-xs text-[#888]">{anomalyDialog.serverName}</div>
             </div>
-            <div className="mt-5 space-y-4 text-sm">
-              <div>
-                <div className="space-y-3 rounded-lg bg-[#f7f8fa] p-3 text-[#333]">
-                  <div className="whitespace-pre-wrap leading-6">{anomalyDialog.detail.description || "暂无说明"}</div>
-                  {anomalyDialog.detail.sessions.length > 0 ? (
-                    <div className="space-y-2">
-                      {anomalyDialog.detail.sessions.map((session, index) => (
-                        <div key={`${session.device}-${session.client}-${session.ip}-${index}`} className="rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 leading-6">
-                          <div className="font-bold text-[#222]">
-                            设备{index + 1}：{session.device || "未知设备"}
-                            {session.client ? `（${session.client}）` : ""}
-                          </div>
-                          <div className="text-[#666]">IP：{session.ip || "-"}</div>
-                          <div className="text-[#666]">{session.nowPlaying || "未知内容"}</div>
-                        </div>
-                      ))}
-                    </div>
+            <div className="mt-5 max-h-[68vh] space-y-4 overflow-y-auto pr-1 text-sm">
+              {anomalyDialog.details.map((detail, detailIndex) => (
+                <div key={`${detail.detectedAt}-${detailIndex}`} className="rounded-xl border border-[#eef0f3] p-3">
+                  {anomalyDialog.details.length > 1 ? (
+                    <div className="mb-3 text-xs font-bold text-[#e3001b]">处罚记录 {detailIndex + 1}</div>
                   ) : null}
+                  <div className="space-y-3 rounded-lg bg-[#f7f8fa] p-3 text-[#333]">
+                    <div className="whitespace-pre-wrap leading-6">{detail.description || "暂无说明"}</div>
+                    {detail.sessions.length > 0 ? (
+                      <div className="space-y-2">
+                        {detail.sessions.map((session, index) => (
+                          <div key={`${detail.detectedAt}-${session.device}-${session.client}-${session.ip}-${index}`} className="rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 leading-6">
+                            <div className="font-bold text-[#222]">
+                              设备{index + 1}：{session.device || "未知设备"}
+                              {session.client ? `（${session.client}）` : ""}
+                            </div>
+                            <div className="text-[#666]">IP：{session.ip || "-"}</div>
+                            <div className="text-[#666]">{session.nowPlaying || "未知内容"}</div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                  <div className="mt-4 flex flex-wrap items-start gap-x-8 gap-y-3">
+                    <div className="min-w-[190px]">
+                      <div className="mb-1 text-xs font-bold text-[#888]">检测时间</div>
+                      <div className="font-mono text-[#333]">{fmtDateTime(detail.detectedAt)}</div>
+                    </div>
+                    <div className="min-w-[190px]">
+                      <div className="mb-1 text-xs font-bold text-[#888]">解封时间</div>
+                      <div className="font-mono text-[#333]">{fmtDateTime(detail.unlockedAt)}</div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div>
-                <div className="mb-1 text-xs font-bold text-[#888]">检测时间</div>
-                <div className="font-mono text-[#333]">{fmtDateTime(anomalyDialog.detail.detectedAt)}</div>
-              </div>
+              ))}
             </div>
           </div>
         </div>
@@ -216,14 +234,20 @@ export function PortalEmbyServicesClient() {
           const backupEndpoint = s.backupUrl ? parseBaseUrl(String(s.backupUrl)) : null;
           const stateText = s.banned ? (s.banTypeLabel ? `${s.banTypeLabel} 封禁中` : "封禁中") : s.online ? "在线" : "离线";
           const showPenaltyUnlockAt = !!(s.banned && s.banTypeLabel && s.penaltyUnlockAt);
-          const canShowAnomalyDetail = !!(s.banned && s.banTypeLabel && s.anomalyDetail);
+          const recentPenaltyDetails = s.recentPenaltyDetails ?? [];
+          const dialogDetails = recentPenaltyDetails.length
+            ? recentPenaltyDetails
+            : s.anomalyDetail
+              ? [s.anomalyDetail]
+              : [];
+          const canShowAnomalyDetail = !!(dialogDetails.length && ((s.banned && s.banTypeLabel) || recentPenaltyDetails.length));
           return (
             <div key={s.id} className="relative bg-white border-2 border-[#e3001b] rounded-2xl p-8 shadow-[0_8px_24px_rgba(227,0,27,0.08)]">
               {canShowAnomalyDetail ? (
                 <button
                   type="button"
                   className="absolute -top-3 left-1/2 inline-flex min-w-max -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-full bg-[#e3001b] px-4 py-1 text-xs font-bold tracking-wide text-white shadow-sm transition hover:bg-[#c90018] focus:outline-none focus:ring-2 focus:ring-[#e3001b]/25"
-                  onClick={() => setAnomalyDialog({ serverName: s.name, detail: s.anomalyDetail! })}
+                  onClick={() => openAnomalyDialog(s.name, dialogDetails)}
                 >
                   <span>状态：{stateText}</span>
                   <UiImage src="/icons/exclamation.svg" alt="点击查看详情" className="h-3.5 w-3.5 shrink-0 brightness-0 invert" />
