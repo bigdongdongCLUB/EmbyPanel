@@ -58,8 +58,15 @@ function buildAnomalyDetail(anomaly?: { detectedAt: Date; evidenceJson: unknown 
   };
 }
 
-function isSimultaneousPenalty(record: any) {
-  return String(record?.anomalyType || "") === "SIMULTANEOUS_MULTI_DEVICE" || String(record?.anomalyTypeLabel || "") === "同时多设备";
+function isPlaybackAnomalyPenalty(record: any) {
+  const type = String(record?.anomalyType || "");
+  const label = String(record?.anomalyTypeLabel || "");
+  return (
+    type === "SIMULTANEOUS_MULTI_DEVICE" ||
+    type === "CROSS_REGION_MULTI_DEVICE" ||
+    label === "同时多设备" ||
+    label === "异地多设备"
+  );
 }
 
 function isAppliedPenaltyRecord(record: any, userId: string, embyServerId: string, cutoffMs: number) {
@@ -236,7 +243,7 @@ export async function GET() {
       const pendingPenalty = pendingPenaltyByServer.get(s.id) ?? null;
       const recentAnomaly = recentAnomalyByServer.get(s.id) ?? null;
       const recentPenaltyDetails = penaltyRecords
-        .filter((r) => isAppliedPenaltyRecord(r, user.id, s.id, recentPenaltyCutoffMs) && isSimultaneousPenalty(r))
+        .filter((r) => isAppliedPenaltyRecord(r, user.id, s.id, recentPenaltyCutoffMs) && isPlaybackAnomalyPenalty(r))
         .sort((a, b) => Date.parse(String(b?.disabledAt || "")) - Date.parse(String(a?.disabledAt || "")))
         .map((r) => {
           const matchedAnomaly = findPenaltyAnomaly(recentAnomalies, s.id, String(r?.disabledAt || ""));
