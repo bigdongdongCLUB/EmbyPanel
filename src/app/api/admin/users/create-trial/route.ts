@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
+import { passwordRuleErrorCode } from "@/lib/password-rules";
 import { encryptSyncPassword } from "@/lib/user-secrets";
 import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
 import { embyCreateUser, embyDeleteUser, embySetUserDisabled, embySetUserPassword } from "@/lib/emby-provision";
@@ -29,6 +30,20 @@ function randomDigits(len: number) {
   let out = "";
   for (let i = 0; i < len; i++) out += String(Math.floor(Math.random() * 10));
   return out;
+}
+
+function randomComplexPassword() {
+  const lowers = "abcdefghijklmnopqrstuvwxyz";
+  const uppers = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const digits = "0123456789";
+  const all = lowers + uppers + digits;
+  const chars = [
+    lowers[Math.floor(Math.random() * lowers.length)],
+    uppers[Math.floor(Math.random() * uppers.length)],
+    digits[Math.floor(Math.random() * digits.length)],
+  ];
+  while (chars.length < 8) chars.push(all[Math.floor(Math.random() * all.length)]);
+  return chars.sort(() => Math.random() - 0.5).join("");
 }
 
 function validRegisterUsername(v: string) {
@@ -84,8 +99,11 @@ export async function POST(req: Request) {
     if (!username) return NextResponse.json({ error: "username_generate_failed" }, { status: 500 });
   }
 
-  const password = (parsed.data.password ?? "").trim() || randomDigits(8);
-  if (password.length < 6) return NextResponse.json({ error: "password_too_short" }, { status: 400 });
+  const securityRow = await prisma.appSetting.findUnique({ where: { key: "security_basic" } });
+  const strongPassword = !!((securityRow?.valueJson as any)?.strongPassword);
+  const password = (parsed.data.password ?? "").trim() || (strongPassword ? randomComplexPassword() : randomDigits(8));
+  const passwordError = passwordRuleErrorCode(password, strongPassword);
+  if (passwordError) return NextResponse.json({ error: passwordError }, { status: 400 });
 
   const passwordHash = await hashPassword(password);
   const enc = encryptSyncPassword(password);

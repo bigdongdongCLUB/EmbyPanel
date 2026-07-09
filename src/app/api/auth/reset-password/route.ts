@@ -5,32 +5,18 @@ import { z } from "zod";
 
 import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
+import { passwordRuleErrorCode } from "@/lib/password-rules";
 import { encryptSyncPassword } from "@/lib/user-secrets";
 
 const RESET_TOKEN_KEY = "password_reset_tokens";
 
 const POST_SCHEMA = z.object({
   token: z.string().min(16).max(256),
-  password: z.string().min(8).max(64),
-  confirmPassword: z.string().min(1).max(64).optional(),
+  password: z.string().min(1).max(200),
+  confirmPassword: z.string().min(1).max(200).optional(),
 });
 
 type ResetTokenMap = Record<string, { userId: string; email: string; expiresAt: number; createdAt: number }>;
-
-function validatePasswordRules(password: string, strongPassword: boolean) {
-  if (strongPassword) {
-    const ok =
-      password.length >= 10 &&
-      password.length <= 32 &&
-      /[a-z]/.test(password) &&
-      /[A-Z]/.test(password) &&
-      /[0-9]/.test(password) &&
-      /[^A-Za-z0-9]/.test(password);
-    return ok;
-  }
-
-  return password.length >= 8 && /[A-Za-z]/.test(password) && /[0-9]/.test(password);
-}
 
 async function loadTokenMap() {
   const row = await prisma.appSetting.findUnique({ where: { key: RESET_TOKEN_KEY } });
@@ -100,9 +86,8 @@ export async function POST(req: Request) {
   ]);
 
   const strongPassword = !!((securityRow?.valueJson as any)?.strongPassword);
-  if (!validatePasswordRules(password, strongPassword)) {
-    return NextResponse.json({ error: "weak_password" }, { status: 400 });
-  }
+  const passwordError = passwordRuleErrorCode(password, strongPassword);
+  if (passwordError) return NextResponse.json({ error: passwordError }, { status: 400 });
 
   const nowMs = Date.now();
   const map = rawMap;

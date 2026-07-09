@@ -2,6 +2,7 @@
 
 import { UiImage } from "@/components/ui-image";
 import { useEffect, useMemo, useState } from "react";
+import { getPasswordRuleErrors, passwordRuleText } from "@/lib/password-rules";
 
 type PanelUser = {
   id: string;
@@ -17,6 +18,12 @@ function dash(v: any) {
   return String(v);
 }
 
+function passwordApiErrorText(error?: string) {
+  if (error === "password_invalid_length" || error === "password_too_short") return "密码必须为8-20位";
+  if (error === "weak_password") return "密码必须包含小写字母、大写字母和数字";
+  return error || "操作失败";
+}
+
 export function PanelUsersClient() {
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
@@ -28,8 +35,9 @@ export function PanelUsersClient() {
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [newRole, setNewRole] = useState<"USER" | "ADMIN">("USER");
+  const [strongPassword, setStrongPassword] = useState(false);
 
-  const canCreate = useMemo(() => newUsername.trim() && newPassword.length >= 6, [newUsername, newPassword]);
+  const canCreate = useMemo(() => !!newUsername.trim() && getPasswordRuleErrors(newPassword, strongPassword).length === 0, [newUsername, newPassword, strongPassword]);
 
   async function refresh() {
     setLoading(true);
@@ -50,6 +58,10 @@ export function PanelUsersClient() {
 
   useEffect(() => {
     refresh();
+    fetch("/api/public/security-settings", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j) => setStrongPassword(!!j?.data?.strongPassword))
+      .catch(() => null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -130,7 +142,10 @@ export function PanelUsersClient() {
               </div>
               <div>
                 <label className="text-sm">密码</label>
-                <input className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} type="password" />
+                <input className="mt-1 w-full border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} type="password" placeholder={passwordRuleText(strongPassword)} />
+                {newPassword && getPasswordRuleErrors(newPassword, strongPassword).length ? (
+                  <div className="mt-1 text-xs text-red-500">{getPasswordRuleErrors(newPassword, strongPassword)[0]}</div>
+                ) : null}
               </div>
               <div>
                 <label className="text-sm">角色</label>
@@ -152,7 +167,8 @@ export function PanelUsersClient() {
                     body: JSON.stringify({ username: newUsername.trim(), email: newEmail.trim(), password: newPassword, role: newRole }),
                   });
                   if (!res.ok) {
-                    alert(`创建失败: ${await res.text()}`);
+                    const body = await res.json().catch(() => null);
+                    alert(`创建失败: ${passwordApiErrorText(body?.error)}`);
                     return;
                   }
                   setCreateOpen(false);

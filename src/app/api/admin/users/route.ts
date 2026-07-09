@@ -6,6 +6,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin";
 import { hashPassword } from "@/lib/password";
+import { passwordRuleErrorCode } from "@/lib/password-rules";
 import { encryptSyncPassword } from "@/lib/user-secrets";
 import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
 import { embySetUserDisabled } from "@/lib/emby-provision";
@@ -221,7 +222,7 @@ export async function GET(req: Request) {
 
 const CreateSchema = z.object({
   username: z.string().min(1).max(50),
-  password: z.string().min(6).max(200),
+  password: z.string().min(1).max(200),
   email: z.string().email().optional().or(z.literal("")),
   role: z.enum(["USER", "ADMIN"]).optional(),
   enabled: z.boolean().optional(),
@@ -239,6 +240,10 @@ export async function POST(req: Request) {
 
   const exists = await prisma.user.findFirst({ where: { username: { equals: parsed.data.username.trim(), mode: "insensitive" } }, select: { id: true } });
   if (exists) return NextResponse.json({ error: "username_taken" }, { status: 409 });
+
+  const securityRow = await prisma.appSetting.findUnique({ where: { key: "security_basic" } });
+  const passwordError = passwordRuleErrorCode(parsed.data.password, !!((securityRow?.valueJson as any)?.strongPassword));
+  if (passwordError) return NextResponse.json({ error: passwordError }, { status: 400 });
 
   const passwordHash = await hashPassword(parsed.data.password);
 

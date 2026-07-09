@@ -1,6 +1,7 @@
 "use client";
 
 import { UiImage } from "@/components/ui-image";
+import { getPasswordRuleErrors, passwordRuleText } from "@/lib/password-rules";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
@@ -78,21 +79,8 @@ function ResetPasswordContent() {
   }, [token]);
 
   const passwordErrors = useMemo(() => {
-    const list: string[] = [];
-    if (!password) return list;
-
-    if (strongPassword) {
-      if (password.length < 10 || password.length > 32) list.push("密码必须为10-32个字符");
-      if (!/[a-z]/.test(password)) list.push("密码必须包含小写字母");
-      if (!/[A-Z]/.test(password)) list.push("密码必须包含大写字母");
-      if (!/[0-9]/.test(password)) list.push("密码必须包含数字");
-      if (!/[^A-Za-z0-9]/.test(password)) list.push("密码必须包含特殊字符");
-    } else {
-      if (password.length < 8) list.push("密码至少8个字符");
-      if (!/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) list.push("密码需包含至少一个字母和一个数字");
-    }
-
-    return Array.from(new Set(list));
+    if (!password) return [];
+    return getPasswordRuleErrors(password, strongPassword);
   }, [password, strongPassword]);
 
   const confirmError = confirmPassword && confirmPassword !== password ? "两次输入的密码不一致" : null;
@@ -114,7 +102,8 @@ function ResetPasswordContent() {
       const json = await res.json().catch(() => null);
       if (!res.ok) {
         if (json?.error === "token_invalid_or_expired") setSubmitError("重置链接无效或已过期，请重新获取");
-        else if (json?.error === "weak_password") setSubmitError("密码复杂度不符合系统要求");
+        else if (json?.error === "password_invalid_length") setSubmitError("密码必须为8-20位");
+        else if (json?.error === "weak_password") setSubmitError(`密码复杂度不符合系统要求：${passwordRuleText(strongPassword)}`);
         else if (json?.error === "confirm_password_mismatch") setSubmitError("两次输入的密码不一致");
         else setSubmitError("重置密码失败，请稍后重试");
         return;
@@ -174,6 +163,7 @@ function ResetPasswordContent() {
             {passwordErrors.map((x) => (
               <div key={x} className="text-red-500 text-xs">{x}</div>
             ))}
+            <div className="text-gray-500 text-xs">ⓘ {passwordRuleText(strongPassword)}</div>
 
             <div className={`border border-gray-200 rounded-xl px-3 py-2 flex items-center gap-2 ${confirmError ? "border-red-300" : ""}`}>
               <UiImage src="/icons/lock.svg" alt="确认密码" className="h-4 w-4 opacity-60" />

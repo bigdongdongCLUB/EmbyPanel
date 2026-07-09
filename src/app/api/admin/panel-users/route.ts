@@ -6,6 +6,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin";
 import { hashPassword } from "@/lib/password";
+import { passwordRuleErrorCode } from "@/lib/password-rules";
 
 export async function GET(req: Request) {
   const auth = await requireAdmin();
@@ -39,7 +40,7 @@ export async function GET(req: Request) {
 
 const CreateSchema = z.object({
   username: z.string().min(1).max(50),
-  password: z.string().min(6).max(200),
+  password: z.string().min(1).max(200),
   email: z.string().email().optional().or(z.literal("")),
   role: z.enum(["USER", "ADMIN"]).optional(),
   enabled: z.boolean().optional(),
@@ -52,6 +53,10 @@ export async function POST(req: Request) {
   const json = await req.json().catch(() => null);
   const parsed = CreateSchema.safeParse(json);
   if (!parsed.success) return NextResponse.json({ error: "invalid_payload" }, { status: 400 });
+
+  const securityRow = await prisma.appSetting.findUnique({ where: { key: "security_basic" } });
+  const passwordError = passwordRuleErrorCode(parsed.data.password, !!((securityRow?.valueJson as any)?.strongPassword));
+  if (passwordError) return NextResponse.json({ error: passwordError }, { status: 400 });
 
   const passwordHash = await hashPassword(parsed.data.password);
 

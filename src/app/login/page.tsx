@@ -1,6 +1,7 @@
 "use client";
 
 import { UiImage } from "@/components/ui-image";
+import { getPasswordRuleErrors, passwordRuleText } from "@/lib/password-rules";
 import { signIn } from "next-auth/react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -59,19 +60,8 @@ export default function LoginPage() {
   }, [username]);
 
   const passwordErrors = useMemo(() => {
-    const list: string[] = [];
-    if (strongPassword) {
-      if (password && (password.length < 10 || password.length > 32)) list.push("密码必须为10-32个字符");
-      if (password && !/[a-z]/.test(password)) list.push("密码必须包含小写字母");
-      if (password && !/[A-Z]/.test(password)) list.push("密码必须包含大写字母");
-      if (password && !/[0-9]/.test(password)) list.push("密码必须包含数字");
-      if (password && !/[^A-Za-z0-9]/.test(password)) list.push("密码必须包含特殊字符");
-    } else {
-      if (password && password.length < 8) list.push("密码必须至少8个字符");
-      if (password && !/[A-Za-z]/.test(password)) list.push("密码必须包含至少一个字母和一个数字");
-      if (password && !/[0-9]/.test(password)) list.push("密码必须包含至少一个字母和一个数字");
-    }
-    return Array.from(new Set(list));
+    if (!password) return [];
+    return getPasswordRuleErrors(password, strongPassword);
   }, [password, strongPassword]);
 
   const confirmError = confirmPassword && password !== confirmPassword ? "两次输入的密码不一致" : null;
@@ -220,7 +210,8 @@ export default function LoginPage() {
         else if (json?.error === "invite_required") setRegisterError("当前仅限邀请码注册");
         else if (json?.error === "invite_invalid") setRegisterError("邀请码错误");
         else if (json?.error === "reserved_username") setRegisterError("该用户名为系统保留，无法注册");
-        else if (json?.error === "weak_password") setRegisterError("密码复杂度不符合要求");
+        else if (json?.error === "password_invalid_length") setRegisterError("密码必须为8-20位");
+        else if (json?.error === "weak_password") setRegisterError(`密码复杂度不符合系统要求：${passwordRuleText(strongPassword)}`);
         else if (json?.error === "email_code_required") setRegisterError("请先输入邮箱验证码");
         else if (json?.error === "email_code_invalid") setRegisterError("邮箱验证码无效或已过期");
         else setRegisterError("注册失败，请检查输入后重试");
@@ -367,7 +358,7 @@ export default function LoginPage() {
             {passwordErrors.map((x) => (
               <div key={x} className="text-red-500 text-[11px]">{x}</div>
             ))}
-            <div className="text-gray-500 text-[11px]">ⓘ {strongPassword ? "10-32个字符，且包含大小写字母、数字和特殊字符" : "8-24个字符, 包含至少一个字母和一个数字"}</div>
+            <div className="text-gray-500 text-[11px]">ⓘ {passwordRuleText(strongPassword)}</div>
 
             <div className={`border border-gray-200 rounded-xl px-3 py-1.5 flex items-center gap-2 ${confirmError ? "border-red-300" : ""}`}>
               <UiImage src="/icons/lock.svg" alt="密码" className="h-4 w-4 opacity-60" />

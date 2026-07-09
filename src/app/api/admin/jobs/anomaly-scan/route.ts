@@ -273,7 +273,7 @@ export async function POST(req: Request) {
         const anomalyType = detectAnomalyTypeFromIps(ips);
         const titles = Array.from(new Set(sessionRows.map((x) => x.nowPlaying).filter(Boolean)));
         const devices = Array.from(new Set(sessionRows.map((x) => x.device).filter(Boolean)));
-        const description = titles.length >= 2 ? `同时在 ${concurrentCount} 个设备上播放不同内容` : `同一时间检测到 ${concurrentCount} 个设备播放`;
+        const description = `同一时间检测到 ${concurrentCount} 个设备播放`;
         const excerpt = [
           devices.length ? `设备: ${devices.slice(0, 3).join(" / ")}${devices.length > 3 ? ` 等${devices.length}台` : ""}` : "",
           ips.length ? `IP: ${ips.join(", ")}` : "",

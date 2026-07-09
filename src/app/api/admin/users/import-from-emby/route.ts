@@ -8,13 +8,14 @@ import { requireAdmin } from "@/lib/admin";
 import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
 import { embyFetchUsers } from "@/lib/emby";
 import { hashPassword } from "@/lib/password";
+import { passwordRuleErrorCode } from "@/lib/password-rules";
 import { encryptSyncPassword } from "@/lib/user-secrets";
 
 const TEMPLATE_USERNAME = "atemplate";
 
 const Schema = z.object({
   embyServerId: z.string().min(1),
-  defaultPassword: z.string().min(6).max(200),
+  defaultPassword: z.string().min(1).max(200),
 
   // optional: assign plan on import
   planId: z.string().min(1).nullable().optional(),
@@ -38,6 +39,10 @@ export async function POST(req: Request) {
   if (!parsed.success) return NextResponse.json({ error: "invalid_payload", issues: parsed.error.issues }, { status: 400 });
 
   const { embyServerId, missingOnly, skipAdmins, defaultPassword, planId, payCycle, startAt, endAt, mode, usernames } = parsed.data;
+
+  const securityRow = await prisma.appSetting.findUnique({ where: { key: "security_basic" } });
+  const passwordError = passwordRuleErrorCode(defaultPassword, !!((securityRow?.valueJson as any)?.strongPassword));
+  if (passwordError) return NextResponse.json({ error: passwordError }, { status: 400 });
 
   const server = await prisma.embyServer.findUnique({
     where: { id: embyServerId },

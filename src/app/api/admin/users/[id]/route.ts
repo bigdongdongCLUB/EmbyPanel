@@ -6,6 +6,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin";
 import { hashPassword } from "@/lib/password";
+import { passwordRuleErrorCode } from "@/lib/password-rules";
 import { encryptSyncPassword, getSyncPassword } from "@/lib/user-secrets";
 import { embyCreateUser, embySetUserDisabled, embySetUserPassword } from "@/lib/emby-provision";
 import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
@@ -44,7 +45,7 @@ const PatchSchema = z.object({
     .string()
     .transform((s) => s.trim())
     .optional()
-    .refine((s) => s === undefined || s.length === 0 || s.length >= 6, "password_too_short"),
+    .refine((s) => s === undefined || s.length <= 200, "password_invalid_length"),
 
   subscription: z
     .object({
@@ -190,7 +191,9 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   let newPlainPassword: string | null = null;
   if (parsed.data.changePassword) {
     const pw = parsed.data.newPassword ?? "";
-    if (pw.length < 6) return NextResponse.json({ error: "password_too_short" }, { status: 400 });
+    const securityRow = await prisma.appSetting.findUnique({ where: { key: "security_basic" } });
+    const passwordError = passwordRuleErrorCode(pw, !!((securityRow?.valueJson as any)?.strongPassword));
+    if (passwordError) return NextResponse.json({ error: passwordError }, { status: 400 });
     data.passwordHash = await hashPassword(pw);
     const enc = encryptSyncPassword(pw);
     data.syncPasswordEnc = enc.enc;

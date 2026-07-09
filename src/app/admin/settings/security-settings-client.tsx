@@ -79,7 +79,7 @@ export function SecuritySettingsClient() {
         </div>
 
         <div className="space-y-1.5">
-          <div className="text-sm">启用复杂密码（10-32位，含大小写、数字、特殊字符）</div>
+          <div className="text-sm">启用复杂密码（8-20位，含小写字母、大写字母、数字）</div>
           <ToggleSwitch checked={form.strongPassword} onChange={(next) => setForm((s) => ({ ...s, strongPassword: next }))} />
         </div>
 

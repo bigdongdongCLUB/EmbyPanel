@@ -8,6 +8,7 @@ import { Prisma } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { hashPassword, verifyPassword } from "@/lib/password";
+import { passwordRuleErrorCode } from "@/lib/password-rules";
 import { encryptSyncPassword } from "@/lib/user-secrets";
 
 const PatchSchema = z.object({
@@ -82,7 +83,9 @@ export async function PATCH(req: Request) {
     if (!p.currentPassword || !p.newPassword || !p.confirmPassword) {
       return NextResponse.json({ error: "password_fields_required" }, { status: 400 });
     }
-    if (p.newPassword.length < 6) return NextResponse.json({ error: "password_too_short" }, { status: 400 });
+    const securityRow = await prisma.appSetting.findUnique({ where: { key: "security_basic" } });
+    const passwordError = passwordRuleErrorCode(p.newPassword, !!((securityRow?.valueJson as any)?.strongPassword));
+    if (passwordError) return NextResponse.json({ error: passwordError }, { status: 400 });
     if (p.newPassword !== p.confirmPassword) return NextResponse.json({ error: "password_confirm_mismatch" }, { status: 400 });
 
     const ok = await verifyPassword(p.currentPassword, me.user.passwordHash);

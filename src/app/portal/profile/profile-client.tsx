@@ -1,5 +1,6 @@
 "use client";
 
+import { passwordRuleText } from "@/lib/password-rules";
 import { useEffect, useState } from "react";
 
 function mapProfileErrorMessage(code?: string, fallback?: string) {
@@ -12,8 +13,11 @@ function mapProfileErrorMessage(code?: string, fallback?: string) {
       return "提交参数有误，请检查后重试";
     case "password_fields_required":
       return "请完整填写当前密码、新密码和确认密码";
+    case "password_invalid_length":
     case "password_too_short":
-      return "新密码长度至少 6 位";
+      return "新密码必须为8-20位";
+    case "weak_password":
+      return "新密码必须包含小写字母、大写字母和数字";
     case "password_confirm_mismatch":
       return "两次输入的新密码不一致";
     case "current_password_invalid":
@@ -33,11 +37,16 @@ export function PortalProfileClient() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [strongPassword, setStrongPassword] = useState(false);
 
   async function load() {
     setLoading(true);
-    const res = await fetch("/api/portal/profile", { cache: "no-store" });
+    const [res, securityRes] = await Promise.all([
+      fetch("/api/portal/profile", { cache: "no-store" }),
+      fetch("/api/public/security-settings", { cache: "no-store" }),
+    ]);
     const json = await res.json().catch(() => null);
+    const securityJson = await securityRes.json().catch(() => null);
     if (!res.ok) {
       alert(mapProfileErrorMessage(json?.error, `HTTP ${res.status}`));
       setLoading(false);
@@ -45,6 +54,7 @@ export function PortalProfileClient() {
     }
     setEmail(json?.profile?.email || "");
     setExpiryReminderEnabled(!!json?.profile?.expiryReminderEnabled);
+    setStrongPassword(!!securityJson?.data?.strongPassword);
     setLoading(false);
   }
 
@@ -109,7 +119,7 @@ export function PortalProfileClient() {
 
           <div>
             <label className="text-sm">新密码</label>
-            <input type="password" className="mt-1 w-full border rounded px-3 py-2" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="请输入新密码（至少6位）" />
+            <input type="password" className="mt-1 w-full border rounded px-3 py-2" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder={`请输入新密码（${passwordRuleText(strongPassword)}）`} />
           </div>
 
           <div>

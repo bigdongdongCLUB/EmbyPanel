@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
+import { passwordRuleErrorCode } from "@/lib/password-rules";
 import { encryptSyncPassword } from "@/lib/user-secrets";
 
 const CODE_MAP_KEY = "invite_code_map";
@@ -18,7 +19,7 @@ const schema = z.object({
     .regex(/^[a-zA-Z0-9]+$/, "用户名只能包含字母或字母与数字的组合")
     .refine((v) => !/^[0-9]+$/.test(v), "用户名不能全为数字"),
   email: z.string().email(),
-  password: z.string().min(8),
+  password: z.string().min(1).max(200),
   name: z.string().min(1).optional(),
   inviteCode: z.string().min(3).max(32).optional(),
   emailCode: z.string().min(4).max(8).optional(),
@@ -54,17 +55,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "reserved_username" }, { status: 400 });
   }
 
-  if (security.strongPassword) {
-    const pw = parsed.data.password || "";
-    const ok =
-      pw.length >= 10 &&
-      pw.length <= 32 &&
-      /[a-z]/.test(pw) &&
-      /[A-Z]/.test(pw) &&
-      /[0-9]/.test(pw) &&
-      /[^A-Za-z0-9]/.test(pw);
-    if (!ok) return NextResponse.json({ error: "weak_password" }, { status: 400 });
-  }
+  const passwordError = passwordRuleErrorCode(parsed.data.password || "", !!security.strongPassword);
+  if (passwordError) return NextResponse.json({ error: passwordError }, { status: 400 });
 
   if (security.requireEmailVerification) {
     if (!email) return NextResponse.json({ error: "email_required_for_verification" }, { status: 400 });

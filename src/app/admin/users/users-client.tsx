@@ -3,6 +3,7 @@
 import { UiImage } from "@/components/ui-image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PaginationBar } from "@/components/pagination-bar";
+import { getPasswordRuleErrors, passwordRuleText } from "@/lib/password-rules";
 
 type EmbyServerOption = { id: string; name: string; enabled: boolean };
 type PlanOption = { id: string; name: string };
@@ -80,6 +81,12 @@ function avatarColor(username: string) {
 function dash(v: any) {
   if (v === null || v === undefined || v === "") return "-";
   return String(v);
+}
+
+function passwordApiErrorText(error?: string) {
+  if (error === "password_invalid_length" || error === "password_too_short") return "密码必须为8-20位";
+  if (error === "weak_password") return "密码必须包含小写字母、大写字母和数字";
+  return error || "操作失败";
 }
 
 function formatDateYmdShanghai(v: any) {
@@ -202,14 +209,15 @@ export function UsersClient() {
   const [newPassword, setNewPassword] = useState("");
   const [newRole, setNewRole] = useState<"USER" | "ADMIN">("USER");
   const [newBalance, setNewBalance] = useState("0");
+  const [strongPassword, setStrongPassword] = useState(false);
 
   const canCreate = useMemo(() => {
     if (!newUsername.trim()) return false;
-    if (newPassword.length < 6) return false;
+    if (getPasswordRuleErrors(newPassword, strongPassword).length) return false;
     const b = Number(newBalance);
     if (!Number.isFinite(b) || b < 0) return false;
     return true;
-  }, [newUsername, newPassword, newBalance]);
+  }, [newUsername, newPassword, newBalance, strongPassword]);
 
   const total = rows.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -291,6 +299,10 @@ export function UsersClient() {
 
   useEffect(() => {
     refresh();
+    fetch("/api/public/security-settings", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j) => setStrongPassword(!!j?.data?.strongPassword))
+      .catch(() => null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -861,7 +873,7 @@ export function UsersClient() {
                     <input
                       className="mt-2 w-full border border-[#eaeaea] rounded-lg px-3 py-2 bg-[#f4f5f7] focus:border-[#e3001b] outline-none"
                       type="password"
-                      placeholder="新密码（>=6位）"
+                      placeholder={`新密码（${passwordRuleText(strongPassword)}）`}
                       value={edit.newPassword}
                       onChange={(e) => setEdit({ ...edit, newPassword: e.target.value })}
                     />
@@ -985,6 +997,13 @@ export function UsersClient() {
                     alert("无有效订阅计划");
                     return;
                   }
+                  if (edit.changePassword) {
+                    const passwordErrors = getPasswordRuleErrors(edit.newPassword, strongPassword);
+                    if (passwordErrors.length) {
+                      alert(passwordErrors[0]);
+                      return;
+                    }
+                  }
 
                   const payload: any = {
                     email: edit.email.trim() ? edit.email.trim() : null,
@@ -1032,7 +1051,7 @@ export function UsersClient() {
                       } else if (body?.error === "no_active_subscription") {
                         msg = body?.message || "无有效订阅计划";
                       } else if (body?.error) {
-                        msg = String(body.error);
+                        msg = passwordApiErrorText(body.error);
                       }
                       alert(`保存失败: ${msg}`);
                       return;
@@ -1305,7 +1324,10 @@ export function UsersClient() {
 
                 <div>
                   <label className="text-sm text-[#222] font-medium">默认密码 <span className="text-[#e3001b]">*</span> <span className="font-normal text-[#888] text-xs">（导入后面板账户使用该密码；不会重置 Emby 原密码）</span></label>
-                  <input className="mt-2 w-full rounded-[10px] border border-[#eaeaea] bg-[#f8f9fa] px-3.5 py-2.5 text-sm outline-none focus:bg-white focus:border-[#e3001b] focus:ring-4 focus:ring-[rgba(227,0,27,0.05)]" type="password" value={importDefaultPassword} onChange={(e) => setImportDefaultPassword(e.target.value)} placeholder="至少 6 位" />
+                  <input className="mt-2 w-full rounded-[10px] border border-[#eaeaea] bg-[#f8f9fa] px-3.5 py-2.5 text-sm outline-none focus:bg-white focus:border-[#e3001b] focus:ring-4 focus:ring-[rgba(227,0,27,0.05)]" type="password" value={importDefaultPassword} onChange={(e) => setImportDefaultPassword(e.target.value)} placeholder={passwordRuleText(strongPassword)} />
+                  {importDefaultPassword && getPasswordRuleErrors(importDefaultPassword, strongPassword).length ? (
+                    <div className="mt-1 text-xs text-red-500">{getPasswordRuleErrors(importDefaultPassword, strongPassword)[0]}</div>
+                  ) : null}
                 </div>
 
                 <div>
@@ -1429,7 +1451,7 @@ export function UsersClient() {
               <button className="px-6 py-2.5 rounded-md border border-[#eaeaea] bg-white text-[#222] text-sm font-bold hover:bg-[#f8f9fa]" onClick={() => setImportOpen(false)}>取消</button>
               <button
                 className="px-6 py-2.5 rounded-md bg-[#e3001b] hover:bg-[#c20017] text-white text-sm font-bold disabled:opacity-50"
-                disabled={!importServerId || importDefaultPassword.trim().length < 6 || importLoading || (importMode === "SELECTED" && importSelectedIds.length === 0 && importNamesText.trim().length === 0) || (importPlanId ? !importStartAt || !importEndAt || importStartAt >= importEndAt : false)}
+                disabled={!importServerId || getPasswordRuleErrors(importDefaultPassword, strongPassword).length > 0 || importLoading || (importMode === "SELECTED" && importSelectedIds.length === 0 && importNamesText.trim().length === 0) || (importPlanId ? !importStartAt || !importEndAt || importStartAt >= importEndAt : false)}
                 onClick={async () => {
                   setImportLoading(true);
                   setImportError(null);
@@ -1800,7 +1822,10 @@ export function UsersClient() {
               </div>
               <div>
                 <label className="text-sm">密码</label>
-                <input className="mt-1 w-full border rounded px-3 py-2" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} type="password" />
+                <input className="mt-1 w-full border rounded px-3 py-2" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} type="password" placeholder={passwordRuleText(strongPassword)} />
+                {newPassword && getPasswordRuleErrors(newPassword, strongPassword).length ? (
+                  <div className="mt-1 text-xs text-red-500">{getPasswordRuleErrors(newPassword, strongPassword)[0]}</div>
+                ) : null}
               </div>
               <div>
                 <label className="text-sm">是否管理员（面板）</label>
@@ -1849,7 +1874,8 @@ export function UsersClient() {
                     }),
                   });
                   if (!res.ok) {
-                    alert(`创建失败: ${await res.text()}`);
+                    const body = await res.json().catch(() => null);
+                    alert(`创建失败: ${passwordApiErrorText(body?.error)}`);
                     return;
                   }
                   setCreateOpen(false);

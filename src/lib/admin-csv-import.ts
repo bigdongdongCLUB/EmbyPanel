@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
+import { passwordRuleErrorCode } from "@/lib/password-rules";
 import { encryptSyncPassword } from "@/lib/user-secrets";
 import { embyCreateUser, embySetUserDisabled } from "@/lib/emby-provision";
 import { embyFetchUsers } from "@/lib/emby";
@@ -106,11 +107,13 @@ export async function runAdminCsvImport(
   const emit = (message?: string) => onProgress?.({ total, processed, success, skipped, failed, message });
   emit("开始导入...");
 
-  const [plans, planConfigs, existingUsers] = await Promise.all([
+  const [plans, planConfigs, existingUsers, securityRow] = await Promise.all([
     prisma.plan.findMany({ where: { enabled: true }, select: { id: true, name: true } }),
     prisma.planServerConfig.findMany({ select: { planId: true, embyServerId: true } }),
     prisma.user.findMany({ select: { username: true } }),
+    prisma.appSetting.findUnique({ where: { key: "security_basic" } }),
   ]);
+  const strongPassword = !!((securityRow?.valueJson as any)?.strongPassword);
 
   const planByName = new Map(plans.map((p) => [p.name.trim().toLowerCase(), p] as const));
   const serversByPlanId = new Map<string, string[]>();
@@ -144,7 +147,8 @@ export async function runAdminCsvImport(
     try {
       if (!username) throw new Error("missing_username");
       if (!validUsername(username)) throw new Error("invalid_username");
-      if (panelPassword.length < 6) throw new Error("password_too_short");
+      const passwordError = passwordRuleErrorCode(panelPassword, strongPassword);
+      if (passwordError) throw new Error(passwordError);
 
       if (existingPanelUsernames.has(usernameKey)) {
         skipped++;
