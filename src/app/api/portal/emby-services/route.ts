@@ -8,6 +8,7 @@ import { prisma } from "@/lib/db";
 import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
 import { embyFetchUsers, normalizeBaseUrl } from "@/lib/emby";
 import { embyDeleteUser } from "@/lib/emby-provision";
+import { getSyncPassword } from "@/lib/user-secrets";
 
 const PENALTY_RECORDS_KEY = "anomaly_penalty_records";
 
@@ -152,6 +153,9 @@ export async function GET() {
     select: {
       id: true,
       username: true,
+      syncPasswordEnc: true,
+      syncPasswordIv: true,
+      syncPasswordTag: true,
       subscriptions: {
         where: { status: { in: ["ACTIVE", "EXPIRED"] }, planId: { not: null } },
         orderBy: { endAt: "desc" },
@@ -171,6 +175,7 @@ export async function GET() {
 
   if (!user) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
+  const syncPassword = getSyncPassword(user);
   const currentSub = user.subscriptions?.[0] ?? null;
   const now = Date.now();
   const canDeleteExpired = !!(currentSub?.plan?.id && currentSub?.endAt && currentSub.endAt.getTime() <= now);
@@ -307,7 +312,7 @@ export async function GET() {
     },
     aggregate,
     servers: list,
-    user: { username: user.username },
+    user: { username: user.username, syncPassword },
   });
 }
 

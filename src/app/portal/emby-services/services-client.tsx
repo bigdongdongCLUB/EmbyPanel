@@ -28,7 +28,7 @@ type Data = {
     embyUserId: string | null;
     counts: { movieCount: number; seriesCount: number; episodeCount: number; songCount: number };
   }>;
-  user: { username: string };
+  user: { username: string; syncPassword?: string | null };
 };
 
 type AnomalyDialog = {
@@ -51,9 +51,33 @@ function parseBaseUrl(u: string) {
     const x = new URL(u);
     const protocol = x.protocol.replace(":", "").toUpperCase();
     const port = x.port || (x.protocol === "https:" ? "443" : x.protocol === "http:" ? "80" : "-");
-    return { host: x.hostname, port, protocol };
+    return { host: x.hostname, address: `${x.protocol}//${x.hostname}`, port, protocol };
   } catch {
-    return { host: u, port: "-", protocol: "-" };
+    return { host: u, address: u, port: "-", protocol: "-" };
+  }
+}
+
+async function copyTextSafe(text: string) {
+  const value = String(text || "").trim();
+  if (!value) return false;
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(value);
+      return true;
+    }
+  } catch {}
+
+  const ta = document.createElement("textarea");
+  ta.value = value;
+  ta.setAttribute("readonly", "readonly");
+  ta.style.position = "fixed";
+  ta.style.left = "-9999px";
+  document.body.appendChild(ta);
+  ta.select();
+  try {
+    return document.execCommand("copy");
+  } finally {
+    document.body.removeChild(ta);
   }
 }
 
@@ -64,10 +88,22 @@ export function PortalEmbyServicesClient() {
   const [syncingServerId, setSyncingServerId] = useState<string | null>(null);
   const [deletingSubscription, setDeletingSubscription] = useState(false);
   const [anomalyDialog, setAnomalyDialog] = useState<AnomalyDialog | null>(null);
+  const [passwordVisible, setPasswordVisible] = useState(false);
+
+  useEffect(() => {
+    if (!passwordVisible) return;
+    const timer = window.setTimeout(() => setPasswordVisible(false), 10000);
+    return () => window.clearTimeout(timer);
+  }, [passwordVisible]);
 
   function openAnomalyDialog(serverName: string, details: Array<NonNullable<Data["servers"][number]["anomalyDetail"]>>) {
     if (!details.length) return;
     setAnomalyDialog({ serverName, details });
+  }
+
+  async function copyEndpointAddress(address: string) {
+    const ok = await copyTextSafe(address);
+    alert(ok ? "地址已复制" : "复制失败，请手动复制");
   }
 
   async function refresh() {
@@ -278,11 +314,36 @@ export function PortalEmbyServicesClient() {
 
               <div className="bg-[#f4f5f7] rounded-xl p-5 mb-6 space-y-1.5 text-sm">
                 <div className="flex py-2 border-b border-dashed border-[#dcdcdc]"><span className="w-20 text-[#e3001b] font-bold">用户名:</span><span className="font-mono text-[15px] text-[#222]">{data?.user.username ?? "-"}</span></div>
-                <div className="flex py-2 border-b border-dashed border-[#dcdcdc]"><span className="w-20 text-[#e3001b] font-bold">密码:</span><span className="font-mono text-[15px] text-[#222]">当前站点密码</span></div>
+                <div className="flex items-center py-2 border-b border-dashed border-[#dcdcdc]">
+                  <span className="w-20 text-[#e3001b] font-bold">密码:</span>
+                  <span className="min-w-0 flex-1 break-all font-mono text-[15px] text-[#222]">{passwordVisible ? data?.user.syncPassword || "-" : data?.user.syncPassword ? "••••••••" : "-"}</span>
+                  {data?.user.syncPassword ? (
+                    <button
+                      type="button"
+                      className="ml-2 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#e2e4e8] bg-white hover:border-[#e3001b] hover:bg-[#fff7f8]"
+                      aria-label={passwordVisible ? "隐藏密码" : "显示密码"}
+                      onClick={() => setPasswordVisible((v) => !v)}
+                    >
+                      <UiImage src={passwordVisible ? "/icons/invisible.svg" : "/icons/visible.svg"} alt="" className="h-4 w-4 opacity-70" />
+                    </button>
+                  ) : null}
+                </div>
 
                 <div className="pt-1">
                   <div className="text-center text-[#8aaec2] text-xs font-semibold tracking-wide mb-1">主线路</div>
-                  <div className="flex py-2 border-b border-dashed border-[#dcdcdc]"><span className="w-20 text-[#e3001b] font-bold">地址:</span><span className="font-mono text-[15px] text-[#222]">{mainEndpoint.host}</span></div>
+                  <div className="flex items-center py-2 border-b border-dashed border-[#dcdcdc]">
+                    <span className="w-20 text-[#e3001b] font-bold">地址:</span>
+                    <span className="min-w-0 flex-1 break-all font-mono text-[15px] text-[#222]">{mainEndpoint.address}</span>
+                    <button
+                      type="button"
+                      className="ml-2 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#e2e4e8] bg-white text-[13px] leading-none text-[#666] hover:border-[#e3001b] hover:bg-[#fff7f8] hover:text-[#e3001b]"
+                      title="复制地址"
+                      aria-label="复制主线路地址"
+                      onClick={() => void copyEndpointAddress(mainEndpoint.address)}
+                    >
+                      <UiImage src="/icons/copy.png" alt="" className="h-4 w-4" />
+                    </button>
+                  </div>
                   <div className="flex py-2 border-b border-dashed border-[#dcdcdc]"><span className="w-20 text-[#e3001b] font-bold">端口:</span><span className="font-mono text-[15px] text-[#222]">{mainEndpoint.port}</span></div>
                   <div className="flex py-2 border-b border-dashed border-[#dcdcdc]"><span className="w-20 text-[#e3001b] font-bold">协议:</span><span className="font-mono text-[15px] text-[#222]">{mainEndpoint.protocol}</span></div>
                 </div>
@@ -290,7 +351,19 @@ export function PortalEmbyServicesClient() {
                 {backupEndpoint ? (
                   <div className="pt-1">
                     <div className="text-center text-[#8aaec2] text-xs font-semibold tracking-wide mb-1">备用线路</div>
-                    <div className="flex py-2 border-b border-dashed border-[#dcdcdc]"><span className="w-20 text-[#e3001b] font-bold">地址:</span><span className="font-mono text-[15px] text-[#222]">{backupEndpoint.host}</span></div>
+                    <div className="flex items-center py-2 border-b border-dashed border-[#dcdcdc]">
+                      <span className="w-20 text-[#e3001b] font-bold">地址:</span>
+                      <span className="min-w-0 flex-1 break-all font-mono text-[15px] text-[#222]">{backupEndpoint.address}</span>
+                      <button
+                        type="button"
+                        className="ml-2 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#e2e4e8] bg-white text-[13px] leading-none text-[#666] hover:border-[#e3001b] hover:bg-[#fff7f8] hover:text-[#e3001b]"
+                        title="复制地址"
+                        aria-label="复制备用线路地址"
+                        onClick={() => void copyEndpointAddress(backupEndpoint.address)}
+                      >
+                        <UiImage src="/icons/copy.png" alt="" className="h-4 w-4" />
+                      </button>
+                    </div>
                     <div className="flex py-2 border-b border-dashed border-[#dcdcdc]"><span className="w-20 text-[#e3001b] font-bold">端口:</span><span className="font-mono text-[15px] text-[#222]">{backupEndpoint.port}</span></div>
                     <div className="flex py-2"><span className="w-20 text-[#e3001b] font-bold">协议:</span><span className="font-mono text-[15px] text-[#222]">{backupEndpoint.protocol}</span></div>
                   </div>
