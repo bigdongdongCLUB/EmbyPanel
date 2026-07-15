@@ -1,7 +1,7 @@
 "use client";
 
 import { UiImage } from "@/components/ui-image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Data = {
   subscription: { planName: string; endAt: string | null; canDeleteExpired?: boolean; serverCount: number; onlineCount: number };
@@ -89,6 +89,8 @@ export function PortalEmbyServicesClient() {
   const [deletingSubscription, setDeletingSubscription] = useState(false);
   const [anomalyDialog, setAnomalyDialog] = useState<AnomalyDialog | null>(null);
   const [passwordVisible, setPasswordVisible] = useState(false);
+  const [endpointCopyFeedback, setEndpointCopyFeedback] = useState<{ key: string; ok: boolean } | null>(null);
+  const copiedEndpointTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!passwordVisible) return;
@@ -96,14 +98,22 @@ export function PortalEmbyServicesClient() {
     return () => window.clearTimeout(timer);
   }, [passwordVisible]);
 
+  useEffect(() => {
+    return () => {
+      if (copiedEndpointTimerRef.current) clearTimeout(copiedEndpointTimerRef.current);
+    };
+  }, []);
+
   function openAnomalyDialog(serverName: string, details: Array<NonNullable<Data["servers"][number]["anomalyDetail"]>>) {
     if (!details.length) return;
     setAnomalyDialog({ serverName, details });
   }
 
-  async function copyEndpointAddress(address: string) {
+  async function copyEndpointAddress(address: string, key: string) {
     const ok = await copyTextSafe(address);
-    alert(ok ? "地址已复制" : "复制失败，请手动复制");
+    setEndpointCopyFeedback({ key, ok });
+    if (copiedEndpointTimerRef.current) clearTimeout(copiedEndpointTimerRef.current);
+    copiedEndpointTimerRef.current = setTimeout(() => setEndpointCopyFeedback(null), 1600);
   }
 
   async function refresh() {
@@ -268,6 +278,10 @@ export function PortalEmbyServicesClient() {
           const visitUrl = (s.baseUrl || "").trim();
           const mainEndpoint = parseBaseUrl(visitUrl);
           const backupEndpoint = s.backupUrl ? parseBaseUrl(String(s.backupUrl)) : null;
+          const mainEndpointKey = `${s.id}:main`;
+          const backupEndpointKey = `${s.id}:backup`;
+          const mainEndpointFeedback = endpointCopyFeedback?.key === mainEndpointKey ? endpointCopyFeedback : null;
+          const backupEndpointFeedback = endpointCopyFeedback?.key === backupEndpointKey ? endpointCopyFeedback : null;
           const stateText = s.banned ? (s.banTypeLabel ? `${s.banTypeLabel} 封禁中` : "封禁中") : s.online ? "在线" : "离线";
           const showPenaltyUnlockAt = !!(s.banned && s.banTypeLabel && s.penaltyUnlockAt);
           const recentPenaltyDetails = s.recentPenaltyDetails ?? [];
@@ -336,12 +350,18 @@ export function PortalEmbyServicesClient() {
                     <span className="min-w-0 flex-1 break-all font-mono text-[15px] text-[#222]">{mainEndpoint.address}</span>
                     <button
                       type="button"
-                      className="ml-2 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#e2e4e8] bg-white text-[13px] leading-none text-[#666] hover:border-[#e3001b] hover:bg-[#fff7f8] hover:text-[#e3001b]"
-                      title="复制地址"
-                      aria-label="复制主线路地址"
-                      onClick={() => void copyEndpointAddress(mainEndpoint.address)}
+                      className={`ml-2 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[13px] leading-none transition ${
+                        mainEndpointFeedback?.ok
+                          ? "border-green-200 bg-green-50 text-green-600"
+                          : mainEndpointFeedback
+                            ? "border-red-200 bg-red-50 text-red-600"
+                          : "border-[#e2e4e8] bg-white text-[#666] hover:border-[#e3001b] hover:bg-[#fff7f8] hover:text-[#e3001b]"
+                      }`}
+                      title={mainEndpointFeedback?.ok ? "已复制地址" : mainEndpointFeedback ? "复制失败" : "复制地址"}
+                      aria-label={mainEndpointFeedback?.ok ? "已复制主线路地址" : mainEndpointFeedback ? "主线路地址复制失败" : "复制主线路地址"}
+                      onClick={() => void copyEndpointAddress(mainEndpoint.address, mainEndpointKey)}
                     >
-                      <UiImage src="/icons/copy.png" alt="" className="h-4 w-4" />
+                      {mainEndpointFeedback ? <span className="text-xs font-bold">{mainEndpointFeedback.ok ? "✓" : "×"}</span> : <UiImage src="/icons/copy.png" alt="" className="h-4 w-4" />}
                     </button>
                   </div>
                   <div className="flex py-2 border-b border-dashed border-[#dcdcdc]"><span className="w-20 text-[#e3001b] font-bold">端口:</span><span className="font-mono text-[15px] text-[#222]">{mainEndpoint.port}</span></div>
@@ -356,12 +376,18 @@ export function PortalEmbyServicesClient() {
                       <span className="min-w-0 flex-1 break-all font-mono text-[15px] text-[#222]">{backupEndpoint.address}</span>
                       <button
                         type="button"
-                        className="ml-2 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#e2e4e8] bg-white text-[13px] leading-none text-[#666] hover:border-[#e3001b] hover:bg-[#fff7f8] hover:text-[#e3001b]"
-                        title="复制地址"
-                        aria-label="复制备用线路地址"
-                        onClick={() => void copyEndpointAddress(backupEndpoint.address)}
+                        className={`ml-2 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[13px] leading-none transition ${
+                          backupEndpointFeedback?.ok
+                            ? "border-green-200 bg-green-50 text-green-600"
+                            : backupEndpointFeedback
+                              ? "border-red-200 bg-red-50 text-red-600"
+                            : "border-[#e2e4e8] bg-white text-[#666] hover:border-[#e3001b] hover:bg-[#fff7f8] hover:text-[#e3001b]"
+                        }`}
+                        title={backupEndpointFeedback?.ok ? "已复制地址" : backupEndpointFeedback ? "复制失败" : "复制地址"}
+                        aria-label={backupEndpointFeedback?.ok ? "已复制备用线路地址" : backupEndpointFeedback ? "备用线路地址复制失败" : "复制备用线路地址"}
+                        onClick={() => void copyEndpointAddress(backupEndpoint.address, backupEndpointKey)}
                       >
-                        <UiImage src="/icons/copy.png" alt="" className="h-4 w-4" />
+                        {backupEndpointFeedback ? <span className="text-xs font-bold">{backupEndpointFeedback.ok ? "✓" : "×"}</span> : <UiImage src="/icons/copy.png" alt="" className="h-4 w-4" />}
                       </button>
                     </div>
                     <div className="flex py-2 border-b border-dashed border-[#dcdcdc]"><span className="w-20 text-[#e3001b] font-bold">端口:</span><span className="font-mono text-[15px] text-[#222]">{backupEndpoint.port}</span></div>
