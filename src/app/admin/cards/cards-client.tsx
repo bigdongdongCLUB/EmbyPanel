@@ -333,7 +333,7 @@ export function CardCodesClient() {
         <div className="fixed inset-0 bg-black/45 flex items-center justify-center p-4">
           <div className="bg-white border border-[#eaeaea] rounded-2xl w-full max-w-[470px] p-5 space-y-4 max-h-[85vh] overflow-auto shadow-sm">
             <div className="text-xl font-semibold">批量创建卡密</div>
-            <div className="rounded-lg border bg-[#fff7f8] p-4 text-sm text-gray-700">支持生成余额充值卡密和订阅卡密。卡密默认16位大写英文+数字。</div>
+            <div className="rounded-lg border bg-[#fff7f8] p-4 text-sm text-gray-700">支持生成余额充值卡密和订阅卡密。卡密默认16位大写英文+数字，余额卡密和订阅卡密在近3年内不会重复。</div>
 
             <div>
               <label className="text-sm">* 生成数量</label>

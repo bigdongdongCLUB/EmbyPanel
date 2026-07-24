@@ -743,12 +743,12 @@ export function VodClient() {
                           </span>
                         </div>
                         {r.note ? (
-                          <div className="text-[12px] text-[#666] bg-[#f8f9fa] border border-[#eaeaea] rounded px-2 py-1">
+                          <div className="w-full min-w-0 max-w-full whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-[12px] text-[#666] bg-[#f8f9fa] border border-[#eaeaea] rounded px-2 py-1">
                             备注：{r.note}
                           </div>
                         ) : null}
                         {r.adminNote ? (
-                          <div className="text-[12px] text-[#e3001b] bg-[#fff7f8] border border-[#f3d4d8] rounded px-2 py-1">
+                          <div className="w-full min-w-0 max-w-full whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-[12px] text-[#e3001b] bg-[#fff7f8] border border-[#f3d4d8] rounded px-2 py-1">
                             管理员回复：{r.adminNote}
                           </div>
                         ) : null}

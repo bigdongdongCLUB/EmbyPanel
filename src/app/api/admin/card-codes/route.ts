@@ -1,6 +1,7 @@
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
 import { requireAdmin } from "@/lib/admin";
@@ -21,6 +22,33 @@ function randomCode16() {
   let out = "";
   for (let i = 0; i < 16; i++) out += chars[Math.floor(Math.random() * chars.length)];
   return out;
+}
+
+function threeYearsAgo(now = new Date()) {
+  const d = new Date(now);
+  d.setFullYear(d.getFullYear() - 3);
+  return d;
+}
+
+async function loadRecentCardCodeSet(cutoff: Date): Promise<Set<string>> {
+  const cardCodeModel: any = (prisma as any).cardCode;
+  const rows: Array<{ code: string }> = cardCodeModel
+    ? await cardCodeModel.findMany({
+        where: { createdAt: { gte: cutoff } },
+        select: { code: true },
+      })
+    : await prisma.$queryRaw<Array<{ code: string }>>`SELECT "code" FROM "CardCode" WHERE "createdAt" >= ${cutoff}`;
+  return new Set<string>(rows.map((r) => String(r.code || "").toUpperCase()).filter(Boolean));
+}
+
+function nextUniqueCardCode(usedCodes: Set<string>) {
+  for (let i = 0; i < 2000; i++) {
+    const code = randomCode16();
+    if (usedCodes.has(code)) continue;
+    usedCodes.add(code);
+    return code;
+  }
+  throw new Error("card_code_generate_exhausted");
 }
 
 function cycleDays(payCycle?: string) {
@@ -198,12 +226,10 @@ export async function POST(req: Request) {
 
     const days = p.type === "SUBSCRIPTION" ? p.subscriptionDays ?? cycleDays(p.payCycle) : undefined;
 
+    const recentCodes = await loadRecentCardCodeSet(threeYearsAgo());
     const data: any[] = [];
-    const used = new Set<string>();
     while (data.length < p.count) {
-      const code = randomCode16();
-      if (used.has(code)) continue;
-      used.add(code);
+      const code = nextUniqueCardCode(recentCodes);
       data.push({
         code,
         type: p.type,
@@ -217,18 +243,45 @@ export async function POST(req: Request) {
 
     const cardCodeModel: any = (prisma as any).cardCode;
     if (cardCodeModel) {
-      await cardCodeModel.createMany({ data, skipDuplicates: true });
+      const created: any[] = [];
+      for (const item of data) {
+        let current = item;
+        for (let attempt = 0; attempt < 20; attempt++) {
+          try {
+            const row = await cardCodeModel.create({ data: current, select: { code: true } });
+            created.push(row);
+            break;
+          } catch (e) {
+            if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+              current = { ...current, code: nextUniqueCardCode(recentCodes) };
+              continue;
+            }
+            throw e;
+          }
+        }
+      }
+      if (created.length !== data.length) throw new Error("card_codes_create_incomplete");
+      return NextResponse.json({ ok: true, created: created.length, preview: created.slice(0, 20).map((x) => x.code) });
     } else {
+      const createdCodes: string[] = [];
       for (const d of data) {
-        await prisma.$executeRaw`
+        let current = d;
+        for (let attempt = 0; attempt < 20; attempt++) {
+          const affected = await prisma.$executeRaw`
           INSERT INTO "CardCode" ("id","code","type","status","amountCents","planId","payCycle","subscriptionDays","note","createdAt","updatedAt")
-          VALUES (${crypto.randomUUID()}, ${d.code}, ${d.type}::"CardCodeType", 'UNUSED'::"CardCodeStatus", ${d.amountCents}, ${d.planId}, ${d.payCycle}::"PayCycle", ${d.subscriptionDays}, ${d.note}, NOW(), NOW())
+          VALUES (${crypto.randomUUID()}, ${current.code}, ${current.type}::"CardCodeType", 'UNUSED'::"CardCodeStatus", ${current.amountCents}, ${current.planId}, ${current.payCycle}::"PayCycle", ${current.subscriptionDays}, ${current.note}, NOW(), NOW())
           ON CONFLICT ("code") DO NOTHING
         `;
+          if (affected > 0) {
+            createdCodes.push(current.code);
+            break;
+          }
+          current = { ...current, code: nextUniqueCardCode(recentCodes) };
+        }
       }
+      if (createdCodes.length !== data.length) throw new Error("card_codes_create_incomplete");
+      return NextResponse.json({ ok: true, created: createdCodes.length, preview: createdCodes.slice(0, 20) });
     }
-
-    return NextResponse.json({ ok: true, created: data.length, preview: data.slice(0, 20).map((x) => x.code) });
   } catch (e: any) {
     return NextResponse.json({ error: "card_codes_create_failed", message: String(e?.message ?? e) }, { status: 500 });
   }
