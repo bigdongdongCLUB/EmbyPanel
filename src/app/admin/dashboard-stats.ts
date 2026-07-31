@@ -26,6 +26,7 @@ export type UserTrendSeries = {
 
 export type DashboardStats = {
   panelUserCount: number;
+  activeSubscriptionUserCount: number;
   embyActive30dTotal: number;
   expiringSoonCount: number;
   expiringSoonDays: number;
@@ -345,8 +346,15 @@ export async function refreshUserTrend30dSnapshot(activeSnapshot?: ActiveSnapsho
 export async function getDashboardStats(expiringSoonDays = EXPIRING_SOON_DAYS): Promise<DashboardStats> {
   const now = new Date();
 
-  const [panelUserCount, expiringUsers, cached, userTrendCached] = await Promise.all([
+  const [panelUserCount, activeSubscriptionUserCount, expiringUsers, cached, userTrendCached] = await Promise.all([
     prisma.user.count(),
+    prisma.user.count({
+      where: {
+        subscriptions: {
+          some: { status: "ACTIVE", planId: { not: null }, endAt: { gt: now } },
+        },
+      },
+    }),
     prisma.user.findMany({
       where: { enabled: true },
       select: {
@@ -376,6 +384,7 @@ export async function getDashboardStats(expiringSoonDays = EXPIRING_SOON_DAYS): 
 
   return {
     panelUserCount,
+    activeSubscriptionUserCount,
     embyActive30dTotal: active.embyActive30dTotal,
     expiringSoonCount,
     expiringSoonDays,

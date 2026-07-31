@@ -5,12 +5,34 @@ import { authOptions } from "@/lib/auth";
 import { getDashboardStats } from "./dashboard-stats";
 import { UserTrendChart } from "./user-trend-chart";
 
-function StatCard({ title, value, hint, highlight, badge }: { title: string; value: string; hint?: string; highlight?: boolean; badge?: string }) {
+function StatCard({
+  title,
+  value,
+  hint,
+  highlight,
+  badge,
+  secondaryLabel,
+  secondaryValue,
+}: {
+  title: string;
+  value: string;
+  hint?: string;
+  highlight?: boolean;
+  badge?: string;
+  secondaryLabel?: string;
+  secondaryValue?: string;
+}) {
   return (
-    <div className={"relative rounded-2xl p-7 border-2 " + (highlight ? "border-[#e3001b] bg-white shadow-[0_8px_24px_rgba(227,0,27,0.08)]" : "border-transparent bg-white shadow-sm")}>
+    <div className={"relative min-w-0 rounded-2xl p-5 sm:p-7 border-2 " + (highlight ? "border-[#e3001b] bg-white shadow-[0_8px_24px_rgba(227,0,27,0.08)]" : "border-transparent bg-white shadow-sm")}>
       {badge ? <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#e3001b] text-white text-xs px-4 py-1 rounded-full font-bold">{badge}</div> : null}
       <div className="text-sm text-[#888]">{title}</div>
-      <div className={"mt-2 text-4xl font-bold " + (highlight ? "text-[#e3001b]" : "text-[#222]")}>{value}</div>
+      <div className={"mt-2 max-w-full break-words text-4xl font-bold " + (highlight ? "text-[#e3001b]" : "text-[#222]")}>{value}</div>
+      {secondaryLabel && secondaryValue !== undefined ? (
+        <div className="mt-4 flex min-w-0 flex-wrap items-end justify-start gap-x-3 gap-y-1 border-t border-[#eeeeee] pt-3">
+          <div className="min-w-0 break-words text-sm text-[#888]">{secondaryLabel}</div>
+          <div className="max-w-full break-all text-2xl font-bold leading-none text-[#e3001b]">{secondaryValue}</div>
+        </div>
+      ) : null}
       {hint ? <div className="mt-2 text-sm text-[#888]">{hint}</div> : null}
     </div>
   );
@@ -29,7 +51,12 @@ export default async function AdminHome() {
       <h1 className="text-2xl font-bold text-[#222]">仪表盘</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <StatCard title="面板用户总数" value={String(stats.panelUserCount)} />
+        <StatCard
+          title="面板用户总数"
+          value={String(stats.panelUserCount)}
+          secondaryLabel="有效订阅人数"
+          secondaryValue={String(stats.activeSubscriptionUserCount)}
+        />
         <StatCard
           title="所有 Emby 服务器 30 日活跃用户"
           value={String(stats.embyActive30dTotal)}
