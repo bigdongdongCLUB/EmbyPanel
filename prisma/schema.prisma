@@ -358,6 +358,7 @@ model VodRequest {
   status        VodRequestStatus @default(PENDING)
   bizStatus     VodBizStatus     @default(PENDING)
   adminNote     String?
+  userDeletedAt DateTime?
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
@@ -365,5 +366,6 @@ model VodRequest {
 
   @@index([userId, status, createdAt])
   @@index([userId, bizStatus, createdAt])
+  @@index([userId, userDeletedAt, createdAt])
   @@index([tmdbId, mediaType])
 }

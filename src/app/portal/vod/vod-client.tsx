@@ -518,7 +518,7 @@ export function VodClient() {
   }
 
   async function deleteMyRequest(requestId: string) {
-    const ok = await (window as unknown as { showConfirm: (msg: string) => Promise<boolean> }).showConfirm("确认删除这条点播记录？删除后管理员侧也会同步移除。");
+    const ok = await (window as unknown as { showConfirm: (msg: string) => Promise<boolean> }).showConfirm("确认删除这条点播记录？删除后仍会计入历史提交次数。");
     if (!ok) return;
     const r = await fetch(`/api/portal/vod/request?id=${encodeURIComponent(requestId)}`, { method: "DELETE" });
     const j = await r.json().catch(() => null);

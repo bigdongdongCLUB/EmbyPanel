@@ -12,6 +12,7 @@ type RelatedRequest = {
   bizStatus: BizStatus;
   note: string | null;
   adminNote: string | null;
+  userDeletedAt: string | null;
   createdAt: string;
   user: { id: string; username: string; email: string | null };
 };
@@ -29,6 +30,7 @@ type Row = {
   bizStatus: BizStatus;
   note: string | null;
   adminNote: string | null;
+  userDeletedAt: string | null;
   createdAt: string;
   user: { id: string; username: string; email: string | null };
   requestCount: number;
@@ -470,6 +472,9 @@ export function VodRequestsAdminClient() {
                               </svg>
                             )}
                           </button>
+                          {r.userDeletedAt ? (
+                            <span className="inline-flex shrink-0 rounded border border-gray-300 bg-gray-50 px-1.5 py-0.5 text-[10px] font-medium text-gray-500">用户已删除</span>
+                          ) : null}
                         </div>
                         <div className="text-xs text-gray-500 truncate">{r.titleOriginal || "-"}</div>
                         <div className="flex items-center gap-1 mt-1">
@@ -542,7 +547,12 @@ export function VodRequestsAdminClient() {
                   ? r.otherRequests.map((item) => (
                       <tr key={item.id} className="border-b border-[#eaeaea] align-middle bg-[#fcfcfd]">
                         <td className="px-3 py-3 align-middle">
-                          <div className="pl-12 text-xs text-gray-400">↳ 同媒体其他点播用户</div>
+                          <div className="flex items-center gap-2 pl-12 text-xs text-gray-400">
+                            <span>↳ 同媒体其他点播用户</span>
+                            {item.userDeletedAt ? (
+                              <span className="inline-flex shrink-0 rounded border border-gray-300 bg-gray-50 px-1.5 py-0.5 text-[10px] font-medium text-gray-500">用户已删除</span>
+                            ) : null}
+                          </div>
                         </td>
                         <td className="px-3 py-3 whitespace-nowrap align-middle">{userLabel(item.user)}</td>
                         <td className="px-3 py-3 align-middle">

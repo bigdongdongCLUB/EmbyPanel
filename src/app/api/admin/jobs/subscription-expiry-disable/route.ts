@@ -72,8 +72,11 @@ export async function POST(req: Request) {
         continue;
       }
 
-      // 订阅到期后清空该用户“我的点播”全部记录
-      const cleared = await prisma.vodRequest.deleteMany({ where: { userId: u.id } });
+      // 订阅到期后从用户“我的点播”隐藏全部记录，管理员侧继续保留历史。
+      const cleared = await prisma.vodRequest.updateMany({
+        where: { userId: u.id, userDeletedAt: null },
+        data: { userDeletedAt: now },
+      });
       vodRequestsCleared += cleared.count;
 
       // 规则：试用号到期后直接删除（面板 + Emby）

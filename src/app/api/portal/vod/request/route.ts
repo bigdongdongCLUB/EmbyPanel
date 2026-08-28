@@ -74,7 +74,10 @@ export async function POST(req: Request) {
   if (!enabled) return NextResponse.json({ error: "vod_disabled", message: "目前点播功能暂未开启" }, { status: 403 });
 
   const existingRequest = await prisma.vodRequest.findFirst({
-    where: mediaType === "TV" ? { userId, tmdbId, mediaType, season: season ?? null } : { userId, tmdbId, mediaType },
+    where:
+      mediaType === "TV"
+        ? { userId, tmdbId, mediaType, season: season ?? null, userDeletedAt: null }
+        : { userId, tmdbId, mediaType, userDeletedAt: null },
     select: { id: true },
   });
   if (existingRequest) {
@@ -122,7 +125,7 @@ export async function GET(req: Request) {
   const page = Math.max(1, Number(url.searchParams.get("page") || "1") || 1);
   const pageSize = Math.max(1, Math.min(30, Number(url.searchParams.get("pageSize") || "10") || 10));
 
-  const where = { userId };
+  const where = { userId, userDeletedAt: null };
   const [total, rows] = await Promise.all([
     prisma.vodRequest.count({ where }),
     prisma.vodRequest.findMany({
@@ -155,17 +158,18 @@ export async function DELETE(req: Request) {
   const url = new URL(req.url);
   const id = (url.searchParams.get("id") || "").trim();
 
-  // 删除单条点播记录（用户主动删除，管理员侧也会同步看不到）
+  // 用户侧软删除：管理员仍可查看，历史提交统计也继续保留。
   if (id) {
-    const row = await prisma.vodRequest.findFirst({ where: { id, userId: dbUser.id }, select: { id: true } });
+    const row = await prisma.vodRequest.findFirst({ where: { id, userId: dbUser.id, userDeletedAt: null }, select: { id: true } });
     if (!row) return NextResponse.json({ error: "not_found" }, { status: 404 });
-    await prisma.vodRequest.delete({ where: { id } });
+    await prisma.vodRequest.update({ where: { id }, data: { userDeletedAt: new Date() } });
     return NextResponse.json({ ok: true, deleted: 1 });
   }
 
-  // 清空已完成记录
-  const result = await prisma.vodRequest.deleteMany({
-    where: { userId: dbUser.id, OR: [{ bizStatus: "COMPLETED" }, { status: "APPROVED" }] },
+  // 清空已完成记录同样只对用户隐藏。
+  const result = await prisma.vodRequest.updateMany({
+    where: { userId: dbUser.id, userDeletedAt: null, OR: [{ bizStatus: "COMPLETED" }, { status: "APPROVED" }] },
+    data: { userDeletedAt: new Date() },
   });
 
   return NextResponse.json({ ok: true, deleted: result.count });
