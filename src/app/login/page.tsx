@@ -342,53 +342,6 @@ export default function LoginPage() {
               <input className="w-full text-sm outline-none" placeholder="邮箱（必填）" value={email} onChange={(e) => setEmail(e.target.value)} required />
             </div>
 
-            <div className={`border border-gray-200 rounded-xl px-3 py-1.5 flex items-center gap-2 ${passwordErrors.length ? "border-red-300" : ""}`}>
-              <UiImage src="/icons/lock.svg" alt="密码" className="h-4 w-4 opacity-60" />
-              <input
-                className="w-full text-sm outline-none"
-                placeholder="密码"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                type={pwdVisible ? "text" : "password"}
-              />
-              <button type="button" onClick={() => setPwdVisible((v) => !v)}>
-                <EyeIcon off={!pwdVisible} />
-              </button>
-            </div>
-            {passwordErrors.map((x) => (
-              <div key={x} className="text-red-500 text-[11px]">{x}</div>
-            ))}
-            <div className="text-gray-500 text-[11px]">ⓘ {passwordRuleText(strongPassword)}</div>
-
-            <div className={`border border-gray-200 rounded-xl px-3 py-1.5 flex items-center gap-2 ${confirmError ? "border-red-300" : ""}`}>
-              <UiImage src="/icons/lock.svg" alt="密码" className="h-4 w-4 opacity-60" />
-              <input
-                className="w-full text-sm outline-none"
-                placeholder="确认密码"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                type={confirmPwdVisible ? "text" : "password"}
-              />
-              <button type="button" onClick={() => setConfirmPwdVisible((v) => !v)}>
-                <EyeIcon off={!confirmPwdVisible} />
-              </button>
-            </div>
-            {confirmError ? <div className="text-red-500 text-[11px]">{confirmError}</div> : null}
-
-            <div className={`border border-gray-200 rounded-xl px-3 py-1.5 flex items-center gap-2 ${inviteCode && inviteCodeStatus === "invalid" ? "border-red-300 bg-red-50" : inviteCode && inviteCodeStatus === "valid" ? "border-green-300 bg-green-50" : ""}`}>
-              <input
-                className="w-full text-sm outline-none bg-transparent"
-                placeholder={inviteOnly ? "邀请码（必填）" : "邀请码（选填）"}
-                value={inviteCode}
-                onChange={(e) => setInviteCode(e.target.value)}
-              />
-            </div>
-            {inviteCode.trim() ? (
-              inviteCodeStatus === "checking" ? <div className="text-gray-500 text-[11px]">校验中...</div> :
-              inviteCodeStatus === "valid" ? <div className="text-green-600 text-[11px]">✓ 邀请码有效</div> :
-              inviteCodeStatus === "invalid" ? <div className="text-red-500 text-[11px]">邀请码错误</div> : null
-            ) : null}
-
             {requireEmailVerification ? (
               <div className="border border-gray-200 rounded-xl px-3 py-1.5 flex items-center gap-2">
                 <input className="w-full text-sm outline-none" placeholder="邮箱验证码" value={emailCode} onChange={(e) => setEmailCode(e.target.value)} />
@@ -424,6 +377,52 @@ export default function LoginPage() {
                   {sendingCode ? "发送中" : codeCooldown > 0 ? `${codeCooldown}s` : "发送验证码"}
                 </button>
               </div>
+            ) : null}
+
+            <div className={`border border-gray-200 rounded-xl px-3 py-1.5 flex items-center gap-2 ${passwordErrors.length ? "border-red-300" : ""}`}>
+              <UiImage src="/icons/lock.svg" alt="密码" className="h-4 w-4 opacity-60" />
+              <input
+                className="w-full text-sm outline-none"
+                placeholder="密码"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                type={pwdVisible ? "text" : "password"}
+              />
+              <button type="button" onClick={() => setPwdVisible((v) => !v)}>
+                <EyeIcon off={!pwdVisible} />
+              </button>
+            </div>
+            {passwordErrors.map((x) => (
+              <div key={x} className="text-red-500 text-[11px]">{x}</div>
+            ))}
+
+            <div className={`border border-gray-200 rounded-xl px-3 py-1.5 flex items-center gap-2 ${confirmError ? "border-red-300" : ""}`}>
+              <UiImage src="/icons/lock.svg" alt="密码" className="h-4 w-4 opacity-60" />
+              <input
+                className="w-full text-sm outline-none"
+                placeholder="确认密码"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                type={confirmPwdVisible ? "text" : "password"}
+              />
+              <button type="button" onClick={() => setConfirmPwdVisible((v) => !v)}>
+                <EyeIcon off={!confirmPwdVisible} />
+              </button>
+            </div>
+            {confirmError ? <div className="text-red-500 text-[11px]">{confirmError}</div> : null}
+
+            <div className={`border border-gray-200 rounded-xl px-3 py-1.5 flex items-center gap-2 ${inviteCode && inviteCodeStatus === "invalid" ? "border-red-300 bg-red-50" : inviteCode && inviteCodeStatus === "valid" ? "border-green-300 bg-green-50" : ""}`}>
+              <input
+                className="w-full text-sm outline-none bg-transparent"
+                placeholder={inviteOnly ? "邀请码（必填）" : "邀请码（选填）"}
+                value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value)}
+              />
+            </div>
+            {inviteCode.trim() ? (
+              inviteCodeStatus === "checking" ? <div className="text-gray-500 text-[11px]">校验中...</div> :
+              inviteCodeStatus === "valid" ? <div className="text-green-600 text-[11px]">✓ 邀请码有效</div> :
+              inviteCodeStatus === "invalid" ? <div className="text-red-500 text-[11px]">邀请码错误</div> : null
             ) : null}
 
             {registerError ? <div className="text-red-500 text-[11px]">{registerError}</div> : null}
