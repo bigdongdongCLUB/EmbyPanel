@@ -36,6 +36,22 @@ type AnomalyDialog = {
   details: Array<NonNullable<Data["servers"][number]["anomalyDetail"]>>;
 };
 
+type QuickImportPlayer = "forward" | "senplayer" | "vidhub" | "hills" | "xiaohuan";
+
+type QuickImportDialog = {
+  serverName: string;
+  routeLabel: "主线路" | "备用线路";
+  endpoint: ReturnType<typeof parseBaseUrl>;
+};
+
+const QUICK_IMPORT_PLAYERS: Array<{ id: QuickImportPlayer; name: string; supported: boolean }> = [
+  { id: "forward", name: "Forward", supported: true },
+  { id: "senplayer", name: "SenPlayer", supported: true },
+  { id: "vidhub", name: "VidHub", supported: true },
+  { id: "hills", name: "Hills", supported: true },
+  { id: "xiaohuan", name: "小幻影视", supported: true },
+];
+
 function fmtDate(v?: string | null) {
   if (!v) return "--";
   return new Date(v).toLocaleDateString("zh-CN", { timeZone: "Asia/Shanghai" });
@@ -55,6 +71,63 @@ function parseBaseUrl(u: string) {
   } catch {
     return { host: u, address: u, port: "-", protocol: "-" };
   }
+}
+
+function buildQuickImportUrl(
+  player: QuickImportPlayer,
+  endpoint: ReturnType<typeof parseBaseUrl>,
+  username: string,
+  password: string,
+  title: string,
+) {
+  const protocol = endpoint.protocol.toLowerCase();
+  if (!endpoint.host || !endpoint.port || endpoint.port === "-" || !["http", "https"].includes(protocol)) return null;
+
+  if (player === "senplayer") {
+    const params = new URLSearchParams({
+      type: "emby",
+      address: `${protocol}://${endpoint.host}:${endpoint.port}`,
+      username,
+      password,
+    });
+    return `senplayer://importserver?${params.toString()}`;
+  }
+
+  if (player === "forward" || player === "vidhub" || player === "hills") {
+    const params = new URLSearchParams({
+      type: "emby",
+      scheme: protocol,
+      host: endpoint.host,
+      port: endpoint.port,
+      username,
+      password,
+    });
+    return `${player}://import?${params.toString()}`;
+  }
+
+  if (player === "xiaohuan") {
+    const params = new URLSearchParams({
+      type: "emby",
+      title,
+      scheme: protocol,
+      host: endpoint.host,
+      port: endpoint.port,
+      username,
+      password,
+    });
+    return `rodelplayer://import?${params.toString()}`;
+  }
+
+  return null;
+}
+
+function PhoneIcon({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className={className}>
+      <rect x="6.5" y="2.5" width="11" height="19" rx="2" stroke="currentColor" strokeWidth="1.8" />
+      <circle cx="12" cy="18.5" r="0.9" fill="currentColor" />
+    </svg>
+  );
 }
 
 async function copyTextSafe(text: string) {
@@ -88,6 +161,11 @@ export function PortalEmbyServicesClient() {
   const [syncingServerId, setSyncingServerId] = useState<string | null>(null);
   const [deletingSubscription, setDeletingSubscription] = useState(false);
   const [anomalyDialog, setAnomalyDialog] = useState<AnomalyDialog | null>(null);
+  const [quickImportDialog, setQuickImportDialog] = useState<QuickImportDialog | null>(null);
+  const [quickImportPlayer, setQuickImportPlayer] = useState<QuickImportPlayer>("forward");
+  const [quickImportPassword, setQuickImportPassword] = useState("");
+  const [quickImportPasswordVisible, setQuickImportPasswordVisible] = useState(false);
+  const [quickImportMessage, setQuickImportMessage] = useState<string | null>(null);
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [endpointCopyFeedback, setEndpointCopyFeedback] = useState<{ key: string; ok: boolean } | null>(null);
   const copiedEndpointTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -107,6 +185,35 @@ export function PortalEmbyServicesClient() {
   function openAnomalyDialog(serverName: string, details: Array<NonNullable<Data["servers"][number]["anomalyDetail"]>>) {
     if (!details.length) return;
     setAnomalyDialog({ serverName, details });
+  }
+
+  function openQuickImportDialog(serverName: string, routeLabel: "主线路" | "备用线路", endpoint: ReturnType<typeof parseBaseUrl>) {
+    setQuickImportPlayer("forward");
+    setQuickImportPassword(data?.user.syncPassword || "");
+    setQuickImportPasswordVisible(false);
+    setQuickImportMessage(null);
+    setQuickImportDialog({ serverName, routeLabel, endpoint });
+  }
+
+  function launchQuickImport() {
+    if (!quickImportDialog || !data) return;
+    if (!quickImportPassword) {
+      setQuickImportMessage("请输入当前 Emby 密码");
+      return;
+    }
+    const importUrl = buildQuickImportUrl(
+      quickImportPlayer,
+      quickImportDialog.endpoint,
+      data.user.username,
+      quickImportPassword,
+      `${quickImportDialog.serverName}-${quickImportDialog.routeLabel}`,
+    );
+    if (!importUrl) {
+      setQuickImportMessage("该播放器暂未公开服务器快捷导入协议");
+      return;
+    }
+    setQuickImportMessage(null);
+    window.location.href = importUrl;
   }
 
   async function copyEndpointAddress(address: string, key: string) {
@@ -194,6 +301,99 @@ export function PortalEmbyServicesClient() {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      ) : null}
+
+      {quickImportDialog ? (
+        <div className="fixed inset-0 z-[310] flex items-center justify-center px-4 py-6">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/70 backdrop-blur-[2px]"
+            aria-label="关闭快捷导入"
+            onClick={() => setQuickImportDialog(null)}
+          />
+          <div className="relative max-h-[90vh] w-full max-w-[640px] overflow-y-auto rounded-[24px] border border-[#e7e7e7] bg-white px-5 py-6 shadow-[0_24px_70px_rgba(0,0,0,0.25)] sm:px-8 sm:py-8">
+            <button
+              type="button"
+              className="absolute right-5 top-5 text-2xl leading-none text-[#222] hover:text-[#e3001b]"
+              aria-label="关闭"
+              onClick={() => setQuickImportDialog(null)}
+            >
+              ×
+            </button>
+            <div className="flex items-center gap-3 pr-10 text-2xl font-bold text-[#161616]">
+              <PhoneIcon className="h-6 w-6 shrink-0 text-[#f2003c]" />
+              <span>快捷导入</span>
+            </div>
+            <div className="mt-3 text-sm leading-6 text-[#888] sm:text-base">
+              选择播放器并确认当前 Emby 密码，系统会使用{quickImportDialog.routeLabel}生成导入链接。
+            </div>
+            <div className="mt-2 text-xs text-[#aaa]">
+              {quickImportDialog.serverName} · {quickImportDialog.endpoint.address}:{quickImportDialog.endpoint.port}
+            </div>
+
+            <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {QUICK_IMPORT_PLAYERS.map((player) => {
+                const selected = quickImportPlayer === player.id;
+                return (
+                  <button
+                    key={player.id}
+                    type="button"
+                    className={`relative min-h-12 rounded-xl border px-4 py-2 text-base font-semibold transition ${
+                      selected
+                        ? "border-[#f2003c] bg-[#f2003c] text-white"
+                        : "border-[#dedede] bg-white text-[#161616] hover:border-[#f2003c]"
+                    }`}
+                    onClick={() => {
+                      setQuickImportPlayer(player.id);
+                      setQuickImportMessage(player.supported ? null : "该播放器暂未公开服务器快捷导入协议");
+                    }}
+                  >
+                    {player.name}
+                    {!player.supported ? (
+                      <span className={`ml-2 text-[10px] font-normal ${selected ? "text-white/80" : "text-[#aaa]"}`}>暂不支持</span>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+
+            <label className="mt-6 block text-sm font-semibold text-[#333]" htmlFor="quick-import-password">
+              Emby 密码
+            </label>
+            <div className="mt-2 flex items-center rounded-xl border border-[#dedede] bg-[#f8f9fa] px-4 focus-within:border-[#f2003c] focus-within:bg-white">
+              <input
+                id="quick-import-password"
+                type={quickImportPasswordVisible ? "text" : "password"}
+                value={quickImportPassword}
+                autoComplete="current-password"
+                className="min-w-0 flex-1 bg-transparent py-3 font-mono text-base text-[#222] outline-none"
+                placeholder="请输入当前 Emby 密码"
+                onChange={(event) => {
+                  setQuickImportPassword(event.target.value);
+                  setQuickImportMessage(null);
+                }}
+              />
+              <button
+                type="button"
+                className="ml-2 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full hover:bg-[#eee]"
+                aria-label={quickImportPasswordVisible ? "隐藏密码" : "显示密码"}
+                onClick={() => setQuickImportPasswordVisible((visible) => !visible)}
+              >
+                <UiImage src={quickImportPasswordVisible ? "/icons/invisible.svg" : "/icons/visible.svg"} alt="" className="h-4 w-4 opacity-70" />
+              </button>
+            </div>
+            {quickImportMessage ? <div className="mt-3 text-sm text-[#e3001b]">{quickImportMessage}</div> : null}
+            <button
+              type="button"
+              className="mt-6 w-full rounded-xl bg-[#f2003c] px-4 py-3 text-base font-bold text-white transition hover:bg-[#d90035] disabled:cursor-not-allowed disabled:bg-[#c8c8c8]"
+              disabled={!QUICK_IMPORT_PLAYERS.find((player) => player.id === quickImportPlayer)?.supported}
+              onClick={launchQuickImport}
+            >
+              导入到 {QUICK_IMPORT_PLAYERS.find((player) => player.id === quickImportPlayer)?.name}
+            </button>
+            <div className="mt-3 text-center text-xs leading-5 text-[#aaa]">导入信息仅在当前浏览器中生成，不会额外保存密码。</div>
           </div>
         </div>
       ) : null}
@@ -366,6 +566,16 @@ export function PortalEmbyServicesClient() {
                   </div>
                   <div className="flex py-2 border-b border-dashed border-[#dcdcdc]"><span className="w-20 text-[#e3001b] font-bold">端口:</span><span className="font-mono text-[15px] text-[#222]">{mainEndpoint.port}</span></div>
                   <div className="flex py-2 border-b border-dashed border-[#dcdcdc]"><span className="w-20 text-[#e3001b] font-bold">协议:</span><span className="font-mono text-[15px] text-[#222]">{mainEndpoint.protocol}</span></div>
+                  <div className="flex justify-center pt-3">
+                    <button
+                      type="button"
+                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#d9d9d9] bg-white px-4 py-2 text-sm font-semibold text-[#222] transition hover:border-[#e3001b] hover:bg-[#fff7f8] hover:text-[#e3001b]"
+                      onClick={() => openQuickImportDialog(s.name, "主线路", mainEndpoint)}
+                    >
+                      <PhoneIcon />
+                      快捷导入
+                    </button>
+                  </div>
                 </div>
 
                 {backupEndpoint ? (
@@ -392,6 +602,16 @@ export function PortalEmbyServicesClient() {
                     </div>
                     <div className="flex py-2 border-b border-dashed border-[#dcdcdc]"><span className="w-20 text-[#e3001b] font-bold">端口:</span><span className="font-mono text-[15px] text-[#222]">{backupEndpoint.port}</span></div>
                     <div className="flex py-2"><span className="w-20 text-[#e3001b] font-bold">协议:</span><span className="font-mono text-[15px] text-[#222]">{backupEndpoint.protocol}</span></div>
+                    <div className="flex justify-center pt-3">
+                      <button
+                        type="button"
+                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#d9d9d9] bg-white px-4 py-2 text-sm font-semibold text-[#222] transition hover:border-[#e3001b] hover:bg-[#fff7f8] hover:text-[#e3001b]"
+                        onClick={() => openQuickImportDialog(s.name, "备用线路", backupEndpoint)}
+                      >
+                        <PhoneIcon />
+                        快捷导入
+                      </button>
+                    </div>
                   </div>
                 ) : null}
               </div>
