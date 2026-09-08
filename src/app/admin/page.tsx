@@ -27,13 +27,13 @@ function StatCard({
       {badge ? <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#e3001b] text-white text-xs px-4 py-1 rounded-full font-bold">{badge}</div> : null}
       <div className="text-sm text-[#888]">{title}</div>
       <div className={"mt-2 max-w-full break-words text-4xl font-bold " + (highlight ? "text-[#e3001b]" : "text-[#222]")}>{value}</div>
+      {hint ? <div className="mt-2 text-sm text-[#888]">{hint}</div> : null}
       {secondaryLabel && secondaryValue !== undefined ? (
         <div className="mt-4 flex min-w-0 flex-wrap items-end justify-start gap-x-3 gap-y-1 border-t border-[#eeeeee] pt-3">
           <div className="min-w-0 break-words text-sm text-[#888]">{secondaryLabel}</div>
           <div className="max-w-full break-all text-2xl font-bold leading-none text-[#e3001b]">{secondaryValue}</div>
         </div>
       ) : null}
-      {hint ? <div className="mt-2 text-sm text-[#888]">{hint}</div> : null}
     </div>
   );
 }
@@ -62,7 +62,15 @@ export default async function AdminHome() {
           value={String(stats.embyActive30dTotal)}
           hint={stats.activeSnapshotAt ? `每日 00:00 更新：${new Date(stats.activeSnapshotAt).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false })}` : "每日 00:00 更新"}
         />
-        <StatCard title="即将到期用户" value={String(stats.expiringSoonCount)} hint={`未来 ${stats.expiringSoonDays} 天内到期`} highlight badge="需关注" />
+        <StatCard
+          title="即将到期用户"
+          value={String(stats.expiringSoonCount)}
+          hint={`未来 ${stats.expiringSoonDays} 天内到期`}
+          secondaryLabel="本月即将到期"
+          secondaryValue={String(stats.expiringThisMonthCount)}
+          highlight
+          badge="需关注"
+        />
       </div>
 
       <UserTrendChart series={stats.userTrend30d} />

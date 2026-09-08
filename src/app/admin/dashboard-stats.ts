@@ -2,7 +2,11 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getEmbyApiKeyForServer } from "@/lib/emby-auth";
 import { embyFetchUsers } from "@/lib/emby";
-import { EXPIRING_SOON_DAYS, isSubscriptionExpiringSoon } from "@/lib/subscription-status";
+import {
+  EXPIRING_SOON_DAYS,
+  isSubscriptionExpiringSoon,
+  isSubscriptionExpiringThisMonth,
+} from "@/lib/subscription-status";
 
 const DASHBOARD_ACTIVE30D_CACHE_KEY = "admin_dashboard_active30d_snapshot";
 // v4: both bars use the same Emby LastActivityDate snapshot family.
@@ -29,6 +33,7 @@ export type DashboardStats = {
   activeSubscriptionUserCount: number;
   embyActive30dTotal: number;
   expiringSoonCount: number;
+  expiringThisMonthCount: number;
   expiringSoonDays: number;
   perServer: Array<{ id: string; name: string; active30d: number; dailyActive: number; totalUsers: number; ok: boolean; error?: string }>;
   activeSnapshotAt: string | null;
@@ -370,6 +375,9 @@ export async function getDashboardStats(expiringSoonDays = EXPIRING_SOON_DAYS): 
     readUserTrend30dSnapshot(),
   ]);
   const expiringSoonCount = expiringUsers.filter((u) => isSubscriptionExpiringSoon(u.subscriptions[0]?.endAt, now, expiringSoonDays)).length;
+  const expiringThisMonthCount = expiringUsers.filter((u) =>
+    isSubscriptionExpiringThisMonth(u.subscriptions[0]?.endAt, now)
+  ).length;
 
   // Dashboard reads must not rebuild yesterday's LastActivityDate snapshot on page load.
   // If a cache is missing, wait for the 00:00 scheduled job (or explicit job run)
@@ -387,6 +395,7 @@ export async function getDashboardStats(expiringSoonDays = EXPIRING_SOON_DAYS): 
     activeSubscriptionUserCount,
     embyActive30dTotal: active.embyActive30dTotal,
     expiringSoonCount,
+    expiringThisMonthCount,
     expiringSoonDays,
     perServer: active.perServer,
     activeSnapshotAt: active.snapshotAt ?? null,
