@@ -27,6 +27,9 @@ function fmtDateYmd(v?: string | null) {
 }
 
 function redeemErrorMessage(message: string) {
+  if (message === "unauthorized") {
+    return "登录已过期，请重新登录";
+  }
   if (["card_not_found", "card_not_usable", "card_already_used", "invalid_payload"].includes(message)) {
     return "兑换失败 卡密错误";
   }
