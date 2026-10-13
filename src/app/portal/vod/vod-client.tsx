@@ -704,7 +704,6 @@ export function VodClient() {
             </div>
             <div className="space-y-4 text-sm leading-6 text-[#555]">
               <p>每人每月获得 {quota?.total ?? 300} 积分，每月 1 日重置。不累积、不结转，当月额度用完需等待下月重置。</p>
-              <p>每人每天最多提交 {quota?.dailyTotal ?? 2} 次申请，消耗积分和免积分申请均计入次数。成功提交才计次，删除待处理申请恢复次数，删除其他状态申请不恢复次数，每日重置。</p>
               <div className="rounded-xl bg-[#f7f8fa] p-4">
                 <p className="font-bold text-[#222]">电影：每部 10 积分，与发行年份无关。</p>
                 <p className="mt-2 font-bold text-[#222]">电视剧：按每次点按季计算积分，以所选季的发行年份为准。</p>
