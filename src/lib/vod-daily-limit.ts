@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 
-export const DEFAULT_DAILY_VOD_SUBMISSIONS = 3;
+export const DEFAULT_DAILY_VOD_SUBMISSIONS = 2;
 
 export function dailyVodSubmissionSetting(value: unknown) {
   return typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 1000

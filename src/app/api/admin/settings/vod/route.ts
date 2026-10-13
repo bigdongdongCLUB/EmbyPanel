@@ -13,7 +13,7 @@ const Schema = z.object({
   tmdbApiKey: z.string().max(200).default(""),
   tmdbCacheHours: z.number().int().min(1).max(168).default(12),
   monthlyInitialPoints: z.number().int().min(0).max(100000).default(300),
-  dailySubmissionLimit: z.number().int().min(1).max(1000).default(3),
+  dailySubmissionLimit: z.number().int().min(1).max(1000).default(2),
 });
 
 const DEFAULTS = {
@@ -21,7 +21,7 @@ const DEFAULTS = {
   tmdbApiKey: "",
   tmdbCacheHours: 12,
   monthlyInitialPoints: 300,
-  dailySubmissionLimit: 3,
+  dailySubmissionLimit: 2,
 };
 
 export async function GET() {

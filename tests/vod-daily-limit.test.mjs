@@ -10,10 +10,10 @@ const testModule = { exports: {} };
 new Function("module", "exports", "require", compiled)(testModule, testModule.exports, require);
 const { dailyVodSubmissionSetting, vodSubmissionDay, getDailyVodSubmissions, recordDeletedVodSubmission } = testModule.exports;
 
-test("daily submission setting defaults to three and validates integers", () => {
-  assert.equal(dailyVodSubmissionSetting(undefined), 3);
+test("daily submission setting defaults to two and validates integers", () => {
+  assert.equal(dailyVodSubmissionSetting(undefined), 2);
   assert.equal(dailyVodSubmissionSetting(5), 5);
-  for (const value of [0, -1, 1.5, "5", 1001]) assert.equal(dailyVodSubmissionSetting(value), 3);
+  for (const value of [0, -1, 1.5, "5", 1001]) assert.equal(dailyVodSubmissionSetting(value), 2);
 });
 
 test("day boundary is Shanghai midnight", () => {

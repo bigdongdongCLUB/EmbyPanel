@@ -12,7 +12,7 @@ type Settings = {
   dailySubmissionLimit: number;
 };
 
-const DEFAULTS: Settings = { enabled: false, tmdbApiKey: "", tmdbCacheHours: 12, monthlyInitialPoints: 300, dailySubmissionLimit: 3 };
+const DEFAULTS: Settings = { enabled: false, tmdbApiKey: "", tmdbCacheHours: 12, monthlyInitialPoints: 300, dailySubmissionLimit: 2 };
 
 export function VodSettingsClient() {
   const [settings, setSettings] = useState<Settings>(DEFAULTS);
@@ -171,7 +171,7 @@ export function VodSettingsClient() {
           />
           <span className="shrink-0 text-sm text-gray-400">次/天</span>
         </div>
-        <p className="text-xs text-gray-400">默认每人每天 3 次，消耗积分和免积分申请均计入次数。</p>
+        <p className="text-xs text-gray-400">默认每人每天 2 次，消耗积分和免积分申请均计入次数。</p>
       </div>
 
       {/* 测试结果 */}
