@@ -112,6 +112,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
           where: { mediaType: current.mediaType, tmdbId: current.tmdbId, season: current.season },
           select: {
             id: true,
+            userId: true,
             mediaType: true,
             tmdbId: true,
             title: true,
@@ -127,6 +128,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
           where: { mediaType: current.mediaType, year: current.year, season: current.season },
           select: {
             id: true,
+            userId: true,
             mediaType: true,
             tmdbId: true,
             title: true,
@@ -139,7 +141,19 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
           },
         });
 
-    const sameGroup = candidates.filter((r) => mediaGroupKey(r) === currentKey);
+    const groupedCandidates = candidates.filter((row) => mediaGroupKey(row) === currentKey);
+    for (const userId of [...new Set(groupedCandidates.map((row) => row.userId))].sort()) {
+      await lockVodPointUser(tx, userId);
+    }
+    // Re-read status after the user locks so completed peers cannot be refunded by a concurrent update.
+    const lockedRows = await tx.vodRequest.findMany({
+      where: { id: { in: groupedCandidates.map((row) => row.id) } },
+      select: { id: true, status: true, bizStatus: true },
+    });
+    const lockedById = new Map(lockedRows.map((row) => [row.id, row]));
+    const sameGroup = groupedCandidates.filter((row) => lockedById.has(row.id)).map((row) => ({ ...row, ...lockedById.get(row.id)! }));
+    const selectedRow = sameGroup.find((row) => row.id === id);
+    if (!selectedRow) return null;
 
     const latest = sameGroup
       .slice()
@@ -157,7 +171,9 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     const targetStatus = targetBizStatus === "COMPLETED" ? "APPROVED" :
       targetBizStatus === "PENDING" || targetBizStatus === "PROCESSING" ? "PENDING" : "REJECTED";
     const statusData = { status: targetStatus, bizStatus: targetBizStatus } as const;
-    const affectedRows = latest && latest.id === id ? sameGroup : [current];
+    const affectedRows = latest && latest.id === id
+      ? sameGroup.filter((row) => row.id === id || row.bizStatus !== "COMPLETED")
+      : [selectedRow];
     const changedIds = affectedRows
       .filter((row) => row.bizStatus !== targetBizStatus || row.status !== targetStatus)
       .map((row) => row.id);
@@ -165,7 +181,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
     if (latest && latest.id === id && Object.keys(statusData).length > 0) {
       await tx.vodRequest.updateMany({
-        where: { id: { in: sameGroup.map((r) => r.id) } },
+        where: { id: { in: affectedRows.map((row) => row.id) } },
         data: statusData,
       });
     } else {
