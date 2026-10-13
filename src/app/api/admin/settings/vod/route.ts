@@ -12,14 +12,16 @@ const Schema = z.object({
   enabled: z.boolean().default(false),
   tmdbApiKey: z.string().max(200).default(""),
   tmdbCacheHours: z.number().int().min(1).max(168).default(12),
-  dailyTotalQuota: z.number().int().min(1).max(100).default(5),
+  monthlyInitialPoints: z.number().int().min(0).max(100000).default(300),
+  dailySubmissionLimit: z.number().int().min(1).max(1000).default(3),
 });
 
 const DEFAULTS = {
   enabled: false,
   tmdbApiKey: "",
   tmdbCacheHours: 12,
-  dailyTotalQuota: 5,
+  monthlyInitialPoints: 300,
+  dailySubmissionLimit: 3,
 };
 
 export async function GET() {

@@ -8,10 +8,11 @@ type Settings = {
   enabled: boolean;
   tmdbApiKey: string;
   tmdbCacheHours: number;
-  dailyTotalQuota: number;
+  monthlyInitialPoints: number;
+  dailySubmissionLimit: number;
 };
 
-const DEFAULTS: Settings = { enabled: false, tmdbApiKey: "", tmdbCacheHours: 12, dailyTotalQuota: 5 };
+const DEFAULTS: Settings = { enabled: false, tmdbApiKey: "", tmdbCacheHours: 12, monthlyInitialPoints: 300, dailySubmissionLimit: 3 };
 
 export function VodSettingsClient() {
   const [settings, setSettings] = useState<Settings>(DEFAULTS);
@@ -56,8 +57,8 @@ export function VodSettingsClient() {
       const res = await fetch("/api/admin/settings/vod/test", { method: "POST" });
       const j = await res.json().catch(() => null);
       setTestResult({ ok: j?.ok === true, message: j?.message ?? (res.ok ? "连接成功" : "连接失败") });
-    } catch (e: any) {
-      setTestResult({ ok: false, message: e?.message ?? "请求失败" });
+    } catch (e: unknown) {
+      setTestResult({ ok: false, message: e instanceof Error ? e.message : "请求失败" });
     } finally {
       setTesting(false);
     }
@@ -137,26 +138,40 @@ export function VodSettingsClient() {
         <p className="text-xs text-gray-400">设置 TMDB 数据的缓存时间，减少 API 调用频率。范围: 1-168 小时（最多7天）</p>
       </div>
 
-      {/* 每人每天点播上限 */}
       <div className="space-y-1.5">
-        <label className="text-sm font-medium text-gray-700">
-          <span className="text-red-500 mr-0.5">*</span>每人每天点播上限
-        </label>
-        <div className="flex items-center border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 gap-2 max-w-xs">
+        <label htmlFor="monthly-vod-points" className="text-sm font-medium text-gray-700">每月初始积分数</label>
+        <div className="flex max-w-xs items-center gap-2 rounded-lg border border-[#eaeaea] bg-[#f4f5f7] px-3 py-2">
           <input
+            id="monthly-vod-points"
+            type="number"
+            min={0}
+            max={100000}
+            step={1}
+            className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+            value={settings.monthlyInitialPoints}
+            onChange={(event) => setSettings((value) => ({ ...value, monthlyInitialPoints: Math.min(100000, Math.max(0, Math.trunc(Number(event.target.value) || 0))) }))}
+          />
+          <span className="shrink-0 text-sm text-gray-400">积分/月</span>
+        </div>
+        <p className="text-xs text-gray-400">默认 300 积分。保存后按新额度计算可用积分，保留本月已扣和预占记录。</p>
+      </div>
+
+      <div className="space-y-1.5">
+        <label htmlFor="daily-vod-submissions" className="text-sm font-medium text-gray-700">每日每人提交次数</label>
+        <div className="flex max-w-xs items-center gap-2 rounded-lg border border-[#eaeaea] bg-[#f4f5f7] px-3 py-2">
+          <input
+            id="daily-vod-submissions"
             type="number"
             min={1}
-            max={100}
-            className="flex-1 text-sm outline-none"
-            value={settings.dailyTotalQuota}
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              setSettings((s) => ({ ...s, dailyTotalQuota: Math.min(100, Math.max(1, v || 1)) }));
-            }}
+            max={1000}
+            step={1}
+            className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+            value={settings.dailySubmissionLimit}
+            onChange={(event) => setSettings((value) => ({ ...value, dailySubmissionLimit: Math.min(1000, Math.max(1, Math.trunc(Number(event.target.value) || 1))) }))}
           />
-          <span className="text-sm text-gray-400 shrink-0">个/天</span>
+          <span className="shrink-0 text-sm text-gray-400">次/天</span>
         </div>
-        <p className="text-xs text-gray-400">控制单个用户每天可提交的点播总数量，默认 5 个（电影和电视剧合计）。</p>
+        <p className="text-xs text-gray-400">默认每人每天 3 次，消耗积分和免积分申请均计入次数。</p>
       </div>
 
       {/* 测试结果 */}

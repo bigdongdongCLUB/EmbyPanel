@@ -91,6 +91,7 @@ model User {
   usedCardCodes CardCode[]
   serviceOrders ServiceOrder[]
   vodRequests   VodRequest[]
+  vodPointEntries VodPointEntry[]
 }
 
 model Plan {
@@ -368,4 +369,20 @@ model VodRequest {
   @@index([userId, bizStatus, createdAt])
   @@index([userId, userDeletedAt, createdAt])
   @@index([tmdbId, mediaType])
+}
+
+// Independent of request deletion so removing a request cannot erase spending.
+model VodPointEntry {
+  requestId String @id
+  userId String
+  cost Int
+  month String
+  state String
+  dailySubmissionReleased Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, month, state])
+  @@index([userId, createdAt])
 }

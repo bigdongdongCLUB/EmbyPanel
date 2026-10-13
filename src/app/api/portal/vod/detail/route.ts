@@ -19,7 +19,7 @@ type EmbyItem = {
 
 type EmbyItemsResponse<T = EmbyItem> = { Items?: T[] };
 type SeasonItem = { IndexNumber?: number | string | null };
-type TmdbSeason = { season_number: number; name: string; episode_count: number };
+type TmdbSeason = { season_number: number; name: string; episode_count: number; air_date?: string | null };
 type TmdbDetail = {
   id: number;
   title?: string;
@@ -125,7 +125,7 @@ export async function GET(req: Request) {
       mediaType === "tv"
         ? (detail.seasons ?? [])
             .filter((s) => s.season_number > 0)
-            .map((s) => ({ seasonNumber: s.season_number, name: s.name, episodeCount: s.episode_count }))
+            .map((s) => ({ seasonNumber: s.season_number, name: s.name, episodeCount: s.episode_count, year: s.air_date?.slice(0, 4) || null }))
         : [];
 
     const links = await prisma.embyUserLink.findMany({

@@ -219,7 +219,7 @@ export function VodRequestsAdminClient() {
       body: JSON.stringify(body),
     });
     const json = await res.json().catch(() => null);
-    if (!res.ok) throw new Error((json as Resp)?.error || `HTTP ${res.status}`);
+    if (!res.ok) throw new Error(json?.message || (json as Resp)?.error || `HTTP ${res.status}`);
   }
 
   async function applyQuickAction(row: Pick<Row, "id" | "status"> | Pick<RelatedRequest, "id" | "status">, action: BizStatus) {

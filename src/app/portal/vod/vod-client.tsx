@@ -3,6 +3,8 @@
 import { UiImage } from "@/components/ui-image";
 import { useCallback, useEffect, useState } from "react";
 import { PaginationBar } from "@/components/pagination-bar";
+import { vodPointCost } from "@/lib/vod-points";
+import { isVodContentInLibrary } from "@/lib/vod-library-status";
 
 type MediaItem = {
   id: number;
@@ -16,7 +18,7 @@ type MediaItem = {
   requestCount?: number;
 };
 
-type Season = { seasonNumber: number; name: string; episodeCount: number };
+type Season = { seasonNumber: number; name: string; episodeCount: number; year?: string | null };
 
 type ServerResult = {
   serverId: string;
@@ -41,14 +43,14 @@ type DetailData = {
 };
 
 type Quota = {
-  totalRemaining: number;
-  totalTotal: number;
-  movieRemaining: number;
-  movieTotal: number;
-  tvRemaining: number;
-  tvTotal: number;
-  resetPeriod: string;
+  dailyTotal: number;
+  dailyRemaining: number;
+  available: number;
+  reserved: number;
+  charged: number;
+  total: number;
   nextReset: string;
+  month: string;
 };
 
 type Tab = "now_playing_movie" | "now_playing_tv" | "popular_movie" | "popular_tv" | "requested_movie" | "requested_tv";
@@ -129,7 +131,7 @@ function DetailModal({
   item: MediaItem | null;
   detail: DetailData | null;
   onClose: () => void;
-  onSubmit: (params: { season?: number; note: string }) => Promise<void>;
+  onSubmit: (params: { season?: number; note: string; inLibraryConfirmed?: boolean }) => Promise<boolean>;
   vodEnabled: boolean;
   vodCanRequest: boolean;
   vodDisabledReason: string;
@@ -152,6 +154,8 @@ function DetailModal({
   const allExist = isInLibraryByDetail(detail);
 
   const overview = d.overview.length > 100 ? d.overview.slice(0, 100) + "…" : d.overview;
+  const selectedInLibrary = isVodContentInLibrary(isTv ? "TV" : "MOVIE", serverResults, selectedSeason === "" ? undefined : selectedSeason);
+  const pointCost = selectedInLibrary ? 0 : isTv && selectedSeason === "" ? null : vodPointCost(isTv ? "TV" : "MOVIE", isTv ? seasons.find((season) => season.seasonNumber === selectedSeason)?.year : d.year);
   const canSubmit = vodEnabled && vodCanRequest && (!isTv || selectedSeason !== "") && !submitting;
 
   const serverTableSeasons = seasons;
@@ -160,8 +164,9 @@ function DetailModal({
     setSubmitError(null);
     setSubmitting(true);
     try {
-      await onSubmit({ season: isTv && selectedSeason !== "" ? Number(selectedSeason) : undefined, note });
-      onClose();
+      if (selectedInLibrary && !(await (window as unknown as { showConfirm: (message: string) => Promise<boolean> }).showConfirm("该内容已入库，你确定再次提交吗？"))) return;
+      const submitted = await onSubmit({ season: isTv && selectedSeason !== "" ? Number(selectedSeason) : undefined, note, inLibraryConfirmed: selectedInLibrary });
+      if (submitted) onClose();
     } catch (e) {
       const message = (e as Error)?.message ?? "提交失败";
       if (message === "请勿重复点播") {
@@ -191,7 +196,7 @@ function DetailModal({
               <span className="text-green-500 text-lg mt-0.5 shrink-0">✓</span>
               <div>
                 <div className="font-medium text-green-800 text-sm">{isTv ? "该电视剧已存在于媒体库" : "该电影已存在于媒体库"}</div>
-                <div className="text-xs text-green-700 mt-0.5">{isTv ? "媒体库中已存在该电视剧的至少一季，无需再次点播。" : "该电影已上线，无需再次点播。"}</div>
+                <div className="text-xs text-green-700 mt-0.5">{isTv ? "该剧已有季入库。点播已入库的季免积分，未入库季按发行年份扣除积分。" : "该电影已入库，再次提交不消耗积分。"}</div>
               </div>
             </div>
           )}
@@ -220,12 +225,14 @@ function DetailModal({
             </div>
           </div>
 
-          {!allExist && (
+          {(
             <div className="flex gap-2 rounded-xl border border-[#f3d4d8] bg-[#fff7f8] px-4 py-3 mb-4">
               <span className="text-blue-500 shrink-0 mt-0.5 text-sm">ℹ</span>
               <div className="text-sm text-gray-700">
                 <div className="font-medium text-gray-800 mb-0.5">点播说明</div>
-                提交请求后，管理员将审核您的请求。通过审核后，内容将会被添加到服务器中。请注意您的点播配额限制。
+                {pointCost === null ? "请先选择季，以查看本次点播所需积分。" : pointCost === 0 ? "该内容已入库，本次点播免积分。" : `本次点播需要 ${pointCost} 积分。`}
+                提交请求后，管理员将审核您的请求。
+                {pointCost !== 0 ? "提交时预占积分，管理员标记已入库后才实际扣除。" : null}
               </div>
             </div>
           )}
@@ -307,7 +314,7 @@ function DetailModal({
                 <option value="">请选择要点播的季度</option>
                 {seasons.map((s) => (
                   <option key={s.seasonNumber} value={s.seasonNumber}>
-                    第 {s.seasonNumber} 季 ({s.episodeCount} 集)
+                    第 {s.seasonNumber} 季 ({s.episodeCount} 集) · {s.year || "年份未知"} · {isVodContentInLibrary("TV", serverResults, s.seasonNumber) ? 0 : vodPointCost("TV", s.year)} 积分
                   </option>
                 ))}
               </select>
@@ -361,7 +368,8 @@ export function VodClient() {
   const [selectedDetail, setSelectedDetail] = useState<DetailData | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [showMyRequests, setShowMyRequests] = useState(false);
-  const [myRequests, setMyRequests] = useState<Array<{ id: string; title: string; year: string; mediaType: string; season?: number; bizStatus: string; posterPath: string | null; note?: string; adminNote?: string }>>([]);
+  const [showPointRules, setShowPointRules] = useState(false);
+  const [myRequests, setMyRequests] = useState<Array<{ id: string; title: string; year: string; mediaType: string; season?: number; bizStatus: string; posterPath: string | null; note?: string; adminNote?: string; pointCost?: number | null; pointState?: string | null; pointMonth?: string | null }>>([]);
   const [myReqPage, setMyReqPage] = useState(1);
   const [myReqTotalPages, setMyReqTotalPages] = useState(1);
   const [myReqTotal, setMyReqTotal] = useState(0);
@@ -527,7 +535,7 @@ export function VodClient() {
     await Promise.all([loadMyRequests(nextPage), loadVodQuota()]);
   }
 
-  async function submitRequest({ season, note }: { season?: number; note: string }) {
+  async function submitRequest({ season, note, inLibraryConfirmed = false }: { season?: number; note: string; inLibraryConfirmed?: boolean }): Promise<boolean> {
     if (!vodEnabled || !vodCanRequest) throw new Error(vodDisabledReason);
     if (!selectedItem) throw new Error("no item");
     const r = await fetch("/api/portal/vod/request", {
@@ -542,12 +550,19 @@ export function VodClient() {
         year: selectedItem.year,
         season,
         note,
+        inLibraryConfirmed,
       }),
     });
     const j = await r.json();
+    if (j?.error === "in_library_confirmation_required" && !inLibraryConfirmed) {
+      const confirmed = await (window as unknown as { showConfirm: (message: string) => Promise<boolean> }).showConfirm("该内容已入库，你确定再次提交吗？");
+      if (!confirmed) return false;
+      return submitRequest({ season, note, inLibraryConfirmed: true });
+    }
     if (!r.ok) throw new Error(j?.message ?? j?.error ?? `HTTP ${r.status}`);
     await loadVodQuota();
     alert("点播请求已提交！");
+    return true;
   }
 
   return (
@@ -679,14 +694,44 @@ export function VodClient() {
         />
       )}
 
+      {showPointRules && (
+        <div className="fixed inset-0 z-[320] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="点播积分规则">
+          <button type="button" className="absolute inset-0 bg-black/50" aria-label="关闭积分规则" onClick={() => setShowPointRules(false)} />
+          <div className="relative w-full max-w-[560px] max-h-[85vh] overflow-y-auto rounded-2xl border border-[#eaeaea] bg-white p-6 shadow-2xl">
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <h2 className="text-xl font-bold text-[#222]">点播积分规则</h2>
+              <button type="button" aria-label="关闭" className="h-8 w-8 shrink-0 rounded-full border" onClick={() => setShowPointRules(false)}>×</button>
+            </div>
+            <div className="space-y-4 text-sm leading-6 text-[#555]">
+              <p>每人每月获得 {quota?.total ?? 300} 积分，每月 1 日重置。不累积、不结转，当月额度用完需等待下月重置。</p>
+              <p>每人每天最多提交 {quota?.dailyTotal ?? 3} 次申请，消耗积分和免积分申请均计入次数。成功提交才计次，删除待处理申请恢复次数，删除其他状态申请不恢复次数，每日重置。</p>
+              <div className="rounded-xl bg-[#f7f8fa] p-4">
+                <p className="font-bold text-[#222]">电影：每部 10 积分，与发行年份无关。</p>
+                <p className="mt-2 font-bold text-[#222]">电视剧：按每次点按季计算积分，以所选季的发行年份为准。</p>
+                <ul className="mt-2 list-disc pl-5"><li>2015 年及以后（含 2015）：每季 10 积分。</li><li>2005—2014 年（含 2005）：每季 20 积分。</li><li>2005 年以前：每季 30 积分。</li><li>发行年份缺失时按 30 积分处理，最高为 30 积分。</li></ul>
+              </div>
+              <p>已入库的电影或所选电视剧季再次提交不消耗积分。</p>
+              <p>提交请求时预占积分，管理员标记“已完成”后才实际扣除。“无资源”“无法更新”会释放预占；管理员撤销已入库状态时归还已扣积分。若重新进入待处理或进行中时再次预占积分。</p>
+              <p>积分仅在提交当月结算。跨月的待处理请求不占用新月份积分；跨月后无论标记已入库、无资源或其他状态，均不再扣除或返还积分。同月积分不足时管理员无法完成入库结算。</p>
+              <p>删除未入库点播会释放预占，删除已入库记录不返还已扣积分。删除记录后仍计入历史提交次数；若管理员之后将已删除的点播标记入库，仍按规则扣分。</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* My requests */}
       {showMyRequests && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40" onClick={() => setShowMyRequests(false)} />
           <div className="relative bg-white w-full max-w-[560px] max-h-[85vh] rounded-[20px] border-2 border-[#e3001b] shadow-[0_12px_32px_rgba(227,0,27,0.10)] flex flex-col overflow-hidden">
-            <div className="px-7 py-5 border-b border-[#eaeaea] flex items-center justify-between">
-              <div className="text-[20px] font-bold text-[#222]">我的点播记录</div>
-              <div className="flex items-center gap-4">
+            <div className="px-4 sm:px-7 py-5 border-b border-[#eaeaea] flex flex-wrap items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2">
+                <div className="text-[20px] font-bold text-[#222]">我的点播记录</div>
+                <button type="button" title="积分规则说明" aria-label="积分规则说明" className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#eaeaea] bg-white hover:border-[#e3001b]" onClick={() => setShowPointRules(true)}>
+                  <UiImage src="/icons/exclamation.svg" alt="" className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="flex items-center gap-2 sm:gap-4">
                 <button
                   className="border border-[#eaeaea] rounded-[8px] px-4 py-1.5 text-[13px] text-[#222] hover:border-[#e3001b] hover:text-[#e3001b] hover:bg-[#fff0f1] disabled:opacity-40"
                   disabled={myReqLoading}
@@ -703,12 +748,21 @@ export function VodClient() {
             </div>
 
             <div className="px-7 py-5 overflow-y-auto flex-1">
-              <div className="bg-[#fafafa] border border-[#eaeaea] rounded-[12px] px-4 py-3 flex items-center justify-between mb-5">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-sm font-bold text-[#222]">今日点播配额</span>
-                  <span className="text-[18px] font-black text-[#e3001b] font-mono">{quota?.totalTotal ?? "--"}</span>
+              <div className="mb-5 rounded-[12px] border border-[#eaeaea] bg-[#fafafa] px-4 py-3">
+                <div className="flex flex-wrap items-baseline gap-2">
+                  <span className="text-sm font-bold text-[#222]">本月可用积分</span>
+                  <span className="font-mono text-[22px] font-black text-[#e3001b]">{quota?.available ?? "--"}</span>
+                  <span className="text-xs text-[#888]">每月 {quota?.total ?? 300} 积分</span>
                 </div>
-                <span className="text-xs text-[#888]">（默认每人每天 {quota?.totalTotal ?? 5} 个额度）</span>
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[#888]">
+                  <span>预占 {quota?.reserved ?? "--"}</span>
+                  <span>每月1日 重置积分</span>
+                </div>
+                <div className="mt-3 flex flex-wrap items-baseline gap-2 border-t border-[#eaeaea] pt-3">
+                  <span className="text-sm font-bold text-[#222]">本日可用申请</span>
+                  <span className="font-mono text-[22px] font-black text-[#e3001b]">{quota?.dailyRemaining ?? "--"}</span>
+                  <span className="text-xs text-[#888]">每天 {quota?.dailyTotal ?? 3} 次</span>
+                </div>
               </div>
 
               {myReqLoading ? (
@@ -742,6 +796,7 @@ export function VodClient() {
                             {r.bizStatus === "COMPLETED" ? "已完成" : r.bizStatus === "PENDING" ? "待处理" : r.bizStatus === "NO_RESOURCE" ? "无资源" : r.bizStatus === "CANNOT_UPDATE" ? "无法更新" : "进行中"}
                           </span>
                         </div>
+                        {r.pointCost === 0 ? <div className="text-xs text-green-600">已入库内容 · 免积分点播</div> : r.pointCost ? <div className="text-xs text-[#888]">{r.pointCost} 积分 · {r.pointState === "CHARGED" ? "已扣除" : r.pointState === "RESERVED" && r.pointMonth === quota?.month ? "预占中" : "未扣除"}</div> : <div className="text-xs text-[#888]">历史点播，不计积分</div>}
                         {r.note ? (
                           <div className="w-full min-w-0 max-w-full whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-[12px] text-[#666] bg-[#f8f9fa] border border-[#eaeaea] rounded px-2 py-1">
                             备注：{r.note}

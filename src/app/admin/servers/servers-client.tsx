@@ -287,12 +287,13 @@ function UsersTable({
         <div className="flex items-center gap-2">
           <div className="text-sm text-gray-600">已选 {selectedIds.length} 个</div>
           <div className="relative" ref={moreRef}>
-            <button className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none text-sm" onClick={() => setMoreOpen((v) => !v)} disabled={batchLoading || !selectedIds.length}>更多 ▾</button>
+            <button type="button" aria-haspopup="menu" aria-expanded={moreOpen} className="border border-[#eaeaea] bg-[#f4f5f7] rounded-lg px-3 py-2 focus:border-[#e3001b] outline-none text-sm disabled:opacity-50" onClick={() => setMoreOpen((v) => !v)} disabled={batchLoading}>更多 ▾</button>
             {moreOpen ? (
-              <div className="absolute right-0 mt-1 w-36 bg-white border rounded shadow z-20 overflow-hidden">
-                <button className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-50" disabled={batchLoading} onClick={() => runBatch("disable")}>批量禁用</button>
-                <button className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-50" disabled={batchLoading} onClick={() => runBatch("enable")}>批量启用</button>
-                <button className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50" disabled={batchLoading} onClick={() => runBatch("delete")}>批量删除</button>
+              <div role="menu" className="absolute right-0 mt-1 flex w-36 flex-col bg-white border rounded shadow z-20 overflow-hidden">
+                {!selectedIds.length ? <div className="border-b px-3 py-2 text-xs text-gray-500">请先勾选用户</div> : null}
+                <button type="button" role="menuitem" className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed" disabled={batchLoading || !selectedIds.length} onClick={() => runBatch("disable")}>批量禁用</button>
+                <button type="button" role="menuitem" className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed" disabled={batchLoading || !selectedIds.length} onClick={() => runBatch("enable")}>批量启用</button>
+                <button type="button" role="menuitem" className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed" disabled={batchLoading || !selectedIds.length} onClick={() => runBatch("delete")}>批量删除</button>
               </div>
             ) : null}
           </div>
