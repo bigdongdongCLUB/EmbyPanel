@@ -6,10 +6,10 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
-function centsToYuan(v: any) {
+function centsToYuan(v: unknown) {
   if (typeof v !== "number") return null;
   if (!Number.isFinite(v)) return null;
-  return Math.round(v / 100);
+  return v / 100;
 }
 
 export async function GET() {
@@ -30,7 +30,7 @@ export async function GET() {
   return NextResponse.json({
     ok: true,
     plans: plans.map((p) => {
-      const pr: any = p.pricingJson ?? {};
+      const pr = (p.pricingJson ?? {}) as Record<string, { priceCents?: number; hours?: number; days?: number }>;
       return {
         id: p.id,
         name: p.name,

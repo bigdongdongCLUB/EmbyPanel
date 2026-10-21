@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 
 export const ORDER_PENDING_TTL_MINUTES = 30;
@@ -7,8 +8,8 @@ export function isOrderPendingExpired(createdAt: Date, nowMs: number = Date.now(
 }
 
 export async function autoCancelExpiredPendingOrders(
-  db: any = prisma,
-  extraWhere?: Record<string, any>,
+  db: Pick<Prisma.TransactionClient, "serviceOrder"> = prisma,
+  extraWhere?: Prisma.ServiceOrderWhereInput,
 ) {
   const now = new Date();
   const expireBefore = new Date(now.getTime() - ORDER_PENDING_TTL_MINUTES * 60 * 1000);
@@ -17,6 +18,7 @@ export async function autoCancelExpiredPendingOrders(
       status: "PENDING",
       createdAt: { lt: expireBefore },
       ...(extraWhere || {}),
+      OR: [{ stripePayment: null }, { stripePayment: { state: { in: ["FAILED", "EXPIRED"] } } }],
     },
     data: {
       status: "CANCELED",

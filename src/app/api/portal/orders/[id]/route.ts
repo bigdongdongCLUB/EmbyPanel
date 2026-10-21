@@ -4,13 +4,14 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
+import { availableStripeMethods } from "@/lib/stripe-payments";
 import { prisma } from "@/lib/db";
 import { autoCancelExpiredPendingOrders } from "@/lib/order-expiry";
 
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const username = (session as any)?.username;
+  const username = (session as typeof session & { username?: string }).username;
   if (!username) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const user = await prisma.user.findUnique({ where: { username }, select: { id: true, balanceCents: true } });
@@ -31,6 +32,8 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
       createdAt: true,
       paidAt: true,
       canceledAt: true,
+      paymentSource: true, fulfillmentStatus: true,
+      stripePayment: { select: { methodId: true, state: true, feeCents: true, amountCents: true } },
       plan: { select: { id: true, name: true } },
     },
   });
@@ -40,5 +43,6 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     ok: true,
     order,
     balanceYuan: user.balanceCents / 100,
+    paymentMethods: await availableStripeMethods().catch(() => []),
   });
 }

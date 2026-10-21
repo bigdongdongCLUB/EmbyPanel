@@ -6,19 +6,17 @@ import { z } from "zod";
 
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { assertOrderEligibility, lockOrderUser, quoteOrder } from "@/lib/order-pricing";
 
 const BodySchema = z.object({
   planId: z.string().min(1),
   payCycle: z.enum(["TRIAL", "MONTHLY", "QUARTERLY", "HALF_YEARLY", "YEARLY", "TWO_YEARLY"]),
-  days: z.number().int().min(1),
-  trialHours: z.number().int().min(1).max(168).optional(),
-  amountYuan: z.number().int().min(0),
 });
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const username = (session as any)?.username;
+  const username = (session as typeof session & { username?: string }).username;
   if (!username) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const body = await req.json().catch(() => null);
@@ -28,47 +26,22 @@ export async function POST(req: Request) {
   const user = await prisma.user.findUnique({ where: { username }, select: { id: true } });
   if (!user) return NextResponse.json({ error: "user_not_found" }, { status: 404 });
 
-  const plan = await prisma.plan.findUnique({ where: { id: parsed.data.planId }, select: { id: true, enabled: true, visible: true } });
-  if (!plan || !plan.enabled || !plan.visible) return NextResponse.json({ error: "plan_not_available" }, { status: 400 });
-
-  if (parsed.data.payCycle === "TRIAL") {
-    const now = new Date();
-    const [trialPaidCount, trialSubCount, activeSubCount, expiredPlanSubCount] = await Promise.all([
-      prisma.serviceOrder.count({ where: { userId: user.id, payCycle: "TRIAL", status: "PAID" } }),
-      prisma.subscription.count({ where: { userId: user.id, payCycle: "TRIAL" } }),
-      prisma.subscription.count({ where: { userId: user.id, status: "ACTIVE", endAt: { gt: now } } }),
-      prisma.subscription.count({ where: { userId: user.id, planId: { not: null }, endAt: { lte: now } } }),
-    ]);
-    if (activeSubCount > 0) {
-      return NextResponse.json({ error: "trial_blocked_by_active_subscription" }, { status: 400 });
-    }
-    if (expiredPlanSubCount > 0) {
-      return NextResponse.json({ error: "trial_blocked_by_expired_subscription" }, { status: 400 });
-    }
-    if (trialPaidCount > 0 || trialSubCount > 0) {
-      return NextResponse.json({ error: "trial_already_used" }, { status: 400 });
-    }
+  try {
+    const order = await prisma.$transaction(async (tx) => {
+      await lockOrderUser(tx, user.id);
+      const plan = await tx.plan.findUnique({ where: { id: parsed.data.planId } });
+      if (!plan || !plan.enabled || !plan.visible) throw new Error("plan_not_available");
+      const quote = quoteOrder(plan.pricingJson, parsed.data.payCycle);
+      await assertOrderEligibility(tx, user.id, plan.id, parsed.data.payCycle === "TRIAL");
+      return tx.serviceOrder.create({
+        data: { userId: user.id, planId: plan.id, payCycle: parsed.data.payCycle, ...quote, status: "PENDING" },
+        select: { id: true },
+      });
+    });
+    return NextResponse.json({ ok: true, orderId: order.id });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "order_create_failed";
+    const expected = ["plan_not_available", "plan_cycle_not_available", "trial_hours_invalid", "trial_not_available", "subscription_plan_mismatch", "user_disabled"];
+    return NextResponse.json({ error: expected.includes(message) ? message : "order_create_failed" }, { status: expected.includes(message) ? 400 : 500 });
   }
-
-  const trialHours = parsed.data.payCycle === "TRIAL" ? (parsed.data.trialHours ?? parsed.data.days * 24) : null;
-  if (parsed.data.payCycle === "TRIAL") {
-    if (!trialHours || !Number.isFinite(trialHours) || trialHours < 1 || trialHours > 168) {
-      return NextResponse.json({ error: "trial_hours_invalid" }, { status: 400 });
-    }
-  }
-
-  const order = await prisma.serviceOrder.create({
-    data: {
-      userId: user.id,
-      planId: parsed.data.planId,
-      payCycle: parsed.data.payCycle,
-      days: parsed.data.days,
-      amountCents: parsed.data.amountYuan * 100,
-      trialHours,
-      status: "PENDING",
-    },
-    select: { id: true },
-  });
-
-  return NextResponse.json({ ok: true, orderId: order.id });
 }

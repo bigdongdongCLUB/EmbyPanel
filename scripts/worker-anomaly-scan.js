@@ -40,7 +40,7 @@ async function ensureRepeatable(queue) {
   // 清理历史重复任务（例如旧的10分钟scan），避免沿用旧节奏
   const all = await queue.getRepeatableJobs();
   for (const r of all) {
-    if (r?.name === "scan" || r?.name === "unban" || r?.name === "playback-collect" || r?.name === "cache-cleanup" || r?.name === "dashboard-active30d" || r?.name === "stream-limit-enforce") {
+    if (r?.name === "scan" || r?.name === "unban" || r?.name === "playback-collect" || r?.name === "cache-cleanup" || r?.name === "dashboard-active30d" || r?.name === "stream-limit-enforce" || r?.name === "payment-reconcile") {
       await queue.removeRepeatableByKey(r.key);
     }
   }
@@ -142,6 +142,13 @@ async function main() {
   const queue = new Queue(queueName, { connection });
 
   await ensureRepeatable(queue);
+  // Payment API retries must not delay anomaly scanning or timed unbans.
+  const paymentQueue = new Queue("embypanel-payments", { connection });
+  await paymentQueue.add("payment-reconcile", {}, {
+    jobId: "repeat:payment-reconcile", repeat: { every: 60 * 1000 }, removeOnComplete: true, removeOnFail: 100,
+  });
+  const paymentWorker = new Worker("embypanel-payments", () => callInternal("/api/admin/jobs/payment-reconcile"), { connection, concurrency: 1 });
+  paymentWorker.on("failed", (job) => console.error("[worker] payment reconciliation failed", { jobId: job?.id }));
   console.log(`[worker] repeatable job ensured: ${queueName} every 5min -> ${WEB_INTERNAL_URL}`);
 
   const worker = new Worker(
@@ -224,6 +231,8 @@ async function main() {
   const shutdown = async (signal) => {
     console.log(`[worker] shutting down: ${signal}`);
     clearInterval(keepAlive);
+    await paymentWorker.close();
+    await paymentQueue.close();
     await worker.close();
     await queue.close();
     await connection.quit();

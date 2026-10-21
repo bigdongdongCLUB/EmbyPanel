@@ -36,6 +36,10 @@ function resolveAppVersion() {
 const nextConfig: NextConfig = {
   // Suppress Next dev cross-origin warnings for LAN testing.
   allowedDevOrigins,
+  async headers() {
+    const policy = "default-src 'self'; script-src 'self' 'unsafe-inline'" + (process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : "") + "; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.stripe.com https://*.link.com; frame-src https://*.stripe.com https://*.link.com; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'self' https://checkout.stripe.com";
+    return ["/admin/payments", "/portal/orders/:path*", "/portal/purchase/:path*"].map((source) => ({ source, headers: [{ key: "Content-Security-Policy", value: policy }, { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" }] }));
+  },
   env: {
     NEXT_PUBLIC_APP_VERSION: resolveAppVersion(),
   },

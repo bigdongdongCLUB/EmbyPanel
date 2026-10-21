@@ -10,6 +10,7 @@ type Row = {
   amountYuan: string;
   status: "PENDING" | "PAID" | "CANCELED";
   createdAt: string;
+  fulfillmentStatus?: string; paymentSource?: string | null; stripeState?: string | null; stripeSessionId?: string | null; feeYuan?: string;
 };
 
 type Resp = {
@@ -58,15 +59,15 @@ export function OrdersAdminClient() {
     try {
       const qs = new URLSearchParams({ days: String(nextDays), page: String(nextPage), pageSize: String(nextPageSize) });
       const res = await fetch(`/api/admin/orders?${qs.toString()}`, { cache: "no-store" });
-      const json: Resp = await res.json().catch(() => null as any);
-      if (!res.ok) throw new Error((json as any)?.error ? JSON.stringify(json) : `HTTP ${res.status}`);
+      const json = await res.json().catch(() => null as Resp | null);
+      if (!res.ok || !json) throw new Error(json ? JSON.stringify(json) : `HTTP ${res.status}`);
       setSummary(json.summary);
       setRows(Array.isArray(json.rows) ? json.rows : []);
       setTotalPages(json.pagination?.totalPages || 1);
       setTotal(json.pagination?.total || 0);
       setPage(json.pagination?.page || 1);
-    } catch (e: any) {
-      setError(e?.message ?? "load_failed");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "load_failed");
     } finally {
       setLoading(false);
     }
@@ -138,7 +139,7 @@ export function OrdersAdminClient() {
                 <td className="py-2 px-3">{r.user}</td>
                 <td className="py-2 px-3">{r.planName}</td>
                 <td className="py-2 px-3 text-red-600">¥{r.amountYuan}</td>
-                <td className="py-2 px-3">{statusText(r.status)}</td>
+                <td className="py-2 px-3"><div>{statusText(r.status)}{r.paymentSource === "STRIPE" ? " · Stripe" : ""}</div>{r.stripeState === "REVIEW" ? <div className="mt-1 text-xs text-red-600">收款需人工核对，请在 Stripe 后台检查</div> : null}{r.status === "PAID" && ["PENDING", "FAILED"].includes(r.fulfillmentStatus ?? "") ? <div className="mt-1 text-xs text-amber-600">服务待同步 · 自动重试中</div> : null}{r.stripeSessionId ? <div title={r.stripeSessionId} className="mt-1 max-w-[220px] truncate font-mono text-xs text-gray-400">{r.stripeSessionId}</div> : null}</td>
                 <td className="py-2 px-3 font-mono text-xs">{formatDateTimeShanghai(r.createdAt)}</td>
               </tr>
             ))}

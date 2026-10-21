@@ -40,6 +40,8 @@ export async function GET(req: Request) {
         id: true,
         amountCents: true,
         status: true,
+        fulfillmentStatus: true, paymentSource: true,
+        stripePayment: { select: { state: true, sessionId: true, feeCents: true } },
         createdAt: true,
         user: { select: { username: true } },
         plan: { select: { name: true } },
@@ -69,6 +71,9 @@ export async function GET(req: Request) {
       planName: r.plan?.name || "-",
       amountYuan: (r.amountCents / 100).toFixed(2),
       status: r.status,
+      fulfillmentStatus: r.fulfillmentStatus, paymentSource: r.paymentSource,
+      stripeState: r.stripePayment?.state ?? null, stripeSessionId: r.stripePayment?.sessionId ?? null,
+      feeYuan: ((r.stripePayment?.feeCents ?? 0) / 100).toFixed(2),
       createdAt: r.createdAt,
     })),
   });

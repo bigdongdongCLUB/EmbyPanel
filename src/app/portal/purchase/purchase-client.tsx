@@ -1,5 +1,8 @@
 "use client";
 
+import { OrderPaymentPanel, type PublicPaymentMethod, type OrderPaymentState } from "@/components/payments/order-payment-panel";
+import { paymentErrorText } from "@/lib/payment-messages";
+
 import { UiImage } from "@/components/ui-image";
 import { useEffect, useMemo, useState } from "react";
 
@@ -32,11 +35,13 @@ type OrderDetail = {
     payCycle: string;
     days: number;
     trialHours?: number | null;
+    stripePayment?: OrderPaymentState; fulfillmentStatus?: string;
     amountCents: number;
     createdAt: string;
     plan: { id: string; name: string };
   };
   balanceYuan: number;
+  paymentMethods?: PublicPaymentMethod[];
 };
 
 function pickMainPrice(p: Plan) {
@@ -100,8 +105,8 @@ export function PortalPurchaseClient() {
       const json = await res.json().catch(() => null);
       if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
       setPlans(json?.plans ?? []);
-    } catch (e: any) {
-      setError(e?.message || "load_failed");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "load_failed");
     } finally {
       setLoading(false);
     }
@@ -120,8 +125,8 @@ export function PortalPurchaseClient() {
       setPlanDetail({ plan: json.plan, cycles: json.cycles || [] });
       const firstAvailable = (json.cycles || []).find((c: Cycle) => c.available);
       if (firstAvailable) setSelectedCycle(firstAvailable.key);
-    } catch (e: any) {
-      alert(`加载购买信息失败: ${e?.message || "unknown"}`);
+    } catch (e) {
+      alert(`加载购买信息失败: ${e instanceof Error ? e.message : "unknown"}`);
       setModalOpen(false);
     } finally {
       setPlanLoading(false);
@@ -135,8 +140,8 @@ export function PortalPurchaseClient() {
       const json = await res.json().catch(() => null);
       if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
       setOrder(json);
-    } catch (e: any) {
-      alert(`加载订单失败: ${e?.message || "unknown"}`);
+    } catch (e) {
+      alert(`加载订单失败: ${e instanceof Error ? e.message : "unknown"}`);
     } finally {
       setOrderLoading(false);
     }
@@ -263,7 +268,7 @@ export function PortalPurchaseClient() {
                         });
                         const json = await res.json().catch(() => null);
                         if (!res.ok) {
-                          alert(`创建订单失败: ${json?.error || `HTTP ${res.status}`}`);
+                          alert(`创建订单失败: ${paymentErrorText(json?.error || `HTTP ${res.status}`)}`);
                           return;
                         }
                         setStep("order");
@@ -299,54 +304,8 @@ export function PortalPurchaseClient() {
                       </div>
                     </div>
 
-                    <div className="border border-gray-200 rounded-2xl bg-white overflow-hidden">
-                      <div className="px-6 py-4 border-b border-gray-200 text-2xl font-semibold text-[#222]">💳 支付方式</div>
-                      <div className="p-5">
-                        <div className="border-2 border-[#e3001b] rounded-xl p-4 flex items-center justify-between bg-[#fff7f8]">
-                          <div className="text-xl font-semibold">账户余额</div>
-                          <div className="text-3xl font-semibold text-[#e3001b]">¥{order.balanceYuan.toFixed(2)}</div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="border border-gray-200 rounded-2xl bg-white p-5 space-y-3">
-                      <button
-                        className="w-full bg-[#e3001b] hover:bg-[#c20017] text-white rounded-xl px-4 py-3 text-xl font-semibold disabled:opacity-50"
-                        disabled={order.order.status !== "PENDING" || order.balanceYuan < orderAmountYuan}
-                        onClick={async () => {
-                          const res = await fetch(`/api/portal/orders/${order.order.id}/pay`, { method: "POST" });
-                          const json = await res.json().catch(() => null);
-                          if (!res.ok) {
-                            alert(`支付失败: ${json?.error || `HTTP ${res.status}`}`);
-                            return;
-                          }
-                          alert("支付成功");
-                          window.location.href = "/portal";
-                        }}
-                      >
-                        立即支付（余额 ¥{orderAmountYuan.toFixed(2)}）
-                      </button>
-
-                      <button
-                        className="w-full border border-red-300 text-red-600 rounded-xl px-4 py-3 text-lg hover:bg-red-50"
-                        disabled={order.order.status !== "PENDING"}
-                        onClick={async () => {
-                          const res = await fetch(`/api/portal/orders/${order.order.id}/cancel`, { method: "POST" });
-                          const json = await res.json().catch(() => null);
-                          if (!res.ok) {
-                            alert(`取消失败: ${json?.error || `HTTP ${res.status}`}`);
-                            return;
-                          }
-                          setModalOpen(false);
-                        }}
-                      >
-                        取消订单
-                      </button>
-
-                      <button className="w-full border rounded-xl px-4 py-3 text-xl" onClick={() => setModalOpen(false)}>
-                        取消
-                      </button>
-                    </div>
+                    <OrderPaymentPanel orderId={order.order.id} status={order.order.status} amountCents={order.order.amountCents} balanceYuan={order.balanceYuan} methods={order.paymentMethods} stripePayment={order.order.stripePayment} fulfillmentStatus={order.order.fulfillmentStatus} onChanged={() => loadOrder(order.order.id)} />
+                    <button className="w-full rounded-xl border px-4 py-3 text-sm" onClick={() => setModalOpen(false)}>关闭</button>
                   </>
                 ) : null}
               </div>

@@ -6,10 +6,10 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
-function centsToYuan(v: any) {
+function centsToYuan(v: unknown) {
   if (typeof v !== "number") return null;
   if (!Number.isFinite(v)) return null;
-  return Math.round(v / 100);
+  return v / 100;
 }
 
 function cycleDays(cycle: string) {
@@ -32,7 +32,7 @@ function cycleDays(cycle: string) {
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const username = (session as any)?.username;
+  const username = (session as typeof session & { username?: string }).username;
   if (!username) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const user = await prisma.user.findUnique({ where: { username }, select: { id: true } });
@@ -45,7 +45,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   });
   if (!plan || !plan.enabled || !plan.visible) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
-  const pr: any = plan.pricingJson ?? {};
+  const pr = (plan.pricingJson ?? {}) as Record<string, { priceCents?: number; hours?: number; days?: number }>;
   const trialHours = typeof pr?.trial?.hours === "number" ? pr.trial.hours : (typeof pr?.trial?.days === "number" ? pr.trial.days * 24 : 0);
   const trialHasPrice = typeof pr?.trial?.priceCents === "number";
   const trialHasHours = typeof trialHours === "number" && trialHours >= 1 && trialHours <= 168;

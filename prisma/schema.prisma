@@ -302,11 +302,38 @@ model ServiceOrder {
   createdAt DateTime           @default(now())
   paidAt    DateTime?
   canceledAt DateTime?
+  paymentSource String?
+  fulfillmentStatus String @default("NONE")
+  fulfillmentJson Json?
+  fulfillmentUpdatedAt DateTime?
+  stripePayment StripePayment?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   plan Plan @relation(fields: [planId], references: [id], onDelete: Restrict)
 
   @@index([userId, status, createdAt])
+}
+
+model StripePayment {
+  id String @id @default(uuid())
+  orderId String @unique
+  methodId String
+  sessionId String? @unique
+  checkoutUrl String?
+  amountCents Int
+  feeCents Int @default(0)
+  currency String @default("cny")
+  livemode Boolean
+  state String @default("CREATING")
+  credentials Json
+  expiresAt DateTime
+  lastEventId String?
+  errorCode String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  order ServiceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  @@index([state, updatedAt])
+  @@index([methodId])
 }
 
 model AppSetting {
