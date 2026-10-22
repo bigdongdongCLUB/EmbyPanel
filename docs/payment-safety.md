@@ -14,8 +14,10 @@ No payment-platform credentials are included in source code or tests.
 - At payment time, the plan must remain available and the order must match its
   current configured price and duration. Otherwise the user must cancel and
   recreate it. This also rejects previously forged pending orders.
-- A buyer with an existing plan must renew that plan; a cheaper different plan
-  cannot extend a more expensive existing subscription.
+- A buyer may purchase any available paid plan to renew an existing subscription.
+  The purchased product determines the price and duration, while the original
+  subscription plan and assigned servers are preserved. Renewal extends from
+  the current expiry date, or from now if already expired. Trials remain restricted.
 - Balance settlement serializes the legacy JSON referral bookkeeping, locks the
   buyer and order, and performs a conditional debit with sufficient funds.
   Paid-order retries succeed without another debit, extension or referral payout.

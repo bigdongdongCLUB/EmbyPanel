@@ -32,7 +32,7 @@ export async function POST(req: Request) {
       const plan = await tx.plan.findUnique({ where: { id: parsed.data.planId } });
       if (!plan || !plan.enabled || !plan.visible) throw new Error("plan_not_available");
       const quote = quoteOrder(plan.pricingJson, parsed.data.payCycle);
-      await assertOrderEligibility(tx, user.id, plan.id, parsed.data.payCycle === "TRIAL");
+      await assertOrderEligibility(tx, user.id, parsed.data.payCycle === "TRIAL");
       return tx.serviceOrder.create({
         data: { userId: user.id, planId: plan.id, payCycle: parsed.data.payCycle, ...quote, status: "PENDING" },
         select: { id: true },
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, orderId: order.id });
   } catch (error) {
     const message = error instanceof Error ? error.message : "order_create_failed";
-    const expected = ["plan_not_available", "plan_cycle_not_available", "trial_hours_invalid", "trial_not_available", "subscription_plan_mismatch", "user_disabled"];
+    const expected = ["plan_not_available", "plan_cycle_not_available", "trial_hours_invalid", "trial_not_available", "user_disabled"];
     return NextResponse.json({ error: expected.includes(message) ? message : "order_create_failed" }, { status: expected.includes(message) ? 400 : 500 });
   }
 }

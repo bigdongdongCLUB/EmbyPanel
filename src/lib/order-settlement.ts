@@ -166,7 +166,7 @@ export async function payBalanceOrder(userId: string, id: string) {
     if (!order.plan.enabled || !order.plan.visible) throw new Error("plan_not_available");
     const quote = quoteOrder(order.plan.pricingJson, order.payCycle);
     if (order.amountCents !== quote.amountCents || order.days !== quote.days || order.trialHours !== quote.trialHours) throw new Error("order_price_changed_recreate");
-    await assertOrderEligibility(tx, userId, order.planId, order.payCycle === "TRIAL");
+    await assertOrderEligibility(tx, userId, order.payCycle === "TRIAL");
     const debit = await tx.user.updateMany({ where: { id: userId, enabled: true, balanceCents: { gte: order.amountCents } }, data: { balanceCents: { decrement: order.amountCents } } });
     if (debit.count !== 1) throw new Error("insufficient_balance");
     await grantPaidOrder(tx, order, "BALANCE");

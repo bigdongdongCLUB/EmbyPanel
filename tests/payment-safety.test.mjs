@@ -143,9 +143,20 @@ test("authenticated local API: trusted prices, repeat payments, insufficient fun
     assert.equal(trialResults.filter((r) => r.body.error === "trial_not_available").length, 1);
     assert.equal((await create(trial.call, "TRIAL")).body.error, "trial_not_available");
 
-    const otherPlan = await db.plan.create({ data: { name: "payment_safety_other_plan", pricingJson: { monthly: { priceCents: 1 } } } });
+    const otherPlan = await db.plan.create({ data: { name: "payment_safety_other_plan", pricingJson: { yearly: { priceCents: 1 } } } });
     plans.push(otherPlan.id);
-    assert.equal((await call("/api/portal/orders", { planId: otherPlan.id, payCycle: "MONTHLY" })).body.error, "subscription_plan_mismatch");
+    await db.plan.update({ where: { id: plan.id }, data: { enabled: false, visible: false } });
+    const renewal = await call("/api/portal/orders", { planId: otherPlan.id, payCycle: "YEARLY" });
+    assert.equal(renewal.status, 200, JSON.stringify(renewal.body));
+    assert.equal((await pay(call, renewal.body.orderId)).status, 200);
+    assert.equal((await pay(call, renewal.body.orderId)).body.alreadyPaid, true);
+    const renewed = await db.subscription.findUniqueOrThrow({ where: { id: subscription.id } });
+    assert.equal(renewed.planId, plan.id);
+    assert.equal(renewed.startAt.getTime(), subscription.startAt.getTime());
+    assert.equal(renewed.endAt.getTime(), subscription.endAt.getTime() + 365 * 86400000);
+    assert.equal(await db.subscription.count({ where: { userId: user.id } }), 1);
+    assert.equal((await db.user.findUniqueOrThrow({ where: { id: user.id } })).balanceCents, 8900);
+    await db.plan.update({ where: { id: plan.id }, data: { enabled: true, visible: true } });
     const disabled = await makeUser();
     const disabledOrder = await create(disabled.call);
     await db.user.update({ where: { id: disabled.user.id }, data: { enabled: false } });

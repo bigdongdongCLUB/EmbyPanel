@@ -36,7 +36,7 @@ export async function startStripeCheckout(userId: string, orderId: string, metho
     const quote = quoteOrder(order.plan.pricingJson, order.payCycle);
     if (order.amountCents !== quote.amountCents || order.days !== quote.days || order.trialHours !== quote.trialHours) throw new Error("order_price_changed_recreate");
     if (order.amountCents <= 0) throw new Error("stripe_zero_amount_use_balance");
-    await assertOrderEligibility(tx, userId, order.planId, order.payCycle === "TRIAL");
+    await assertOrderEligibility(tx, userId, order.payCycle === "TRIAL");
     await lockPaymentSettings(tx);
     const method = stripeMethodsFromStored(await readStoredPaymentMethods(tx)).find((m) => m.id === methodId && m.enabled && stripeMethodReady(m));
     if (!method) throw new Error("stripe_method_unavailable");
@@ -120,7 +120,7 @@ export async function applyStripeSession(attemptId: string, session: Stripe.Chec
     if (session.payment_status === "paid" && session.status === "complete") {
       const user = await tx.user.findUnique({ where: { id: payment.order.userId }, select: { enabled: true } });
       let eligible = !!user?.enabled;
-      try { await assertOrderEligibility(tx, payment.order.userId, payment.order.planId, payment.order.payCycle === "TRIAL"); } catch { eligible = false; }
+      try { await assertOrderEligibility(tx, payment.order.userId, payment.order.payCycle === "TRIAL"); } catch { eligible = false; }
       if (payment.order.status === "PAID" || !eligible) {
         await tx.stripePayment.update({ where: { id: attemptId }, data: { ...update, state: "REVIEW", errorCode: "paid_requires_manual_review" } });
         return;

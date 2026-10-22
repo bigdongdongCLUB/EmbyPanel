@@ -25,12 +25,8 @@ export async function lockOrderUser(tx: Prisma.TransactionClient, userId: string
   if (!user?.enabled) throw new Error("user_disabled");
 }
 
-export async function assertOrderEligibility(tx: Prisma.TransactionClient, userId: string, planId: string, trial: boolean) {
-  const existing = await tx.subscription.findFirst({
-    where: { userId, planId: { not: null }, status: { in: ["ACTIVE", "EXPIRED"] } },
-    orderBy: { endAt: "desc" }, select: { planId: true },
-  });
-  if (existing?.planId && existing.planId !== planId) throw new Error("subscription_plan_mismatch");
+export async function assertOrderEligibility(tx: Prisma.TransactionClient, userId: string, trial: boolean) {
+  // Paid purchases extend the existing subscription, even when buying another plan.
   if (!trial) return;
   const now = new Date();
   const used = await tx.serviceOrder.count({ where: { userId, payCycle: "TRIAL", status: "PAID" } });

@@ -7,7 +7,6 @@ const messages: Record<string, string> = {
   stripe_payment_review: "支付结果需要管理员核对，请勿重复付款",
   unauthorized: "登录已过期，请重新登录",
   order_price_changed_recreate: "订单价格或时长已变更，请取消该订单后重新下单",
-  subscription_plan_mismatch: "当前已有其他订阅计划，请选择原计划续费",
   plan_not_available: "该订阅计划当前不可购买",
   plan_cycle_not_available: "该支付周期当前不可购买",
   trial_not_available: "当前账号不符合试用条件",

@@ -33,7 +33,9 @@ test("Stripe checkout and signed callbacks settle once, isolate balance, handle 
   const { autoCancelExpiredPendingOrders } = load("order-expiry");
   const { lockPaymentSettings, readStoredPaymentMethods, saveStoredPaymentMethods } = load("payment-methods");
   const users = [];
-  const plan = await db.plan.create({ data: { name: "Stripe isolated fixture", pricingJson: { monthly: { priceCents: 1099 } } } });
+  const plan = await db.plan.create({ data: { name: "Stripe isolated fixture", pricingJson: { monthly: { priceCents: 1099 }, yearly: { priceCents: 47500 } } } });
+  const originalPlan = await db.plan.create({ data: { name: "Renewal original unavailable plan", enabled: false, visible: false } });
+  const originalServer = await db.embyServer.create({ data: { name: "Renewal original server fixture", baseUrl: "http://127.0.0.1:1", enabled: false } });
   const methodId = crypto.randomUUID();
   const config = { mode: "test", secretKey: "sk_test_fixture", webhookSecret: "whsec_fixture", siteUrl: "http://localhost:3000" };
   const sessions = new Map();
@@ -131,6 +133,41 @@ test("Stripe checkout and signed callbacks settle once, isolate balance, handle 
     const recovered = await createOrder(true);
     assert.equal(sequence, beforeRecovery + 1);
     assert.equal(recovered.payment.state, "OPEN");
+
+    for (const status of ["ACTIVE", "EXPIRED"]) {
+      const user = await db.user.create({ data: { username: `stripe_test_${crypto.randomUUID()}`, passwordHash: "fixture" } });
+      users.push(user.id);
+      const startAt = new Date(Date.now() - 60 * 86400000);
+      const endAt = new Date(Date.now() + (status === "ACTIVE" ? 15 : -15) * 86400000);
+      const original = await db.subscription.create({ data: { userId: user.id, planId: originalPlan.id, status, payCycle: "MONTHLY", startAt, endAt } });
+      await db.subscriptionServer.create({ data: { subscriptionId: original.id, embyServerId: originalServer.id } });
+      const renewal = await db.serviceOrder.create({ data: { userId: user.id, planId: plan.id, payCycle: "YEARLY", days: 365, amountCents: 47500 } });
+      await startStripeCheckout(user.id, renewal.id, methodId, factory);
+      const attempt = await db.stripePayment.findUniqueOrThrow({ where: { orderId: renewal.id } });
+      const session = sessions.get(`embypanel_checkout_${attempt.id}`);
+      assert.equal(session.amount_total, 48450);
+      const beforePaid = Date.now();
+      await send({ ...session, status: "complete", payment_status: "paid" }, "checkout.session.completed");
+      const renewed = await db.subscription.findUniqueOrThrow({ where: { id: original.id }, include: { servers: true } });
+      assert.equal(renewed.planId, originalPlan.id);
+      assert.equal(renewed.status, "ACTIVE");
+      assert.equal(renewed.payCycle, "MONTHLY");
+      assert.deepEqual(renewed.servers.map((server) => server.embyServerId), [originalServer.id]);
+      assert.equal(await db.subscription.count({ where: { userId: user.id } }), 1);
+      if (status === "ACTIVE") {
+        assert.equal(renewed.startAt.getTime(), startAt.getTime());
+        assert.equal(renewed.endAt.getTime(), endAt.getTime() + 365 * 86400000);
+      } else {
+        assert.ok(renewed.startAt.getTime() >= beforePaid);
+        assert.equal(renewed.endAt - renewed.startAt, 365 * 86400000);
+      }
+      const settled = await db.serviceOrder.findUniqueOrThrow({ where: { id: renewal.id } });
+      assert.equal(settled.fulfillmentJson.planId, originalPlan.id);
+      assert.equal(settled.fulfillmentJson.activeSubId, original.id);
+      assert.deepEqual(settled.fulfillmentJson.preferredServerIds, [originalServer.id]);
+      await send({ ...session, status: "complete", payment_status: "paid" }, "checkout.session.async_payment_succeeded");
+      assert.equal((await db.subscription.findUniqueOrThrow({ where: { id: original.id } })).endAt.getTime(), renewed.endAt.getTime());
+    }
     const afterDelete = await createOrder();
     await db.$transaction(async (tx) => { await lockPaymentSettings(tx); await saveStoredPaymentMethods(tx, (await readStoredPaymentMethods(tx)).filter((m) => m.id !== methodId)); });
     await send({ ...afterDelete.session, status: "complete", payment_status: "paid" }, "checkout.session.completed");
@@ -139,6 +176,8 @@ test("Stripe checkout and signed callbacks settle once, isolate balance, handle 
     await db.$transaction(async (tx) => { await lockPaymentSettings(tx); await saveStoredPaymentMethods(tx, (await readStoredPaymentMethods(tx)).filter((m) => m.id !== methodId)); });
     await db.user.deleteMany({ where: { id: { in: users } } });
     await db.plan.delete({ where: { id: plan.id } });
+    await db.plan.delete({ where: { id: originalPlan.id } });
+    await db.embyServer.delete({ where: { id: originalServer.id } });
   }
 });
 
