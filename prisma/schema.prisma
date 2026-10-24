@@ -334,6 +334,8 @@ model StripePayment {
   orderId String @unique
   methodId String
   sessionId String? @unique
+  paymentIntentId String? @unique
+  stripePaidAt DateTime?
   checkoutUrl String?
   amountCents Int
   feeCents Int @default(0)

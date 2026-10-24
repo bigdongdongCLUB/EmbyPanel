@@ -95,3 +95,25 @@ Tests use synthetic keys, mocked Stripe sessions, generated webhook signatures,
 and temporary local database records. They do not create live or sandbox Stripe
 transactions and are not a substitute for the required deployment-time end-to-end
 payment test. Never run database tests against production.
+
+## Order reconciliation
+
+The admin order list shows the Stripe PaymentIntent (`pi_`) as the primary
+reconciliation identifier, with copy and Dashboard links. The Checkout Session
+(`cs_`) remains available under a collapsible secondary field. These are different
+Stripe resources, not conflicting order numbers. Live and test Dashboard links
+are generated separately.
+
+Creation time, Stripe payment-success event time, and panel booking time are
+displayed separately in Asia/Shanghai. Booking time is never presented as the
+exact Stripe payment time when that timestamp is unavailable. Successful orders
+show the gross amount collected including any configured surcharge; unpaid or
+canceled orders are not presented as collected payments.
+
+New Checkout Sessions send the panel order ID and username to the underlying
+PaymentIntent's metadata and description. Existing Stripe records are not edited.
+The payment reconciliation worker reads up to three historical paid sessions
+per run to backfill missing PaymentIntent IDs. Where the last successful Stripe
+event is still available and readable, its timestamp is recovered too. This
+backfill writes reference fields only, never entitlement, payment status or
+booking time. The new database migration and worker restart are required.

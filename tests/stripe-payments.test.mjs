@@ -28,7 +28,7 @@ test("Stripe configuration validates mode and canonical HTTPS addresses", () => 
 });
 
 test("Stripe checkout and signed callbacks settle once, isolate balance, handle delays, mismatches and cancellation", { skip: process.env.RUN_STRIPE_DB_TESTS !== "1" }, async () => {
-  const { startStripeCheckout, processStripeWebhook, cancelOrderSafely, paymentSnapshot } = load("stripe-payments");
+  const { startStripeCheckout, processStripeWebhook, cancelOrderSafely, paymentSnapshot, backfillStripePaymentReferences, stripePaymentIntentId } = load("stripe-payments");
   const { payBalanceOrder } = load("order-settlement");
   const { autoCancelExpiredPendingOrders } = load("order-expiry");
   const { lockPaymentSettings, readStoredPaymentMethods, saveStoredPaymentMethods } = load("payment-methods");
@@ -39,21 +39,25 @@ test("Stripe checkout and signed callbacks settle once, isolate balance, handle 
   const methodId = crypto.randomUUID();
   const config = { mode: "test", secretKey: "sk_test_fixture", webhookSecret: "whsec_fixture", siteUrl: "http://localhost:3000" };
   const sessions = new Map();
+  const events = new Map();
   let sequence = 0, expireCalls = 0, loseResponse = false;
   const factory = () => ({ checkout: { sessions: {
     async create(params, options) {
       assert.equal(params.mode, "payment");
       assert.equal("payment_method_types" in params, false);
       assert.match(params.integration_identifier, /embypanel_hosted_[a-z]{8}$/);
+      assert.equal(params.payment_intent_data.metadata.panel_order_id, params.client_reference_id);
+      assert.ok(params.payment_intent_data.description.includes(params.client_reference_id));
+      assert.ok(params.payment_intent_data.metadata.panel_username.startsWith('stripe_test_'));
       if (sessions.has(options.idempotencyKey)) return sessions.get(options.idempotencyKey);
-      const session = { id: `cs_test_fixture${++sequence}`, url: `https://checkout.stripe.com/c/pay/fixture${sequence}`, expires_at: params.expires_at, mode: "payment", livemode: false, status: "open", payment_status: "unpaid", currency: "cny", amount_total: params.line_items.reduce((sum, item) => sum + item.price_data.unit_amount, 0), metadata: params.metadata, client_reference_id: params.client_reference_id };
+      const session = { id: `cs_test_fixture${++sequence}`, payment_intent: `pi_fixture${sequence}`, url: `https://checkout.stripe.com/c/pay/fixture${sequence}`, expires_at: params.expires_at, mode: "payment", livemode: false, status: "open", payment_status: "unpaid", currency: "cny", amount_total: params.line_items.reduce((sum, item) => sum + item.price_data.unit_amount, 0), metadata: params.metadata, client_reference_id: params.client_reference_id };
       sessions.set(options.idempotencyKey, session);
       if (loseResponse) { loseResponse = false; throw new Stripe.errors.StripeConnectionError({ message: "fixture lost response" }); }
       return session;
     },
     async retrieve(id) { return [...sessions.values()].find((session) => session.id === id); },
     async expire(id) { expireCalls++; const session = [...sessions.values()].find((s) => s.id === id); assert.equal(session.status, "open"); session.status = "expired"; return session; },
-  } } });
+  } }, events: { async retrieve(id) { return events.get(id); } } });
   const createOrder = async (unknown = false) => {
     const user = await db.user.create({ data: { username: `stripe_test_${crypto.randomUUID()}`, passwordHash: "fixture", balanceCents: 10000 } });
     users.push(user.id);
@@ -68,7 +72,9 @@ test("Stripe checkout and signed callbacks settle once, isolate balance, handle 
     return { user, order, payment, session };
   };
   const signed = (session, type, secret = config.webhookSecret) => {
-    const raw = JSON.stringify({ id: `evt_fixture_${crypto.randomUUID()}`, object: "event", type, livemode: false, data: { object: session } });
+    const event = { id: `evt_fixture_${crypto.randomUUID()}`, created: Math.floor(Date.now() / 1000), object: "event", type, livemode: false, data: { object: structuredClone(session) } };
+    events.set(event.id, event);
+    const raw = JSON.stringify(event);
     return { raw, signature: Stripe.webhooks.generateTestHeaderString({ payload: raw, secret }) };
   };
   const send = async (session, type) => { const { raw, signature } = signed(session, type); return processStripeWebhook(methodId, raw, signature); };
@@ -106,10 +112,24 @@ test("Stripe checkout and signed callbacks settle once, isolate balance, handle 
     assert.equal(paid.status, "PAID"); assert.equal(paid.paymentSource, "STRIPE"); assert.equal(paid.fulfillmentStatus, "PENDING");
     const sub = await db.subscription.findFirstOrThrow({ where: { userId: first.user.id } });
     assert.equal(sub.endAt - sub.startAt, 30 * 86400000);
+    const reference = await db.stripePayment.findUniqueOrThrow({ where: { id: first.payment.id } });
+    assert.equal(reference.paymentIntentId, first.session.payment_intent);
+    assert.ok(reference.stripePaidAt instanceof Date);
+    assert.equal(stripePaymentIntentId({ payment_intent: { id: first.session.payment_intent } }), first.session.payment_intent);
+    assert.equal(stripePaymentIntentId({ payment_intent: 'https://untrusted.example' }), null);
     await send(first.session, "checkout.session.expired");
     assert.equal((await db.stripePayment.findUniqueOrThrow({ where: { id: first.payment.id } })).state, "PAID");
     assert.equal((await db.subscription.findUniqueOrThrow({ where: { id: sub.id } })).endAt.getTime(), sub.endAt.getTime());
     assert.equal((await db.user.findUniqueOrThrow({ where: { id: first.user.id } })).balanceCents, 10000);
+    assert.equal((await db.stripePayment.findUniqueOrThrow({ where: { id: first.payment.id } })).stripePaidAt.getTime(), reference.stripePaidAt.getTime());
+    await db.stripePayment.update({ where: { id: first.payment.id }, data: { paymentIntentId: null, stripePaidAt: null } });
+    const historical = await db.stripePayment.findUniqueOrThrow({ where: { id: first.payment.id } });
+    await backfillStripePaymentReferences(historical, factory);
+    const backfilled = await db.stripePayment.findUniqueOrThrow({ where: { id: first.payment.id } });
+    assert.equal(backfilled.paymentIntentId, reference.paymentIntentId);
+    assert.equal(backfilled.stripePaidAt.getTime(), reference.stripePaidAt.getTime());
+    assert.equal((await db.subscription.findUniqueOrThrow({ where: { id: sub.id } })).endAt.getTime(), sub.endAt.getTime());
+    assert.equal((await db.serviceOrder.findUniqueOrThrow({ where: { id: paid.id } })).paidAt.getTime(), paid.paidAt.getTime());
 
     const mismatch = await createOrder();
     await send({ ...mismatch.session, status: "complete", payment_status: "paid", amount_total: 1 }, "checkout.session.completed");

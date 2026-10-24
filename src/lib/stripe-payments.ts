@@ -45,10 +45,15 @@ export async function startStripeCheckout(userId: string, orderId: string, metho
     const feeCents = method.feeEnabled ? Math.ceil(order.amountCents * method.feePercent / 100) : 0;
     if (!Number.isSafeInteger(order.amountCents + feeCents) || order.amountCents + feeCents > 2147483647) throw new Error("invalid_payment_amount");
     const siteUrl = stripeSiteUrl(method.config.siteUrl, method.config.mode);
+    const buyer = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { username: true } });
     const params: Stripe.Checkout.SessionCreateParams = {
       mode: "payment", client_reference_id: order.id,
       integration_identifier: `embypanel_hosted_${Array.from(randomBytes(8), (n) => String.fromCharCode(97 + n % 26)).join("")}`,
       metadata: { paymentAttemptId: id, orderId, userId },
+      payment_intent_data: {
+        description: `面板订单 ${orderId} · ${buyer.username}`,
+        metadata: { panel_order_id: orderId, panel_username: buyer.username, payment_attempt_id: id },
+      },
       line_items: [{ quantity: 1, price_data: { currency: "cny", unit_amount: order.amountCents, product_data: { name: order.plan.name } } },
         ...(feeCents ? [{ quantity: 1, price_data: { currency: "cny", unit_amount: feeCents, product_data: { name: "支付手续费" } } }] : [])],
       success_url: `${siteUrl}/portal/orders/${orderId}?stripe_return=1`, cancel_url: `${siteUrl}/portal/orders/${orderId}?stripe_cancel=1`,
@@ -101,9 +106,14 @@ export async function processStripeWebhook(methodId: string, raw: string, signat
   const supported = ["checkout.session.completed", "checkout.session.async_payment_succeeded", "checkout.session.async_payment_failed", "checkout.session.expired"];
   if (!supported.includes(event.type)) return;
   const session = event.data.object as Stripe.Checkout.Session;
-  await applyStripeSession(payment.id, session, event.type, event.id);
+  await applyStripeSession(payment.id, session, event.type, event.id, typeof event.created === "number" ? new Date(event.created * 1000) : undefined);
 }
-export async function applyStripeSession(attemptId: string, session: Stripe.Checkout.Session, eventType: string, eventId: string) {
+export function stripePaymentIntentId(session: Stripe.Checkout.Session) {
+  const id = typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id;
+  return id && /^pi_[A-Za-z0-9]+$/.test(id) ? id : null;
+}
+
+export async function applyStripeSession(attemptId: string, session: Stripe.Checkout.Session, eventType: string, eventId: string, eventAt?: Date) {
   const initial = await prisma.stripePayment.findUniqueOrThrow({ where: { id: attemptId }, include: { order: true } });
   await prisma.$transaction(async (tx) => {
     await lockSettlement(tx, initial.order.userId, initial.orderId).catch(async (error) => {
@@ -115,8 +125,16 @@ export async function applyStripeSession(attemptId: string, session: Stripe.Chec
       await tx.stripePayment.update({ where: { id: attemptId }, data: { state: "REVIEW", errorCode: "session_mismatch", lastEventId: eventId } });
       return;
     }
-    if (payment.state === "PAID" || payment.state === "REVIEW") return;
-    const update = { sessionId: session.id, lastEventId: eventId };
+    const confirmedPaid = session.payment_status === "paid" && session.status === "complete";
+    const references = {
+      paymentIntentId: payment.paymentIntentId ?? stripePaymentIntentId(session),
+      stripePaidAt: payment.stripePaidAt ?? (confirmedPaid && eventAt && Number.isFinite(eventAt.getTime()) ? eventAt : null),
+    };
+    if (payment.state === "PAID" || payment.state === "REVIEW") {
+      await tx.stripePayment.update({ where: { id: attemptId }, data: references });
+      return;
+    }
+    const update = { sessionId: session.id, lastEventId: eventId, ...references };
     if (session.payment_status === "paid" && session.status === "complete") {
       const user = await tx.user.findUnique({ where: { id: payment.order.userId }, select: { enabled: true } });
       let eligible = !!user?.enabled;
@@ -134,6 +152,27 @@ export async function applyStripeSession(attemptId: string, session: Stripe.Chec
       await tx.stripePayment.update({ where: { id: attemptId }, data: { ...update, state: "PROCESSING" } });
     }
   });
+}
+
+// Read Stripe only: historical reference recovery must never settle or extend an order again.
+export async function backfillStripePaymentReferences(payment: StripePayment, factory: ClientFactory = stripeClient) {
+  if (!payment.sessionId) return false;
+  const stripe = factory(paymentSnapshot(payment).config.secretKey);
+  const session = await stripe.checkout.sessions.retrieve(payment.sessionId);
+  const order = await prisma.serviceOrder.findUniqueOrThrow({ where: { id: payment.orderId } });
+  if (!stripeSessionMatches(payment, session, order.userId)) throw new Error("session_mismatch");
+  const paymentIntentId = stripePaymentIntentId(session);
+  if (!paymentIntentId) return false;
+  let stripePaidAt: Date | null = null;
+  if (payment.lastEventId?.startsWith("evt_")) {
+    try {
+      const event = await stripe.events.retrieve(payment.lastEventId);
+      const object = event.data.object as Stripe.Checkout.Session;
+      if (["checkout.session.completed", "checkout.session.async_payment_succeeded"].includes(event.type) && object.id === session.id && object.payment_status === "paid" && object.status === "complete" && Number.isFinite(event.created)) stripePaidAt = new Date(event.created * 1000);
+    } catch { /* Older events or restricted-key permissions may be unavailable. */ }
+  }
+  const result = await prisma.stripePayment.updateMany({ where: { id: payment.id, paymentIntentId: null }, data: { paymentIntentId, stripePaidAt } });
+  return result.count === 1;
 }
 
 export async function cancelOrderSafely(userId: string, orderId: string, factory: ClientFactory = stripeClient) {
