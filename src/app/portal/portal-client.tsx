@@ -260,7 +260,7 @@ export function PortalClient() {
                   });
                   const json = await res.json().catch(() => null);
                   if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
-                  alert("兑换成功");
+                  alert(json?.warn ? "兑换成功，Emby 账号同步尚未完成，系统将自动重试，请稍后查看。" : "兑换成功");
                   setRedeemCode("");
                   await refresh();
                 } catch (e: unknown) {

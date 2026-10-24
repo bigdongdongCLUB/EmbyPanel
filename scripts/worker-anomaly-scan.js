@@ -149,6 +149,12 @@ async function main() {
   });
   const paymentWorker = new Worker("embypanel-payments", () => callInternal("/api/admin/jobs/payment-reconcile"), { connection, concurrency: 1 });
   paymentWorker.on("failed", (job) => console.error("[worker] payment reconciliation failed", { jobId: job?.id }));
+  const redemptionQueue = new Queue("embypanel-redemption-sync", { connection });
+  await redemptionQueue.add("redemption-sync", {}, {
+    jobId: "repeat:redemption-sync", repeat: { every: 60 * 1000 }, removeOnComplete: true, removeOnFail: 100,
+  });
+  const redemptionWorker = new Worker("embypanel-redemption-sync", () => callInternal("/api/admin/jobs/redemption-sync"), { connection, concurrency: 1 });
+  redemptionWorker.on("failed", (job) => console.error("[worker] redemption synchronization failed", { jobId: job?.id }));
   console.log(`[worker] repeatable job ensured: ${queueName} every 5min -> ${WEB_INTERNAL_URL}`);
 
   const worker = new Worker(
@@ -231,6 +237,8 @@ async function main() {
   const shutdown = async (signal) => {
     console.log(`[worker] shutting down: ${signal}`);
     clearInterval(keepAlive);
+    await redemptionWorker.close();
+    await redemptionQueue.close();
     await paymentWorker.close();
     await paymentQueue.close();
     await worker.close();

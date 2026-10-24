@@ -148,9 +148,24 @@ model Subscription {
   user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   plan      Plan?              @relation(fields: [planId], references: [id])
   servers   SubscriptionServer[]
+  redemptionSync RedemptionSyncJob?
 
   @@index([userId, status])
   @@index([endAt])
+}
+
+model RedemptionSyncJob {
+  id String @id @default(cuid())
+  subscriptionId String @unique
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  status String @default("PENDING")
+  attempts Int @default(0)
+  nextAttemptAt DateTime @default(now())
+  lastError Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, nextAttemptAt])
 }
 
 model EmbyServer {
