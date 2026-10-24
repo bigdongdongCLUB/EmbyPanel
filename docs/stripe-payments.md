@@ -99,14 +99,15 @@ payment test. Never run database tests against production.
 ## Order reconciliation
 
 The admin order list shows the Stripe PaymentIntent (`pi_`) as the primary
-reconciliation identifier, with copy and Dashboard links. The Checkout Session
-(`cs_`) remains available under a collapsible secondary field. These are different
-Stripe resources, not conflicting order numbers. Live and test Dashboard links
+reconciliation identifier, with copy and Dashboard links in the general payment
+column. Balance payments are labeled separately. Checkout Session (`cs_`) IDs
+remain stored internally but are not displayed. Live and test Dashboard links
 are generated separately.
 
-Creation time, Stripe payment-success event time, and panel booking time are
-displayed separately in Asia/Shanghai. Booking time is never presented as the
-exact Stripe payment time when that timestamp is unavailable. Successful orders
+Only creation and payment-confirmation times are displayed in Asia/Shanghai.
+Stripe uses the payment-success event time; balance payments use settlement time.
+Missing Stripe confirmation times are marked pending recovery, never replaced by
+panel booking time. Successful orders
 show the gross amount collected including any configured surcharge; unpaid or
 canceled orders are not presented as collected payments.
 
