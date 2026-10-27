@@ -118,3 +118,35 @@ per run to backfill missing PaymentIntent IDs. Where the last successful Stripe
 event is still available and readable, its timestamp is recovered too. This
 backfill writes reference fields only, never entitlement, payment status or
 booking time. The new database migration and worker restart are required.
+
+## Balance offset with Stripe
+
+The customer may opt into using available panel balance before paying the remainder
+through Stripe. For a CNY 475 order and CNY 25 balance, the panel reserves CNY 25
+and creates a CNY 450 Checkout Session. If surcharges are enabled, they apply only
+to the external portion, not to the balance share. A balance that covers the
+entire order uses the existing balance-only payment path without Stripe fees.
+
+The server calculates the offset under the settlement/user lock; it never accepts
+a client-supplied offset amount. Reservation and attempt creation commit in one
+transaction. The available balance is reduced while its share is `HELD`, becomes
+`CONSUMED` on confirmed payment, or is returned exactly once as `RELEASED` after
+confirmed cancellation/expiry/failure. The order remains pending until Stripe
+confirms the external portion. Closing the browser or returning from Checkout
+does not prove cancellation and does not release the reservation.
+
+Unknown creation/network results retain the hold until reconciled. A later
+configuration error after an unknown result goes to manual review, not an unsafe
+refund. An external remainder below Stripe's applicable minimum can be rejected;
+on a definitive creation failure the balance is returned. No live transactions
+are created by the automated tests.
+
+If a delayed success arrives after a refund, the released share must be acquired
+again before fulfillment; insufficient funds put the payment into `REVIEW` without
+granting service. Mismatched sessions and other ambiguous results likewise retain
+manual-review safeguards. Duplicate or out-of-order events cannot refund consumed
+balance or extend a subscription twice.
+
+Mixed orders use payment source `BALANCE_STRIPE`. Admin orders show the full paid
+amount and its balance/Stripe breakdown so the external portion can be matched to
+the Stripe payment ID. Existing orders migrate with a zero balance offset.

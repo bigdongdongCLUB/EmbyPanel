@@ -17,6 +17,8 @@ type Row = {
   stripePaidAt?: string | null;
   paidAt?: string | null;
   paidAmountYuan?: string | null;
+  balanceOffsetYuan?: string;
+  stripeAmountYuan?: string;
 };
 
 type Resp = {
@@ -159,11 +161,12 @@ export function OrdersAdminClient() {
                 <td className="py-2 px-3">{r.user}</td>
                 <td className="py-2 px-3">{r.planName}</td>
                 <td className="py-2 px-3 text-red-600 whitespace-nowrap">{r.status === "PAID" ? `¥${r.paidAmountYuan ?? r.amountYuan}` : <><span className="text-gray-500">未收款</span><div className="mt-1 text-xs text-gray-400">订单 ¥{r.amountYuan}</div></>}{r.status === "PAID" && Number(r.feeYuan) > 0 ? <div className="mt-1 text-xs text-gray-400">含手续费 ¥{r.feeYuan}</div> : null}</td>
-                <td className="py-2 px-3"><div>{statusText(r.status)}{r.paymentSource === "STRIPE" ? " · Stripe" : ""}</div>{r.stripeState === "REVIEW" ? <div className="mt-1 text-xs text-red-600">收款需人工核对，请在 Stripe 后台检查</div> : null}{r.status === "PAID" && ["PENDING", "FAILED"].includes(r.fulfillmentStatus ?? "") ? <div className="mt-1 text-xs text-amber-600">服务待同步 · 自动重试中</div> : null}</td>
+                <td className="py-2 px-3"><div>{statusText(r.status)}{["STRIPE", "BALANCE_STRIPE"].includes(r.paymentSource ?? "") ? (r.paymentSource === "BALANCE_STRIPE" ? " · 余额 + Stripe" : " · Stripe") : ""}</div>{r.stripeState === "REVIEW" ? <div className="mt-1 text-xs text-red-600">收款需人工核对，请在 Stripe 后台检查</div> : null}{r.status === "PAID" && ["PENDING", "FAILED"].includes(r.fulfillmentStatus ?? "") ? <div className="mt-1 text-xs text-amber-600">服务待同步 · 自动重试中</div> : null}</td>
                 <td className="py-2 px-3"><div className="w-[270px] space-y-2">
-                  {r.stripePaymentIntentId ? <><div className="flex items-start gap-2"><span className="min-w-0 break-all font-mono text-xs">{r.stripePaymentIntentId}</span><CopyId value={r.stripePaymentIntentId} label="复制 Stripe 付款 ID" /></div>{r.stripeDashboardUrl ? <a href={r.stripeDashboardUrl} target="_blank" rel="noopener noreferrer" className="inline-block text-xs text-[#e3001b] hover:underline">查看 Stripe 交易</a> : null}</> : <span className="text-xs text-gray-400">{r.paymentSource === "BALANCE" ? "余额付款" : r.paymentSource === "STRIPE" && r.status === "PAID" ? "付款 ID 待后台补齐" : "-"}</span>}
+                  {r.paymentSource === "BALANCE_STRIPE" ? <div className="text-xs text-gray-500">余额 ¥{r.balanceOffsetYuan} ＋ Stripe ¥{r.stripeAmountYuan}</div> : null}
+                  {r.stripePaymentIntentId ? <><div className="flex items-start gap-2"><span className="min-w-0 break-all font-mono text-xs">{r.stripePaymentIntentId}</span><CopyId value={r.stripePaymentIntentId} label="复制 Stripe 付款 ID" /></div>{r.stripeDashboardUrl ? <a href={r.stripeDashboardUrl} target="_blank" rel="noopener noreferrer" className="inline-block text-xs text-[#e3001b] hover:underline">查看 Stripe 交易</a> : null}</> : <span className="text-xs text-gray-400">{r.paymentSource === "BALANCE" ? "余额付款" : ["STRIPE", "BALANCE_STRIPE"].includes(r.paymentSource ?? "") && r.status === "PAID" ? "付款 ID 待后台补齐" : "-"}</span>}
                 </div></td>
-                <td className="py-2 px-3 text-xs whitespace-nowrap"><div><span className="text-gray-400">创建：</span>{formatDateTimeShanghai(r.createdAt)}</div>{r.status === "PAID" ? <div className="mt-2"><span className="text-gray-400">付款确认：</span>{r.paymentSource === "STRIPE" ? (r.stripePaidAt ? formatDateTimeShanghai(r.stripePaidAt) : "待后台补齐") : formatDateTimeShanghai(r.paidAt)}</div> : null}</td>
+                <td className="py-2 px-3 text-xs whitespace-nowrap"><div><span className="text-gray-400">创建：</span>{formatDateTimeShanghai(r.createdAt)}</div>{r.status === "PAID" ? <div className="mt-2"><span className="text-gray-400">付款确认：</span>{["STRIPE", "BALANCE_STRIPE"].includes(r.paymentSource ?? "") ? (r.stripePaidAt ? formatDateTimeShanghai(r.stripePaidAt) : "待后台补齐") : formatDateTimeShanghai(r.paidAt)}</div> : null}</td>
               </tr>
             ))}
             {!loading && rows.length === 0 ? (

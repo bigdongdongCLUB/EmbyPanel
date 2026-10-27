@@ -339,6 +339,8 @@ model StripePayment {
   checkoutUrl String?
   amountCents Int
   feeCents Int @default(0)
+  balanceCents Int @default(0)
+  balanceState String @default("NONE")
   currency String @default("cny")
   livemode Boolean
   state String @default("CREATING")

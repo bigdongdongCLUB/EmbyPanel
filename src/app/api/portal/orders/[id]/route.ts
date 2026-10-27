@@ -33,7 +33,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
       paidAt: true,
       canceledAt: true,
       paymentSource: true, fulfillmentStatus: true,
-      stripePayment: { select: { methodId: true, state: true, feeCents: true, amountCents: true } },
+      stripePayment: { select: { methodId: true, state: true, feeCents: true, amountCents: true, balanceCents: true, balanceState: true } },
       plan: { select: { id: true, name: true } },
     },
   });

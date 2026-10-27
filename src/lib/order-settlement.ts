@@ -75,7 +75,7 @@ export async function lockSettlement(tx: Prisma.TransactionClient, userId: strin
   await lockOrderUser(tx, userId);
   await tx.$queryRaw`SELECT id FROM "ServiceOrder" WHERE id = ${orderId} AND "userId" = ${userId} FOR UPDATE`;
 }
-export async function grantPaidOrder(tx: Prisma.TransactionClient, order: ServiceOrder, source: "BALANCE" | "STRIPE") {
+export async function grantPaidOrder(tx: Prisma.TransactionClient, order: ServiceOrder, source: "BALANCE" | "STRIPE" | "BALANCE_STRIPE") {
       const now = new Date();
       const durationMs = order.payCycle === "TRIAL"
         ? ((order.trialHours ?? order.days * 24) * 3600 * 1000)

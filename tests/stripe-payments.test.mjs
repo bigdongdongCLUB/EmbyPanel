@@ -5,6 +5,7 @@ import test from "node:test";
 import ts from "typescript";
 import Stripe from "stripe";
 const require = createRequire(import.meta.url);
+const FixtureStripe = require("stripe");
 require("dotenv/config");
 const { PrismaClient } = require("@prisma/client");
 const db = new PrismaClient();
@@ -40,9 +41,10 @@ test("Stripe checkout and signed callbacks settle once, isolate balance, handle 
   const config = { mode: "test", secretKey: "sk_test_fixture", webhookSecret: "whsec_fixture", siteUrl: "http://localhost:3000" };
   const sessions = new Map();
   const events = new Map();
-  let sequence = 0, expireCalls = 0, loseResponse = false;
+  let sequence = 0, expireCalls = 0, loseResponse = false, failCreateConfig = false, failExpire = false;
   const factory = () => ({ checkout: { sessions: {
     async create(params, options) {
+      if (failCreateConfig) throw new FixtureStripe.errors.StripeInvalidRequestError({ message: 'fixture configuration error' });
       assert.equal(params.mode, "payment");
       assert.equal("payment_method_types" in params, false);
       assert.match(params.integration_identifier, /embypanel_hosted_[a-z]{8}$/);
@@ -56,7 +58,7 @@ test("Stripe checkout and signed callbacks settle once, isolate balance, handle 
       return session;
     },
     async retrieve(id) { return [...sessions.values()].find((session) => session.id === id); },
-    async expire(id) { expireCalls++; const session = [...sessions.values()].find((s) => s.id === id); assert.equal(session.status, "open"); session.status = "expired"; return session; },
+    async expire(id) { if (failExpire) throw new Stripe.errors.StripeConnectionError({ message: 'fixture timeout' }); expireCalls++; const session = [...sessions.values()].find((s) => s.id === id); assert.equal(session.status, "open"); session.status = "expired"; return session; },
   } }, events: { async retrieve(id) { return events.get(id); } } });
   const createOrder = async (unknown = false) => {
     const user = await db.user.create({ data: { username: `stripe_test_${crypto.randomUUID()}`, passwordHash: "fixture", balanceCents: 10000 } });
@@ -153,6 +155,104 @@ test("Stripe checkout and signed callbacks settle once, isolate balance, handle 
     const recovered = await createOrder(true);
     assert.equal(sequence, beforeRecovery + 1);
     assert.equal(recovered.payment.state, "OPEN");
+
+    const mixedOrder = async (balanceCents = 2500) => {
+      const user = await db.user.create({ data: { username: `stripe_test_${crypto.randomUUID()}`, passwordHash: 'fixture', balanceCents } }); users.push(user.id);
+      const order = await db.serviceOrder.create({ data: { userId: user.id, planId: plan.id, payCycle: 'YEARLY', days: 365, amountCents: 47500 } });
+      return { user, order };
+    };
+    const beginMixed = async (fixture) => {
+      await startStripeCheckout(fixture.user.id, fixture.order.id, methodId, factory, true);
+      const payment = await db.stripePayment.findUniqueOrThrow({ where: { orderId: fixture.order.id } });
+      return { payment, session: sessions.get(`embypanel_checkout_${payment.id}`) };
+    };
+    const balance = async (fixture) => (await db.user.findUniqueOrThrow({ where: { id: fixture.user.id } })).balanceCents;
+    const setFee = async (enabled) => db.$transaction(async tx => {
+      await lockPaymentSettings(tx);
+      const list = await readStoredPaymentMethods(tx);
+      await saveStoredPaymentMethods(tx, list.map(m => m.id === methodId ? { ...m, feeEnabled: enabled } : m));
+    });
+    await setFee(false);
+    const mixed = await mixedOrder();
+    const mixedStart = await beginMixed(mixed);
+    assert.equal(mixedStart.payment.balanceCents, 2500);
+    assert.equal(mixedStart.payment.balanceState, 'HELD');
+    assert.equal(mixedStart.session.amount_total, 45000);
+    assert.equal(await balance(mixed), 0);
+    const mixedAgain = await beginMixed(mixed);
+    assert.equal(mixedAgain.session.id, mixedStart.session.id);
+    assert.equal(await balance(mixed), 0);
+    const mixedPaid = { ...mixedStart.session, status: 'complete', payment_status: 'paid' };
+    await Promise.all([send(mixedPaid, 'checkout.session.completed'), send(mixedPaid, 'checkout.session.async_payment_succeeded')]);
+    assert.equal((await db.serviceOrder.findUniqueOrThrow({ where: { id: mixed.order.id } })).paymentSource, 'BALANCE_STRIPE');
+    assert.equal((await db.stripePayment.findUniqueOrThrow({ where: { id: mixedStart.payment.id } })).balanceState, 'CONSUMED');
+    const mixedSub = await db.subscription.findFirstOrThrow({ where: { userId: mixed.user.id } });
+    assert.equal(mixedSub.endAt - mixedSub.startAt, 365 * 86400000);
+    await send({ ...mixedStart.session, status: 'expired' }, 'checkout.session.expired');
+    assert.equal(await balance(mixed), 0);
+    assert.equal((await db.subscription.findUniqueOrThrow({ where: { id: mixedSub.id } })).endAt.getTime(), mixedSub.endAt.getTime());
+    await setFee(true);
+    const canceledMixed = await mixedOrder();
+    const canceledMixedStart = await beginMixed(canceledMixed);
+    assert.equal(canceledMixedStart.payment.feeCents, 900);
+    assert.equal(canceledMixedStart.session.amount_total, 45900);
+    failExpire = true;
+    await assert.rejects(cancelOrderSafely(canceledMixed.user.id, canceledMixed.order.id, factory));
+    assert.equal(await balance(canceledMixed), 0);
+    failExpire = false;
+    await cancelOrderSafely(canceledMixed.user.id, canceledMixed.order.id, factory);
+    assert.equal(await balance(canceledMixed), 2500);
+    await send({ ...canceledMixedStart.session, status: 'expired' }, 'checkout.session.expired');
+    await send({ ...canceledMixedStart.session, status: 'expired' }, 'checkout.session.expired');
+    assert.equal(await balance(canceledMixed), 2500);
+
+    const expiredMixed = await mixedOrder();
+    const expiredMixedStart = await beginMixed(expiredMixed);
+    await send({ ...expiredMixedStart.session, status: 'expired' }, 'checkout.session.expired');
+    assert.equal(await balance(expiredMixed), 2500);
+    // A late successful payment can only settle if the released balance is reacquired.
+    await send({ ...expiredMixedStart.session, status: 'complete', payment_status: 'paid' }, 'checkout.session.async_payment_succeeded');
+    assert.equal(await balance(expiredMixed), 0);
+    assert.equal((await db.serviceOrder.findUniqueOrThrow({ where: { id: expiredMixed.order.id } })).status, 'PAID');
+
+    const failedMixed = await mixedOrder();
+    const failedMixedStart = await beginMixed(failedMixed);
+    await send({ ...failedMixedStart.session, status: 'complete' }, 'checkout.session.async_payment_failed');
+    assert.equal(await balance(failedMixed), 2500);
+    await db.user.update({ where: { id: failedMixed.user.id }, data: { balanceCents: 0 } });
+    await send({ ...failedMixedStart.session, status: 'complete', payment_status: 'paid' }, 'checkout.session.async_payment_succeeded');
+    assert.equal((await db.stripePayment.findUniqueOrThrow({ where: { id: failedMixedStart.payment.id } })).state, 'REVIEW');
+    assert.equal(await db.subscription.count({ where: { userId: failedMixed.user.id } }), 0);
+
+    const configFailure = await mixedOrder();
+    failCreateConfig = true;
+    await assert.rejects(beginMixed(configFailure), /stripe_checkout_failed/);
+    failCreateConfig = false;
+    assert.equal(await balance(configFailure), 2500);
+    assert.equal((await db.stripePayment.findUniqueOrThrow({ where: { orderId: configFailure.order.id } })).balanceState, 'RELEASED');
+    const unknownMixed = await mixedOrder();
+    loseResponse = true;
+    await assert.rejects(beginMixed(unknownMixed), /stripe_checkout_failed/);
+    assert.equal(await balance(unknownMixed), 0);
+    failCreateConfig = true;
+    await assert.rejects(beginMixed(unknownMixed), /stripe_checkout_failed/);
+    failCreateConfig = false;
+    assert.equal((await db.stripePayment.findUniqueOrThrow({ where: { orderId: unknownMixed.order.id } })).state, 'REVIEW');
+    assert.equal(await balance(unknownMixed), 0);
+
+    const fullBalance = await mixedOrder(50000);
+    await assert.rejects(beginMixed(fullBalance), /balance_covers_order_use_balance/);
+    assert.equal(await balance(fullBalance), 50000);
+    await payBalanceOrder(fullBalance.user.id, fullBalance.order.id);
+    assert.equal(await balance(fullBalance), 2500);
+    const concurrentMixed = await mixedOrder();
+    const secondMixed = await db.serviceOrder.create({ data: { userId: concurrentMixed.user.id, planId: plan.id, payCycle: 'YEARLY', days: 365, amountCents: 47500 } });
+    const concurrent = await Promise.all([beginMixed(concurrentMixed), beginMixed({ ...concurrentMixed, order: secondMixed })]);
+    assert.equal(concurrent.reduce((sum, x) => sum + x.payment.balanceCents, 0), 2500);
+    assert.equal(await balance(concurrentMixed), 0);
+    await cancelOrderSafely(concurrentMixed.user.id, concurrentMixed.order.id, factory);
+    await cancelOrderSafely(concurrentMixed.user.id, secondMixed.id, factory);
+    assert.equal(await balance(concurrentMixed), 2500);
 
     for (const status of ["ACTIVE", "EXPIRED"]) {
       const user = await db.user.create({ data: { username: `stripe_test_${crypto.randomUUID()}`, passwordHash: "fixture" } });

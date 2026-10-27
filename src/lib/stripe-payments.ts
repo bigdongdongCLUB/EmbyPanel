@@ -7,6 +7,7 @@ import { lockSettlement, grantPaidOrder } from "@/lib/order-settlement";
 import { assertOrderEligibility, quoteOrder } from "@/lib/order-pricing";
 import { isOrderPendingExpired } from "@/lib/order-expiry";
 import { lockPaymentSettings, readStoredPaymentMethods, stripeMethodsFromStored, stripeMethodReady, stripeSiteUrl, type StripeMethod } from "@/lib/payment-methods";
+import { mixedPaymentQuote, releaseStripeBalance } from "@/lib/mixed-payments";
 
 export const stripeClient = (key: string) => new Stripe(key, { maxNetworkRetries: 2, timeout: 15000 });
 type ClientFactory = typeof stripeClient;
@@ -21,7 +22,7 @@ export async function availableStripeMethods() {
       .map((m) => ({ id: m.id, name: m.name, description: m.description, mode: m.config.mode, feePercent: m.feeEnabled ? m.feePercent : 0 }));
   });
 }
-export async function startStripeCheckout(userId: string, orderId: string, methodId: string, factory: ClientFactory = stripeClient) {
+export async function startStripeCheckout(userId: string, orderId: string, methodId: string, factory: ClientFactory = stripeClient, useBalance = false) {
   const payment = await prisma.$transaction(async (tx) => {
     await lockSettlement(tx, userId, orderId);
     const order = await tx.serviceOrder.findFirst({ where: { id: orderId, userId }, include: { plan: true, stripePayment: true } });
@@ -29,6 +30,7 @@ export async function startStripeCheckout(userId: string, orderId: string, metho
     if (order.status !== "PENDING") throw new Error("order_not_pending");
     if (order.stripePayment) {
       if (order.stripePayment.methodId !== methodId) throw new Error("stripe_payment_in_progress");
+      if (["FAILED", "EXPIRED"].includes(order.stripePayment.state)) throw new Error("stripe_attempt_closed_recreate");
       return order.stripePayment;
     }
     if (isOrderPendingExpired(order.createdAt)) throw new Error("order_expired");
@@ -42,25 +44,31 @@ export async function startStripeCheckout(userId: string, orderId: string, metho
     if (!method) throw new Error("stripe_method_unavailable");
     const id = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + 31 * 60000);
-    const feeCents = method.feeEnabled ? Math.ceil(order.amountCents * method.feePercent / 100) : 0;
-    if (!Number.isSafeInteger(order.amountCents + feeCents) || order.amountCents + feeCents > 2147483647) throw new Error("invalid_payment_amount");
+    const buyer = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { username: true, balanceCents: true } });
+    const quotePayment = mixedPaymentQuote(order.amountCents, buyer.balanceCents, useBalance, method.feeEnabled ? method.feePercent : 0);
+    const { balanceCents, remainingCents, feeCents, externalCents } = quotePayment;
+    if (remainingCents === 0) throw new Error("balance_covers_order_use_balance");
+    if (!Number.isSafeInteger(externalCents) || externalCents > 2147483647) throw new Error("invalid_payment_amount");
+    if (balanceCents > 0) {
+      const debit = await tx.user.updateMany({ where: { id: userId, enabled: true, balanceCents: { gte: balanceCents } }, data: { balanceCents: { decrement: balanceCents } } });
+      if (debit.count !== 1) throw new Error("insufficient_balance");
+    }
     const siteUrl = stripeSiteUrl(method.config.siteUrl, method.config.mode);
-    const buyer = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { username: true } });
     const params: Stripe.Checkout.SessionCreateParams = {
       mode: "payment", client_reference_id: order.id,
       integration_identifier: `embypanel_hosted_${Array.from(randomBytes(8), (n) => String.fromCharCode(97 + n % 26)).join("")}`,
       metadata: { paymentAttemptId: id, orderId, userId },
       payment_intent_data: {
         description: `面板订单 ${orderId} · ${buyer.username}`,
-        metadata: { panel_order_id: orderId, panel_username: buyer.username, payment_attempt_id: id },
+        metadata: { panel_order_id: orderId, panel_username: buyer.username, payment_attempt_id: id, balance_offset_cents: String(balanceCents) },
       },
-      line_items: [{ quantity: 1, price_data: { currency: "cny", unit_amount: order.amountCents, product_data: { name: order.plan.name } } },
+      line_items: [{ quantity: 1, price_data: { currency: "cny", unit_amount: remainingCents, product_data: { name: order.plan.name + (balanceCents ? "（余额抵扣后剩余款）" : "") } } },
         ...(feeCents ? [{ quantity: 1, price_data: { currency: "cny", unit_amount: feeCents, product_data: { name: "支付手续费" } } }] : [])],
       success_url: `${siteUrl}/portal/orders/${orderId}?stripe_return=1`, cancel_url: `${siteUrl}/portal/orders/${orderId}?stripe_cancel=1`,
       expires_at: Math.floor(expiresAt.getTime() / 1000), locale: "zh",
     };
     return tx.stripePayment.create({ data: {
-      id, orderId, methodId, amountCents: order.amountCents + feeCents, feeCents,
+      id, orderId, methodId, amountCents: externalCents, feeCents, balanceCents, balanceState: balanceCents > 0 ? "HELD" : "NONE",
       livemode: method.config.mode === "live", expiresAt,
       credentials: encryptString(JSON.stringify({ config: method.config, params })),
     } });
@@ -80,7 +88,20 @@ export async function createStripeSession(payment: StripePayment, factory: Clien
     session = await factory(snapshot.config.secretKey).checkout.sessions.create(snapshot.params, { idempotencyKey: `embypanel_checkout_${payment.id}` });
   } catch (error) {
     if (error instanceof Stripe.errors.StripeInvalidRequestError || error instanceof Stripe.errors.StripeAuthenticationError || error instanceof Stripe.errors.StripePermissionError) {
-      await prisma.stripePayment.updateMany({ where: { id: payment.id, state: "CREATING" }, data: { state: "FAILED", errorCode: "checkout_configuration_error" } });
+      await prisma.$transaction(async (tx) => {
+        const order = await tx.serviceOrder.findUniqueOrThrow({ where: { id: payment.orderId } });
+        await lockSettlement(tx, order.userId, order.id).catch((e) => { if (e.message !== "user_disabled") throw e; });
+        const current = await tx.stripePayment.findUniqueOrThrow({ where: { id: payment.id } });
+        if (current.state !== "CREATING") return;
+        if (current.errorCode === "checkout_response_unknown") {
+          await tx.stripePayment.update({ where: { id: payment.id }, data: { state: "REVIEW", errorCode: "checkout_creation_unknown" } });
+        } else {
+          await releaseStripeBalance(tx, current, order.userId);
+          await tx.stripePayment.update({ where: { id: payment.id }, data: { state: "FAILED", errorCode: "checkout_configuration_error" } });
+        }
+      });
+    } else {
+      await prisma.stripePayment.updateMany({ where: { id: payment.id, state: "CREATING" }, data: { errorCode: "checkout_response_unknown" } });
     }
     throw new Error("stripe_checkout_failed");
   }
@@ -143,9 +164,18 @@ export async function applyStripeSession(attemptId: string, session: Stripe.Chec
         await tx.stripePayment.update({ where: { id: attemptId }, data: { ...update, state: "REVIEW", errorCode: "paid_requires_manual_review" } });
         return;
       }
-      await grantPaidOrder(tx, payment.order, "STRIPE");
-      await tx.stripePayment.update({ where: { id: attemptId }, data: { ...update, state: "PAID", errorCode: null } });
+      if (payment.balanceCents > 0 && payment.balanceState === "RELEASED") {
+        // A delayed success after a terminal failure must reacquire the refunded share.
+        const debit = await tx.user.updateMany({ where: { id: payment.order.userId, enabled: true, balanceCents: { gte: payment.balanceCents } }, data: { balanceCents: { decrement: payment.balanceCents } } });
+        if (debit.count !== 1) {
+          await tx.stripePayment.update({ where: { id: attemptId }, data: { ...update, state: "REVIEW", errorCode: "mixed_balance_unavailable" } });
+          return;
+        }
+      }
+      await grantPaidOrder(tx, payment.order, payment.balanceCents > 0 ? "BALANCE_STRIPE" : "STRIPE");
+      await tx.stripePayment.update({ where: { id: attemptId }, data: { ...update, state: "PAID", errorCode: null, balanceState: payment.balanceCents > 0 ? "CONSUMED" : "NONE" } });
     } else if (eventType === "checkout.session.expired" || eventType === "checkout.session.async_payment_failed") {
+      await releaseStripeBalance(tx, payment, payment.order.userId);
       await tx.stripePayment.update({ where: { id: attemptId }, data: { ...update, state: eventType.endsWith("expired") ? "EXPIRED" : "FAILED" } });
       await tx.serviceOrder.updateMany({ where: { id: payment.orderId, status: "PENDING" }, data: { status: "CANCELED", canceledAt: new Date() } });
     } else if (session.status === "complete") {
@@ -189,6 +219,7 @@ export async function cancelOrderSafely(userId: string, orderId: string, factory
       if (session.status !== "expired") await stripe.checkout.sessions.expire(payment.sessionId);
       await tx.stripePayment.update({ where: { id: payment.id }, data: { state: "EXPIRED" } });
     }
+    if (payment) await releaseStripeBalance(tx, payment, userId);
     await tx.serviceOrder.update({ where: { id: orderId }, data: { status: "CANCELED", canceledAt: new Date() } });
   }, { timeout: 60000 });
 }
