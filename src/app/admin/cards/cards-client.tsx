@@ -20,6 +20,8 @@ type Row = {
 
 type Plan = { id: string; name: string };
 
+const emptySummary = { total: 0, used: 0, unused: 0, balanceMonthUsed: 0, subMonthUsed: 0, balanceLastMonthUsed: 0, subLastMonthUsed: 0 };
+
 function fmt(v?: string | null) {
   if (!v) return "-";
   return new Date(v).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false });
@@ -55,7 +57,7 @@ export function CardCodesClient() {
   const [q, setQ] = useState("");
   const [type, setType] = useState("");
   const [status, setStatus] = useState("");
-  const [summary, setSummary] = useState({ total: 0, used: 0, unused: 0, balanceMonthUsed: 0, subMonthUsed: 0 });
+  const [summary, setSummary] = useState(emptySummary);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -130,7 +132,7 @@ export function CardCodesClient() {
         return out;
       });
       setPlans(json.plans || []);
-      setSummary(json.summary || { total: 0, used: 0, unused: 0, balanceMonthUsed: 0, subMonthUsed: 0 });
+      setSummary({ ...emptySummary, ...json.summary });
     } catch (e: any) {
       setError(e?.message || "加载失败");
     } finally {
@@ -166,8 +168,8 @@ export function CardCodesClient() {
         <div className="border border-[#eaeaea] bg-white rounded-2xl p-4 shadow-sm"><div className="text-xs text-gray-500">卡密总数</div><div className="text-2xl text-[#e3001b]">{summary.total}</div></div>
         <div className="border border-[#eaeaea] bg-white rounded-2xl p-4 shadow-sm"><div className="text-xs text-gray-500">已使用</div><div className="text-2xl text-red-600">{summary.used}</div></div>
         <div className="border border-[#eaeaea] bg-white rounded-2xl p-4 shadow-sm"><div className="text-xs text-gray-500">未使用</div><div className="text-2xl text-amber-600">{summary.unused}</div></div>
-        <div className="border border-[#eaeaea] bg-white rounded-2xl p-4 shadow-sm"><div className="text-xs text-gray-500">本月余额卡密兑换</div><div className="text-2xl text-green-600">{summary.balanceMonthUsed}</div></div>
-        <div className="border border-[#eaeaea] bg-white rounded-2xl p-4 shadow-sm"><div className="text-xs text-gray-500">本月订阅卡密兑换</div><div className="text-2xl text-purple-600">{summary.subMonthUsed}</div></div>
+        <div className="min-w-0 border border-[#eaeaea] bg-white rounded-2xl p-4 shadow-sm"><div className="text-xs text-gray-500">本月余额卡密兑换</div><div className="text-2xl text-green-600 break-all">{summary.balanceMonthUsed}</div><div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 border-t border-gray-100 pt-2 text-xs text-gray-500"><span>上月数量</span><span className="text-sm font-medium text-gray-600 break-all">{summary.balanceLastMonthUsed}</span></div></div>
+        <div className="min-w-0 border border-[#eaeaea] bg-white rounded-2xl p-4 shadow-sm"><div className="text-xs text-gray-500">本月订阅卡密兑换</div><div className="text-2xl text-purple-600 break-all">{summary.subMonthUsed}</div><div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 border-t border-gray-100 pt-2 text-xs text-gray-500"><span>上月数量</span><span className="text-sm font-medium text-gray-600 break-all">{summary.subLastMonthUsed}</span></div></div>
       </div>
 
       {error ? <div className="text-sm text-red-600">{error}</div> : null}

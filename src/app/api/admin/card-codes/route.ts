@@ -70,11 +70,11 @@ function cycleDays(payCycle?: string) {
   }
 }
 
-function shanghaiMonthRange(now = new Date()) {
+function shanghaiMonthRange(now = new Date(), monthOffset = 0) {
   const shanghaiOffsetMs = 8 * 60 * 60 * 1000;
   const shanghaiNow = new Date(now.getTime() + shanghaiOffsetMs);
   const year = shanghaiNow.getUTCFullYear();
-  const month = shanghaiNow.getUTCMonth();
+  const month = shanghaiNow.getUTCMonth() + monthOffset;
   return {
     start: new Date(Date.UTC(year, month, 1) - shanghaiOffsetMs),
     end: new Date(Date.UTC(year, month + 1, 1) - shanghaiOffsetMs),
@@ -105,7 +105,9 @@ export async function GET(req: Request) {
     };
 
     const plans = await prisma.plan.findMany({ orderBy: { createdAt: "desc" }, select: { id: true, name: true } });
-    const monthRange = shanghaiMonthRange();
+    const now = new Date();
+    const monthRange = shanghaiMonthRange(now);
+    const lastMonthRange = shanghaiMonthRange(now, -1);
 
     const cardCodeModel: any = (prisma as any).cardCode;
     if (!cardCodeModel) {
@@ -124,6 +126,8 @@ export async function GET(req: Request) {
       const unusedRes = await prisma.$queryRaw<any[]>`SELECT COUNT(*)::int as c FROM "CardCode" WHERE "status"='UNUSED'`;
       const balanceMonthUsedRes = await prisma.$queryRaw<any[]>`SELECT COUNT(*)::int as c FROM "CardCode" WHERE "type"='BALANCE' AND "status"='USED' AND "usedAt" >= ${monthRange.start} AND "usedAt" < ${monthRange.end}`;
       const subMonthUsedRes = await prisma.$queryRaw<any[]>`SELECT COUNT(*)::int as c FROM "CardCode" WHERE "type"='SUBSCRIPTION' AND "status"='USED' AND "usedAt" >= ${monthRange.start} AND "usedAt" < ${monthRange.end}`;
+      const balanceLastMonthUsedRes = await prisma.$queryRaw<any[]>`SELECT COUNT(*)::int as c FROM "CardCode" WHERE "type"='BALANCE' AND "status"='USED' AND "usedAt" >= ${lastMonthRange.start} AND "usedAt" < ${lastMonthRange.end}`;
+      const subLastMonthUsedRes = await prisma.$queryRaw<any[]>`SELECT COUNT(*)::int as c FROM "CardCode" WHERE "type"='SUBSCRIPTION' AND "status"='USED' AND "usedAt" >= ${lastMonthRange.start} AND "usedAt" < ${lastMonthRange.end}`;
 
       return NextResponse.json({
         ok: true,
@@ -133,6 +137,8 @@ export async function GET(req: Request) {
           unused: Number(unusedRes?.[0]?.c ?? 0),
           balanceMonthUsed: Number(balanceMonthUsedRes?.[0]?.c ?? 0),
           subMonthUsed: Number(subMonthUsedRes?.[0]?.c ?? 0),
+          balanceLastMonthUsed: Number(balanceLastMonthUsedRes?.[0]?.c ?? 0),
+          subLastMonthUsed: Number(subLastMonthUsedRes?.[0]?.c ?? 0),
         },
         rows: rows.map((r) => ({
           id: r.id,
@@ -152,7 +158,7 @@ export async function GET(req: Request) {
       });
     }
 
-    const [rows, total, used, unused, balanceMonthUsed, subMonthUsed] = await Promise.all([
+    const [rows, total, used, unused, balanceMonthUsed, subMonthUsed, balanceLastMonthUsed, subLastMonthUsed] = await Promise.all([
       cardCodeModel.findMany({
         where,
         orderBy: { createdAt: "desc" },
@@ -177,9 +183,11 @@ export async function GET(req: Request) {
       cardCodeModel.count({ where: { status: "UNUSED" } }),
       cardCodeModel.count({ where: { type: "BALANCE", status: "USED", usedAt: { gte: monthRange.start, lt: monthRange.end } } }),
       cardCodeModel.count({ where: { type: "SUBSCRIPTION", status: "USED", usedAt: { gte: monthRange.start, lt: monthRange.end } } }),
+      cardCodeModel.count({ where: { type: "BALANCE", status: "USED", usedAt: { gte: lastMonthRange.start, lt: lastMonthRange.end } } }),
+      cardCodeModel.count({ where: { type: "SUBSCRIPTION", status: "USED", usedAt: { gte: lastMonthRange.start, lt: lastMonthRange.end } } }),
     ]);
 
-    return NextResponse.json({ ok: true, summary: { total, used, unused, balanceMonthUsed, subMonthUsed }, rows, plans });
+    return NextResponse.json({ ok: true, summary: { total, used, unused, balanceMonthUsed, subMonthUsed, balanceLastMonthUsed, subLastMonthUsed }, rows, plans });
   } catch (e: any) {
     return NextResponse.json({ error: "card_codes_query_failed", message: String(e?.message ?? e) }, { status: 500 });
   }
