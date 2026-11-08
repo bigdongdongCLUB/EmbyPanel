@@ -3,6 +3,7 @@
 import { UiImage } from "@/components/ui-image";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { PaginationBar } from "@/components/pagination-bar";
+import { compactMediaTitle } from "@/lib/media-title";
 
 type BizStatus = "PENDING" | "NO_RESOURCE" | "PROCESSING" | "CANNOT_UPDATE" | "COMPLETED";
 
@@ -407,7 +408,15 @@ export function VodRequestsAdminClient() {
       </div>
 
       <div className="bg-white border border-[#eaeaea] rounded-2xl overflow-auto shadow-sm">
-        <table className="min-w-[1100px] w-full text-sm">
+        <table className="min-w-[1200px] w-full table-fixed text-sm">
+          <colgroup>
+            <col />
+            <col className="w-[140px]" />
+            <col className="w-[90px]" />
+            <col className="w-[240px]" />
+            <col className="w-[180px]" />
+            <col className="w-[110px]" />
+          </colgroup>
           <thead className="border-b border-[#eaeaea] text-left text-[#666] bg-[#f8f9fa]">
             <tr>
               <th className="px-3 py-2">媒体信息</th>
@@ -423,7 +432,7 @@ export function VodRequestsAdminClient() {
               <Fragment key={r.id}>
                 <tr key={r.id} className="border-b border-[#eaeaea] align-middle">
                   <td className="px-3 py-3 align-middle">
-                    <div className="flex items-center gap-2 min-w-[260px]">
+                    <div className="flex min-w-0 items-center gap-2">
                       {tmdbUrl(r) ? (
                         <a
                           href={tmdbUrl(r) || undefined}
@@ -439,7 +448,7 @@ export function VodRequestsAdminClient() {
                       ) : (
                         <div className="w-10 h-14 rounded bg-gray-100" />
                       )}
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1">
                           {tmdbUrl(r) ? (
                             <a
@@ -447,12 +456,12 @@ export function VodRequestsAdminClient() {
                               target="_blank"
                               rel="noreferrer"
                               className="block min-w-0 truncate font-medium text-gray-800 transition hover:text-[#e3001b] hover:underline"
-                              title="在 TMDB 中查看"
+                              title={r.title}
                             >
-                              {r.title}
+                              {compactMediaTitle(r.title)}
                             </a>
                           ) : (
-                            <div className="min-w-0 truncate font-medium text-gray-800">{r.title}</div>
+                            <div className="min-w-0 truncate font-medium text-gray-800" title={r.title}>{compactMediaTitle(r.title)}</div>
                           )}
                           <button
                             type="button"
@@ -476,7 +485,7 @@ export function VodRequestsAdminClient() {
                             <span className="inline-flex shrink-0 rounded border border-gray-300 bg-gray-50 px-1.5 py-0.5 text-[10px] font-medium text-gray-500">用户已删除</span>
                           ) : null}
                         </div>
-                        <div className="text-xs text-gray-500 truncate">{r.titleOriginal || "-"}</div>
+                        <div className="text-xs text-gray-500 truncate" title={r.titleOriginal || undefined}>{compactMediaTitle(r.titleOriginal || "-")}</div>
                         <div className="flex items-center gap-1 mt-1">
                           <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] text-white ${r.mediaType === "MOVIE" ? "bg-[#913edb]" : "bg-[#e3001b]"}`}>{r.mediaType === "MOVIE" ? "电影" : "电视剧"}</span>
                           <span className="text-xs text-gray-500">{r.mediaType === "TV" && r.season ? `S${String(r.season).padStart(2, "0")} · ` : ""}{r.year || "-"}</span>
@@ -495,7 +504,7 @@ export function VodRequestsAdminClient() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-3 py-3 whitespace-nowrap align-middle">{userLabel(r.user)}</td>
+                  <td className="px-3 py-3 break-all align-middle">{userLabel(r.user)}</td>
                   <td className="px-3 py-3 align-middle">
                     {r.note ? (
                       <div className="relative inline-block">
@@ -547,14 +556,14 @@ export function VodRequestsAdminClient() {
                   ? r.otherRequests.map((item) => (
                       <tr key={item.id} className="border-b border-[#eaeaea] align-middle bg-[#fcfcfd]">
                         <td className="px-3 py-3 align-middle">
-                          <div className="flex items-center gap-2 pl-12 text-xs text-gray-400">
+                          <div className="flex flex-wrap items-center gap-2 pl-12 text-xs text-gray-400">
                             <span>↳ 同媒体其他点播用户</span>
                             {item.userDeletedAt ? (
                               <span className="inline-flex shrink-0 rounded border border-gray-300 bg-gray-50 px-1.5 py-0.5 text-[10px] font-medium text-gray-500">用户已删除</span>
                             ) : null}
                           </div>
                         </td>
-                        <td className="px-3 py-3 whitespace-nowrap align-middle">{userLabel(item.user)}</td>
+                        <td className="px-3 py-3 break-all align-middle">{userLabel(item.user)}</td>
                         <td className="px-3 py-3 align-middle">
                           {item.note ? (
                             <div className="relative inline-block">
