@@ -24,6 +24,7 @@ type Row = {
 type Resp = {
   ok: boolean;
   days: number;
+  plans: { id: string; name: string }[];
   summary: {
     totalOrders: number;
     totalIncomeYuan: string;
@@ -64,6 +65,10 @@ function CopyId({ value, label }: { value: string; label: string }) {
 
 export function OrdersAdminClient() {
   const [days, setDays] = useState(30);
+  const [username, setUsername] = useState("");
+  const [status, setStatus] = useState("");
+  const [planId, setPlanId] = useState("");
+  const [plans, setPlans] = useState<Resp["plans"]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState({ totalOrders: 0, totalIncomeYuan: "0.00", paidOrders: 0, pendingOrders: 0 });
@@ -73,30 +78,37 @@ export function OrdersAdminClient() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
 
-  async function refresh(nextDays = days, nextPage = page, nextPageSize = pageSize) {
-    setLoading(true);
-    setError(null);
-    try {
-      const qs = new URLSearchParams({ days: String(nextDays), page: String(nextPage), pageSize: String(nextPageSize) });
-      const res = await fetch(`/api/admin/orders?${qs.toString()}`, { cache: "no-store" });
-      const json = await res.json().catch(() => null as Resp | null);
-      if (!res.ok || !json) throw new Error(json ? JSON.stringify(json) : `HTTP ${res.status}`);
-      setSummary(json.summary);
-      setRows(Array.isArray(json.rows) ? json.rows : []);
-      setTotalPages(json.pagination?.totalPages || 1);
-      setTotal(json.pagination?.total || 0);
-      setPage(json.pagination?.page || 1);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "load_failed");
-    } finally {
-      setLoading(false);
-    }
-  }
-
   useEffect(() => {
-    refresh(30, 1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const controller = new AbortController();
+    async function refresh() {
+      setLoading(true);
+      setError(null);
+      try {
+        const qs = new URLSearchParams({ days: String(days), page: String(page), pageSize: String(pageSize) });
+        if (username.trim()) qs.set("username", username.trim());
+        if (status) qs.set("status", status);
+        if (planId) qs.set("planId", planId);
+        const res = await fetch(`/api/admin/orders?${qs}`, { cache: "no-store", signal: controller.signal });
+        const json = await res.json().catch(() => null as Resp | null);
+        if (controller.signal.aborted) return;
+        if (!res.ok || !json?.ok) throw new Error(json ? JSON.stringify(json) : `HTTP ${res.status}`);
+        setSummary(json.summary);
+        setRows(json.rows);
+        setPlans(json.plans);
+        setTotalPages(json.pagination.totalPages);
+        setTotal(json.pagination.total);
+      } catch (e) {
+        if (!controller.signal.aborted) setError(e instanceof Error ? e.message : "load_failed");
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    }
+    const timer = setTimeout(() => void refresh(), 250);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [days, page, pageSize, username, status, planId]);
 
   return (
     <div className="space-y-6">
@@ -108,7 +120,7 @@ export function OrdersAdminClient() {
           onChange={(e) => {
             const d = Number(e.target.value);
             setDays(d);
-            refresh(d, 1);
+            setPage(1);
           }}
         >
           <option value="30">30日</option>
@@ -139,7 +151,36 @@ export function OrdersAdminClient() {
 
       {error ? <pre className="text-xs text-red-600 whitespace-pre-wrap">{error}</pre> : null}
       {loading ? <div className="text-sm text-gray-500">加载中…</div> : null}
-      <p className="text-xs text-gray-500">时间统一为北京时间（Asia/Shanghai）。Stripe 对账请使用付款 ID（pi_），创建时间不等于付款时间。</p>
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[#eaeaea] bg-white p-2 shadow-sm">
+        <input
+          type="search"
+          aria-label="搜索用户名"
+          placeholder="搜索用户名"
+          className="h-8 w-full min-w-0 rounded-lg border border-[#eaeaea] bg-[#f4f5f7] px-3 text-sm outline-none focus:border-[#e3001b] sm:w-64"
+          value={username}
+          onChange={(e) => { setUsername(e.target.value); setPage(1); }}
+        />
+        <select
+          aria-label="订单状态"
+          className="h-8 max-w-full rounded-lg border border-[#eaeaea] bg-[#f4f5f7] px-3 text-sm outline-none focus:border-[#e3001b]"
+          value={status}
+          onChange={(e) => { setStatus(e.target.value); setPage(1); }}
+        >
+          <option value="">全部订单状态</option>
+          <option value="PENDING">待支付</option>
+          <option value="PAID">已完成</option>
+          <option value="CANCELED">已取消</option>
+        </select>
+        <select
+          aria-label="订阅计划"
+          className="h-8 max-w-full rounded-lg border border-[#eaeaea] bg-[#f4f5f7] px-3 text-sm outline-none focus:border-[#e3001b]"
+          value={planId}
+          onChange={(e) => { setPlanId(e.target.value); setPage(1); }}
+        >
+          <option value="">全部订阅计划</option>
+          {plans.map((plan) => <option key={plan.id} value={plan.id}>{plan.name}</option>)}
+        </select>
+      </div>
 
       <div className="bg-white border border-[#eaeaea] rounded-2xl overflow-auto shadow-sm">
         <table className="min-w-[1180px] w-full text-sm">
@@ -171,7 +212,7 @@ export function OrdersAdminClient() {
             ))}
             {!loading && rows.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-8 px-3 text-center text-gray-500">暂无订单</td>
+                <td colSpan={7} className="py-8 px-3 text-center text-gray-500">{username.trim() || status || planId ? "没有符合条件的订单" : "暂无订单"}</td>
               </tr>
             ) : null}
           </tbody>
@@ -184,8 +225,8 @@ export function OrdersAdminClient() {
           page={page}
           totalPages={totalPages}
           pageSize={pageSize}
-          onPageChange={(p) => refresh(days, p, pageSize)}
-          onPageSizeChange={(n) => { setPageSize(n); refresh(days, 1, n); }}
+          onPageChange={setPage}
+          onPageSizeChange={(n) => { setPageSize(n); setPage(1); }}
         />
       </div>
     </div>

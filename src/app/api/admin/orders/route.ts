@@ -1,12 +1,14 @@
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
 import { autoCancelExpiredPendingOrders } from "@/lib/order-expiry";
 
 function parseIntSafe(v: string | null, d: number) {
+  if (v === null || v.trim() === "") return d;
   const n = Number(v);
   return Number.isFinite(n) ? Math.trunc(n) : d;
 }
@@ -20,20 +22,32 @@ export async function GET(req: Request) {
   const days = [30, 90, 180, 365].includes(daysRaw) ? daysRaw : 30;
   const page = Math.max(1, parseIntSafe(url.searchParams.get("page"), 1));
   const pageSize = Math.max(1, Math.min(100, parseIntSafe(url.searchParams.get("pageSize"), 10)));
+  const username = url.searchParams.get("username")?.trim();
+  const status = url.searchParams.get("status")?.trim() ?? "";
+  const planId = url.searchParams.get("planId")?.trim();
+  if (status !== "" && status !== "PENDING" && status !== "PAID" && status !== "CANCELED") {
+    return NextResponse.json({ error: "invalid_order_status" }, { status: 400 });
+  }
 
   await autoCancelExpiredPendingOrders(prisma);
 
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
   const where = { createdAt: { gte: since } } as const;
+  const listWhere: Prisma.ServiceOrderWhereInput = {
+    ...where,
+    ...(username ? { user: { username: { contains: username.replace(/[\\%_]/g, "\\$&"), mode: "insensitive" } } } : {}),
+    ...(status ? { status } : {}),
+    ...(planId ? { planId } : {}),
+  };
 
-  const [totalOrders, paidAgg, paidOrders, pendingOrders, rows, totalRows] = await Promise.all([
+  const [totalOrders, paidAgg, paidOrders, pendingOrders, rows, totalRows, plans] = await Promise.all([
     prisma.serviceOrder.count({ where }),
     prisma.serviceOrder.aggregate({ where: { ...where, status: "PAID" }, _sum: { amountCents: true } }),
     prisma.serviceOrder.count({ where: { ...where, status: "PAID" } }),
     prisma.serviceOrder.count({ where: { ...where, status: "PENDING" } }),
     prisma.serviceOrder.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
+      where: listWhere,
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       skip: (page - 1) * pageSize,
       take: pageSize,
       select: {
@@ -48,12 +62,14 @@ export async function GET(req: Request) {
         plan: { select: { name: true } },
       },
     }),
-    prisma.serviceOrder.count({ where }),
+    prisma.serviceOrder.count({ where: listWhere }),
+    prisma.plan.findMany({ select: { id: true, name: true }, orderBy: [{ name: "asc" }, { id: "asc" }] }),
   ]);
 
   return NextResponse.json({
     ok: true,
     days,
+    plans,
     summary: {
       totalOrders,
       totalIncomeYuan: ((paidAgg._sum.amountCents ?? 0) / 100).toFixed(2),
