@@ -8,7 +8,7 @@ import { prisma } from "@/lib/db";
 const REL_KEY = "invite_relations";
 const RECORD_KEY = "invite_rebate_records";
 
-type Rel = { inviterUserId: string; inviteCode: string; createdAt: string };
+type Rel = { inviterUserId: string; createdAt: string };
 type RecordRow = {
   id: string;
   inviterUserId: string;
@@ -38,6 +38,7 @@ export async function GET() {
   ]);
 
   const relMap = ((relRow?.valueJson as any) ?? {}) as Record<string, Rel>;
+  const relations = Object.entries(relMap).filter(([, rel]) => typeof rel?.inviterUserId === "string" && rel.inviterUserId);
   const records = (Array.isArray(recordRow?.valueJson) ? (recordRow!.valueJson as any[]) : []) as RecordRow[];
 
   const now = Date.now();
@@ -75,6 +76,10 @@ export async function GET() {
   }
 
   const ids = new Set<string>();
+  for (const [invitedId, relation] of relations) {
+    ids.add(invitedId);
+    ids.add(relation.inviterUserId);
+  }
   records.forEach((r) => {
     if (r.inviterUserId) ids.add(r.inviterUserId);
     if (r.invitedUserId) ids.add(r.invitedUserId);
@@ -83,6 +88,17 @@ export async function GET() {
 
   const users = await prisma.user.findMany({ where: { id: { in: Array.from(ids) } }, select: { id: true, username: true } });
   const nameById = new Map(users.map((u) => [u.id, u.username] as const));
+  const inviteRows = relations
+    .map(([id, relation]) => {
+      const timestamp = Date.parse(relation.createdAt);
+      return {
+        id,
+        inviter: nameById.get(relation.inviterUserId) || relation.inviterUserId,
+        invited: nameById.get(id) || id,
+        createdAt: Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : null,
+      };
+    })
+    .sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? "") || a.id.localeCompare(b.id));
 
   const topInviter = topInviterUserId
     ? {
@@ -115,5 +131,6 @@ export async function GET() {
       topInviter,
     },
     rows,
+    inviteRows,
   });
 }

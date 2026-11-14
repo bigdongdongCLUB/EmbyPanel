@@ -20,10 +20,75 @@ type Row = {
   createdAt: string;
 };
 
+type InviteRow = Pick<Row, "id" | "inviter" | "invited"> & { createdAt: string | null };
+
+const inviteDateTime = new Intl.DateTimeFormat("zh-CN", {
+  timeZone: "Asia/Shanghai",
+  dateStyle: "short",
+  timeStyle: "medium",
+  hour12: false,
+});
+
+function InviteRecords({ rows, loading }: { rows: InviteRow[]; loading: boolean }) {
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+  const filtered = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    return term ? rows.filter((r) => r.inviter.toLowerCase().includes(term) || r.invited.toLowerCase().includes(term)) : rows;
+  }, [rows, query]);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const visible = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  return (
+    <section className="overflow-hidden rounded-2xl border border-[#eaeaea] bg-white shadow-sm" aria-labelledby="invite-records-heading">
+      <h2 id="invite-records-heading" className="border-b border-[#eaeaea] bg-[#f8f9fa] px-4 py-3 font-medium">邀请记录</h2>
+      <div className="border-b border-[#eaeaea] p-2">
+        <input
+          type="search"
+          aria-label="搜索邀请记录"
+          className="w-full rounded-lg border border-transparent bg-[#f4f5f7] px-3 py-2 outline-none focus:border-[#e3001b] md:w-80"
+          placeholder="搜索邀请人或被邀请人"
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); setPage(1); }}
+        />
+      </div>
+      <div className="overflow-auto">
+        <table className="w-full min-w-[420px] table-fixed text-sm">
+          <thead className="border-b border-[#eaeaea] bg-[#f8f9fa] text-left text-[#666]">
+            <tr>
+              <th scope="col" className="px-3 py-2">邀请人</th>
+              <th scope="col" className="px-3 py-2">被邀请人</th>
+              <th scope="col" className="w-[175px] px-3 py-2">创建时间</th>
+            </tr>
+          </thead>
+          <tbody>
+            {visible.map((r) => (
+              <tr key={r.id} className="border-b border-[#eaeaea] last:border-b-0 hover:bg-gray-50/60">
+                <td className="break-all px-3 py-2">{r.inviter}</td>
+                <td className="break-all px-3 py-2">{r.invited}</td>
+                <td className="whitespace-nowrap px-3 py-2">{r.createdAt ? inviteDateTime.format(new Date(r.createdAt)) : "-"}</td>
+              </tr>
+            ))}
+            {!loading && !visible.length ? (
+              <tr><td colSpan={3} className="px-3 py-6 text-gray-500">{rows.length ? "无匹配记录" : "暂无邀请记录"}</td></tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
+      {filtered.length > 0 ? (
+        <PaginationBar total={filtered.length} page={currentPage} totalPages={totalPages} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={() => {}} showPageSize={false} />
+      ) : null}
+    </section>
+  );
+}
+
 export function InvitesAdminClient() {
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [rows, setRows] = useState<Row[]>([]);
+  const [inviteRows, setInviteRows] = useState<InviteRow[]>([]);
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
   const pageSize = 10;
@@ -36,6 +101,7 @@ export function InvitesAdminClient() {
       if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
       setSummary(json.summary);
       setRows(json.rows || []);
+      setInviteRows(json.inviteRows || []);
       setPage(1);
     } catch (e: any) {
       alert(e?.message || "load_failed");
@@ -88,6 +154,8 @@ export function InvitesAdminClient() {
           <div className="text-sm text-gray-500 mt-1">返利 ¥{summary?.topInviter?.amountYuan ?? "0.00"}</div>
         </div>
       </div>
+
+      <InviteRecords rows={inviteRows} loading={loading} />
 
       <div className="rounded-2xl border border-[#eaeaea] bg-white overflow-hidden shadow-sm">
         <div className="px-4 py-3 border-b border-[#eaeaea] bg-[#f8f9fa] font-medium">返利记录</div>
