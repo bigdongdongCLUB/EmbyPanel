@@ -151,6 +151,7 @@ export function UsersClient() {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const moreRef = useRef<HTMLDivElement | null>(null);
   const [bulkAddOpen, setBulkAddOpen] = useState(false);
   const [bulkAddDays, setBulkAddDays] = useState("30");
@@ -408,6 +409,28 @@ export function UsersClient() {
     };
   }, [serverPopover]);
 
+  async function exportUsers() {
+    if (exporting) return;
+    setMoreOpen(false);
+    setExporting(true);
+    try {
+      const res = await fetch("/api/admin/users/export", { cache: "no-store" });
+      if (!res.ok) throw new Error("export_failed");
+      const url = URL.createObjectURL(await res.blob());
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "embypanel-users.xlsx";
+      document.body.append(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch {
+      alert("用户导出失败，请确认管理员登录状态后重试。");
+    } finally {
+      setExporting(false);
+    }
+  }
+
   async function openImportModal() {
     setImportOpen(true);
     setImportError(null);
@@ -558,6 +581,15 @@ export function UsersClient() {
             {moreOpen ? (
               <div className="absolute left-0 md:left-auto md:right-0 mt-2 w-56 max-w-[calc(100vw-2rem)] bg-white border rounded shadow p-2 text-sm space-y-1 z-10">
                 <button
+                  type="button"
+                  className="w-full rounded px-2 py-2 text-left hover:bg-gray-50 disabled:opacity-50"
+                  disabled={exporting}
+                  onClick={() => void exportUsers()}
+                >
+                  {exporting ? "正在导出…" : "用户导出（Excel）"}
+                </button>
+
+                <button
                   className="w-full text-left px-2 py-2 hover:bg-gray-50 rounded"
                   onClick={() => {
                     setMoreOpen(false);
@@ -621,6 +653,7 @@ export function UsersClient() {
 
       {error ? <pre className="text-xs text-red-600 whitespace-pre-wrap">{error}</pre> : null}
       {loading ? <div className="text-sm text-gray-500">加载中…</div> : null}
+      {exporting ? <div role="status" className="text-sm text-gray-500">正在核对默认密码并生成 Excel，请稍候…</div> : null}
 
       <div className="overflow-x-auto overflow-y-visible bg-white border border-[#eaeaea] rounded-2xl shadow-sm">
         <table className="min-w-[1200px] w-full text-sm">
